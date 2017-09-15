@@ -28,6 +28,10 @@ class SessionMiddleware(object):
             session.init()
 
         response = self.get_response(request)
+
+        if request.principal != request.user:
+            request.principal = request.user
+
         session.save()
         session_key = str(session.uuid)
         response[SESSION_HEADER_NAME] = session_key

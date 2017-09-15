@@ -3,7 +3,8 @@
 *.vs
 *.user
 *.egg-info
-obj/
 __pycache__/
 applications/build/
 applications/dist/
+obj/
+static/
