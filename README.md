@@ -154,3 +154,33 @@ Privilege elevation (sudo, UAC, etc. alike) scenarios considered in Talos design
   4. Add existing principal to existing role
 
     ./manage.py create_role_membership --output-status --principal-email "administrator@example.com" --role-code "administrators"
+
+## Architecture
+
+  1. Evidence - any type of proof provided during authentication. Evidence can be of a few different kinds. It can be:
+      * Knowledge factor - something a principal knows, for instance password.
+      * Ownership factor - something a principal has, for instance OTP token or phone.
+      * Inherence factor - something a principal is, for instance fingerprint or retina.
+      * Location factor - somewhere a principal is, for instance IP address.
+      * Trust factor - someone who knows a principal, for instance SSL certificate authority.
+  2. Privilege - right to perform not model related actions. For example, login to admin panel.
+  3. Model permission - right to mode of access on any instance of specific model. For example select, create, update or delete. Has priority over object permission.
+  4. Object permission - right to mode of access on specific instance of specific model. For example select, create, update or delete.  Has priority under model permission.
+  5. Role directory - collection of roles with the same required evidences. 
+      * Role directory may be internal, i.e. entire information is saved in local database, or external, i.e. information is saved externally and is accessed on demand. for example, LDAP directory may be used as external role directory.
+      * Role directory may have options assigned. List of options defined depends on role directory type.
+      * Role directory may have required evidences assigned. Principal will be considered member of role from directory, only if all required evidenced were provided during authentication.
+  6. Role - Job function which defines an authority level.
+     * Role may have model permission granted.
+     * Role may have privileges granted.
+     * Role may have a parent model, in which case role inherits model permissions and privileges granted to parent model. Role may revoke some of inherited model permissions and privileges. Revoking model permission or privilege which has not been granted is not an error.
+  7. Pricipal - entity that can be authenticated. For instance person or service.
+      * For compatibility reasons Principal implements some credential or identity. This functionality is limited and is provided only for applications dependent on django.contrib.auth.
+      * Anonymous is a materialized principal. Thus permissions can be granted to anonymous.
+  8. Identity directory - collection of identities of principals. For example, usernames.
+      * In real world a principal may have multiple identities. For instance 'user', 'user@domain', 'domain\user'. All identities are condired of equal priority, there is no "primary" identity.
+      * Identity directory may have link to credential directory, to limit identity usage scope.
+  9. Identity - something that uniquely identified principal.
+  10. Credential directory - collection of principal credentials.
+  11. Credential - set of evidences a principal provides during authentication.
+  12. Session - virtual connection between principal and server. Session provides security context for operations, either anonymous or authenticated. Session is restarted by authentication operation, either login or logout, which affect all subsequent operations.
