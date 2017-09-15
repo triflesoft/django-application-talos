@@ -1,0 +1,3 @@
+E-mail change was requested for {{ principal.full_name}}. Open the link below to change e-mail.
+
+{{ url }}

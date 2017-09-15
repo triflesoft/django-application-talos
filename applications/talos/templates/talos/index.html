@@ -1,0 +1,27 @@
+﻿{% extends "talos/_base.html" %}
+{% block head_title %}Authentication{% endblock %}
+{% block form_media %}{{ form.media }}{% endblock %}
+{% block body_content %}
+	<section class="hero is-info">
+		<div class="hero-body">
+			<div class="container">
+				<h1 class="title">Authentication</h1>
+				<h2 class="subtitle">{% if principal.is_authenticated %}You are logged in as {{ principal.full_name }} ({{ principal.email }}){% endif %}</h2>
+			</div>
+		</div>
+	</section>
+	<section class="section is-success">
+		<div class="container">
+			<ul>{% if principal.is_anonymous %}
+				<li><a href="{% url 'talos-principal-registration-request-edit' %}">Register</a></li>
+				<li><a href="{% url 'talos-basic-login' %}">Log in</a>
+				<li><a href="{% url 'talos-basic-password-reset-request-edit' %}">Reset Password</a></li>
+				{% else %}
+				<li><a href="{% url 'talos-basic-password-change-edit' %}">Change Password</a></li>
+				<li><a href="{% url 'talos-email-change-request-edit' %}">Change E-mail</a></li>
+				<li><a href="{% url 'talos-logout' %}">Log out</a></li></li>
+				{% endif %}
+			</ul>
+		</div>
+	</section>
+{% endblock %}

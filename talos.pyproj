@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
+  <PropertyGroup>
+    <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>
+    <Name>talos</Name>
+    <RootNamespace>talos</RootNamespace>
+    <IsWindowsApplication>False</IsWindowsApplication>
+    <WebBrowserPort>80</WebBrowserPort>
+  </PropertyGroup>
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{6e096527-3467-416d-90e6-83c5519db6aa}</ProjectGuid>
+    <ProjectHome>.</ProjectHome>
+    <ProjectTypeGuids>{5F0BE9CA-D677-4A4D-8806-6076C0FAAD37};{349c5851-65df-11da-9384-00065b846f21};{888888a0-9f3d-457c-b088-3a5042f75d52}</ProjectTypeGuids>
+    <StartupFile>projects\talos_test\manage.py</StartupFile>
+    <SearchPath>
+    </SearchPath>
+    <WorkingDirectory>projects\talos_test\</WorkingDirectory>
+    <WebBrowserUrl>http://localhost</WebBrowserUrl>
+    <LaunchProvider>Django launcher</LaunchProvider>
+    <DjangoSettingsModule>settings</DjangoSettingsModule>
+    <OutputPath>.</OutputPath>
+    <SuppressCollectPythonCloudServiceFiles>true</SuppressCollectPythonCloudServiceFiles>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+    <DebugSymbols>true</DebugSymbols>
+    <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+    <DebugSymbols>true</DebugSymbols>
+    <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
+  </PropertyGroup>
+  <ItemGroup>
+    <Content Include="applications\MANIFEST.in" />
+    <Content Include="applications\talos\static\talos\admin.css" />
+    <Content Include="applications\talos\templates\talos\_base.html" />
+    <Content Include="applications\talos\templates\talos\basic_login\index.html" />
+    <Content Include="applications\talos\templates\talos\basic_password_change\confirm_done.html" />
+    <Content Include="applications\talos\templates\talos\basic_password_change\confirm_edit.html" />
+    <Content Include="applications\talos\templates\talos\basic_password_reset\confirm_done.html" />
+    <Content Include="applications\talos\templates\talos\basic_password_reset\confirm_edit.html" />
+    <Content Include="applications\talos\templates\talos\basic_password_reset\request_done.html" />
+    <Content Include="applications\talos\templates\talos\basic_password_reset\request_edit.html" />
+    <Content Include="applications\talos\templates\talos\basic_password_reset\request_email_body.html" />
+    <Content Include="applications\talos\templates\talos\basic_password_reset\request_email_body.txt" />
+    <Content Include="applications\talos\templates\talos\basic_password_reset\request_email_subject.txt" />
+    <Content Include="applications\talos\templates\talos\email_change\confirm_done.html" />
+    <Content Include="applications\talos\templates\talos\email_change\confirm_edit.html" />
+    <Content Include="applications\talos\templates\talos\email_change\request_done.html" />
+    <Content Include="applications\talos\templates\talos\email_change\request_edit.html" />
+    <Content Include="applications\talos\templates\talos\email_change\request_email_body.html" />
+    <Content Include="applications\talos\templates\talos\email_change\request_email_body.txt" />
+    <Content Include="applications\talos\templates\talos\email_change\request_email_subject.txt" />
+    <Content Include="applications\talos\templates\talos\index.html" />
+    <Content Include="applications\talos\templates\talos\logout\index.html" />
+    <Content Include="applications\talos\templates\talos\principal_registration\confirm_done.html" />
+    <Content Include="applications\talos\templates\talos\principal_registration\confirm_edit.html" />
+    <Content Include="applications\talos\templates\talos\principal_registration\request_done.html" />
+    <Content Include="applications\talos\templates\talos\principal_registration\request_edit.html" />
+    <Content Include="applications\talos\templates\talos\principal_registration\request_email_body.html" />
+    <Content Include="applications\talos\templates\talos\principal_registration\request_email_body.txt" />
+    <Content Include="applications\talos\templates\talos\principal_registration\request_email_subject.txt" />
+    <Content Include="applications\talos\templates\talos\token_login\index.html" />
+    <Content Include="applications\talos\templates\talos\widgets\button_submit.html" />
+    <Content Include="applications\talos\templates\talos\widgets\form_prefix.html" />
+    <Content Include="applications\talos\templates\talos\widgets\form_suffix.html" />
+    <Content Include="applications\talos\templates\talos\widgets\input_email.html" />
+    <Content Include="applications\talos\templates\talos\widgets\input_name.html" />
+    <Content Include="applications\talos\templates\talos\widgets\input_password.html" />
+    <Content Include="applications\talos\templates\talos\widgets\input_readonly.html" />
+    <Content Include="applications\talos\templates\talos\widgets\input_username.html" />
+    <Content Include="LICENSE" />
+    <Content Include="projects\talos_test\reset.sh" />
+    <Content Include="README.md" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="applications\" />
+    <Folder Include="applications\talos\" />
+    <Folder Include="applications\talos\compatibility\" />
+    <Folder Include="applications\talos\directory\" />
+    <Folder Include="applications\talos\helpers\" />
+    <Folder Include="applications\talos\management\" />
+    <Folder Include="applications\talos\management\commands\" />
+    <Folder Include="applications\talos\migrations\" />
+    <Folder Include="applications\talos\migrations\__pycache__\" />
+    <Folder Include="applications\talos\static\" />
+    <Folder Include="applications\talos\static\talos\" />
+    <Folder Include="applications\talos\templates\" />
+    <Folder Include="applications\talos\templates\talos\" />
+    <Folder Include="applications\talos\templates\talos\basic_login\" />
+    <Folder Include="applications\talos\templates\talos\basic_password_change\" />
+    <Folder Include="applications\talos\templates\talos\basic_password_reset\" />
+    <Folder Include="applications\talos\templates\talos\email_change\" />
+    <Folder Include="applications\talos\templates\talos\logout\" />
+    <Folder Include="applications\talos\templates\talos\principal_registration\" />
+    <Folder Include="applications\talos\templates\talos\token_login\" />
+    <Folder Include="applications\talos\templates\talos\widgets\" />
+    <Folder Include="configuration\" />
+    <Folder Include="projects\" />
+    <Folder Include="projects\talos_test\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="applications\setup.py" />
+    <Compile Include="applications\talos\__init__.py" />
+    <Compile Include="applications\talos\admin.py" />
+    <Compile Include="applications\talos\apps.py" />
+    <Compile Include="applications\talos\compatibility\auth.py" />
+    <Compile Include="applications\talos\directory\__init__.py" />
+    <Compile Include="applications\talos\directory\basic_credential.py" />
+    <Compile Include="applications\talos\directory\basic_identity.py" />
+    <Compile Include="applications\talos\directory\onetimepassword.py" />
+    <Compile Include="applications\talos\directory\subnet.py" />
+    <Compile Include="applications\talos\directory\token_credential.py" />
+    <Compile Include="applications\talos\forms.py" />
+    <Compile Include="applications\talos\helpers\__init__.py" />
+    <Compile Include="applications\talos\helpers\admin.py" />
+    <Compile Include="applications\talos\helpers\discovery.py" />
+    <Compile Include="applications\talos\helpers\migration.py" />
+    <Compile Include="applications\talos\helpers\models.py" />
+    <Compile Include="applications\talos\helpers\session.py" />
+    <Compile Include="applications\talos\management\__init__.py" />
+    <Compile Include="applications\talos\management\abstract_command.py" />
+    <Compile Include="applications\talos\management\commands\__init__.py" />
+    <Compile Include="applications\talos\management\commands\change_role_permission.py" />
+    <Compile Include="applications\talos\management\commands\change_role_priviledge.py" />
+    <Compile Include="applications\talos\management\commands\create_basic_credential.py" />
+    <Compile Include="applications\talos\management\commands\create_basic_identity.py" />
+    <Compile Include="applications\talos\management\commands\create_principal.py" />
+    <Compile Include="applications\talos\management\commands\create_role.py" />
+    <Compile Include="applications\talos\management\commands\create_role_membership.py" />
+    <Compile Include="applications\talos\management\commands\update_basic_credential.py" />
+    <Compile Include="applications\talos\management\commands\update_principal.py" />
+    <Compile Include="applications\talos\management\commands\update_role.py" />
+    <Compile Include="applications\talos\middleware.py" />
+    <Compile Include="applications\talos\migrations\0001_initial.py" />
+    <Compile Include="applications\talos\migrations\__init__.py" />
+    <Compile Include="applications\talos\models.py" />
+    <Compile Include="applications\talos\urls.py" />
+    <Compile Include="applications\talos\views.py" />
+    <Compile Include="projects\talos_test\__init__.py" />
+    <Compile Include="projects\talos_test\manage.py" />
+    <Compile Include="projects\talos_test\settings.py" />
+    <Compile Include="projects\talos_test\urls.py" />
+    <Compile Include="projects\talos_test\wsgi.py" />
+  </ItemGroup>
+  <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.Django.targets" />
+  <!-- Specify pre- and post-build commands in the BeforeBuild and 
+       AfterBuild targets below. -->
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  <ProjectExtensions>
+    <VisualStudio>
+      <FlavorProperties GUID="{349c5851-65df-11da-9384-00065b846f21}">
+        <WebProjectProperties>
+          <AutoAssignPort>True</AutoAssignPort>
+          <UseCustomServer>True</UseCustomServer>
+          <CustomServerUrl>http://localhost</CustomServerUrl>
+          <SaveServerSettingsInUserFile>False</SaveServerSettingsInUserFile>
+        </WebProjectProperties>
+      </FlavorProperties>
+      <FlavorProperties GUID="{349c5851-65df-11da-9384-00065b846f21}" User="">
+        <WebProjectProperties>
+          <StartPageUrl>
+          </StartPageUrl>
+          <StartAction>CurrentPage</StartAction>
+          <AspNetDebugging>True</AspNetDebugging>
+          <SilverlightDebugging>False</SilverlightDebugging>
+          <NativeDebugging>False</NativeDebugging>
+          <SQLDebugging>False</SQLDebugging>
+          <ExternalProgram>
+          </ExternalProgram>
+          <StartExternalURL>
+          </StartExternalURL>
+          <StartCmdLineArguments>
+          </StartCmdLineArguments>
+          <StartWorkingDirectory>
+          </StartWorkingDirectory>
+          <EnableENC>False</EnableENC>
+          <AlwaysStartWebServerOnDebug>False</AlwaysStartWebServerOnDebug>
+        </WebProjectProperties>
+      </FlavorProperties>
+    </VisualStudio>
+  </ProjectExtensions>
+</Project>

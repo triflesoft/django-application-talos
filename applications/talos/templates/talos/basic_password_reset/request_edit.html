@@ -1,0 +1,46 @@
+﻿{% extends "talos/_base.html" %}
+{% block head_title %}{{ translations.process }}{% endblock %}
+{% block form_media %}{{ form.media }}{% endblock %}
+{% block body_content %}
+	<section class="hero {% if form.error or form.non_field_errors %}is-danger{% else %}is-info{% endif %}">
+		<div class="hero-body">
+			<div class="container">
+				<nav class="level">
+					<div class="level-left">
+						<div class="level-item">
+							<h1 class="title">{{ translations.step_header }}</h1>
+						</div>
+					</div>
+					<div class="level-right">
+						<a class="level-item button is-ouline is-warning" href="/">{{ translations.home_link }}</a>
+						<a class="level-item button is-ouline is-warning" href="{% url 'talos-logout' %}">{{ translations.logout_link }}</a>
+					</div>
+				</nav>
+				<h2 class="subtitle">{{ translations.step_summary }}</h2>
+			</div>
+		</div>
+	</section>
+{% include "talos/widgets/form_prefix.html" %}
+{% include "talos/widgets/input_email.html" with field=form.email only %}
+{% include "talos/widgets/button_submit.html" with translations=translations only %}
+{% include "talos/widgets/form_suffix.html" %}
+{% endblock %}
+{% block body_script %}
+	<script type='text/javascript'>
+function updateSubmitState() {
+	var email = $('#{{ form.email.id_for_label }}').val();
+
+	if (email) {
+		$('#submit').prop('disabled', false);
+	} else {
+		$('#submit').prop('disabled', true);
+	}
+}
+
+$('#{{ form.email.id_for_label }}').on('input change paste', function() {
+	updateSubmitState();
+});
+
+updateSubmitState();
+	</script>
+{% endblock %}

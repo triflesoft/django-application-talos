@@ -1,0 +1,69 @@
+﻿{% extends "talos/_base.html" %}
+{% block head_title %}{{ translations.process }}{% endblock %}
+{% block form_media %}{{ form.media }}{% endblock %}
+{% block body_content %}
+	<section class="hero {% if form.error or form.non_field_errors %}is-danger{% else %}is-info{% endif %}">
+		<div class="hero-body">
+			<div class="container">
+				<nav class="level">
+					<div class="level-left">
+						<div class="level-item">
+							<h1 class="title">{{ translations.step_header }}</h1>
+						</div>
+					</div>
+					<div class="level-right">
+						<a class="level-item button is-ouline is-warning" href="/">{{ translations.home_link }}</a>
+					</div>
+				</nav>
+				<h2 class="subtitle">{{ translations.step_summary }}</h2>
+			</div>
+		</div>
+	</section>
+{% include "talos/widgets/form_prefix.html" %}
+{% include "talos/widgets/input_name.html" with field=form.brief_name only %}
+{% include "talos/widgets/input_name.html" with field=form.full_name only %}
+{% include "talos/widgets/input_username.html" with field=form.username only %}
+{% include "talos/widgets/input_password.html" with field=form.password1 only %}
+{% include "talos/widgets/input_password.html" with field=form.password2 only %}
+{% include "talos/widgets/button_submit.html" with translations=translations only %}
+{% include "talos/widgets/form_suffix.html" %}
+{% endblock %}
+{% block body_script %}
+	<script type='text/javascript'>
+function updateSubmitState() {
+	var brief_name = $('#{{ form.brief_name.id_for_label }}').val();
+	var full_name = $('#{{ form.full_name.id_for_label }}').val();
+	var username = $('#{{ form.username.id_for_label }}').val();
+	var password1 = $('#{{ form.password1.id_for_label }}').val();
+	var password2 = $('#{{ form.password2.id_for_label }}').val();
+
+	if (brief_name && full_name && username && password1 && password2) {
+		$('#submit').prop('disabled', false);
+	} else {
+		$('#submit').prop('disabled', true);
+	}
+}
+
+$('#{{ form.brief_name.id_for_label }}').on('input change paste', function() {
+	updateSubmitState();
+});
+
+$('#{{ form.full_name.id_for_label }}').on('input change paste', function() {
+	updateSubmitState();
+});
+
+$('#{{ form.username.id_for_label }}').on('input change paste', function() {
+	updateSubmitState();
+});
+
+$('#{{ form.password1.id_for_label }}').on('input change paste', function() {
+	updateSubmitState();
+});
+
+$('#{{ form.password2.id_for_label }}').on('input change paste', function() {
+	updateSubmitState();
+});
+
+updateSubmitState();
+	</script>
+{% endblock %}

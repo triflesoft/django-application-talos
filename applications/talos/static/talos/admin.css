@@ -1,0 +1,12 @@
+div.field-box > p {
+	white-space: nowrap;
+}
+
+p.datetime > br {
+	visibility: collapse;
+	display: none;
+}
+
+div.related-widget-wrapper {
+	white-space: nowrap;
+}

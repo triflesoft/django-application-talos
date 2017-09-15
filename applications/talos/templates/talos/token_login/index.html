@@ -1,0 +1,29 @@
+﻿{% extends "anshar/_base.html" %}
+{% block form_media %} {{ form.media }} {% endblock %}
+{% block body_content %}
+	<section class="hero is-info">
+		<div class="hero-body">
+			<div class="container">
+				<h1 class="title">Login</h1>
+				<h2 class="subtitle">Please, provde username an password</h2>
+			</div>
+		</div>
+	</section>
+	<section class="section {% if form.errors %}is-danger{% else %}is-success{% endif %}">
+		<div class="container">
+			<form method="post" enctype="application/x-www-form-urlencoded">{% csrf_token %}
+				<div class="field">
+					<label class="label" for="{{ form.token.id_for_label }}">{{ form.token.label }}</label>
+					<div class="control">
+						<input type="text" name="{{ form.token.name }}" required="required" id="{{ form.token.id_for_label }}" maxlength="{{ form.token.max_length }}" />
+					</div>
+					{% if form.token.errors %}{% for error in form.token.errors %}<p class="help is-danger">{{ error|escape }}</p>
+					{% endfor %}{% endif %}
+				</div>
+				<div class="field">
+					<button class="button is-primary" type="submit" disabled="disabled" id="submit">Log In</button>
+				</div>
+			</form>
+		</div>
+	</section>
+{% endblock %}

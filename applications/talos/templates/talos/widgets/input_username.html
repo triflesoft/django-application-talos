@@ -1,0 +1,8 @@
+﻿						<div class="field">
+							<label class="label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+							<div class="control">
+								<input class="input" type="text" name="{{ field.name }}" required="required" id="{{ field.id_for_label }}"{% if field.value != None %} value="{{ field.value|stringformat:'s' }}"{% endif %} />
+							</div>{% if field.errors %}{% for error in field.errors %}
+							<p class="help is-danger">{{ error|escape }}</p>
+							{% endfor %}{% endif %}
+						</div>

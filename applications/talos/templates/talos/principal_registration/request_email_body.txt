@@ -1,0 +1,3 @@
+Password reset was requested for {{ email }}. Open the link below to confirm your e-mail address and continue registration.
+
+{{ url }}
