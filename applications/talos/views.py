@@ -41,12 +41,6 @@ class TranslationContextMixin(object):
 
 
 class SecureFormViewBaseView(TranslationContextMixin, FormView):
-    @method_decorator(sensitive_post_parameters())
-    @method_decorator(csrf_protect)
-    @method_decorator(never_cache)
-    def dispatch(self, request, *args, **kwargs):
-        return super(SecureFormViewBaseView, self).dispatch(request, *args, **kwargs)
-
     def get_form_kwargs(self):
         from .models import _tznow
         from .models import ValidationToken
@@ -74,6 +68,12 @@ class SecureFormViewBaseView(TranslationContextMixin, FormView):
         kwargs['request'] = self.request
 
         return kwargs
+
+    @method_decorator(sensitive_post_parameters())
+    @method_decorator(csrf_protect)
+    @method_decorator(never_cache)
+    def dispatch(self, request, *args, **kwargs):
+        return super(SecureFormViewBaseView, self).dispatch(request, *args, **kwargs)
 
 
 class SecureTemplateViewBaseView(TranslationContextMixin, TemplateView):
