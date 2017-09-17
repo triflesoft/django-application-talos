@@ -5,9 +5,6 @@ from django.utils.text import slugify
 from socket import gethostname
 from uuid import uuid4
 
-from logging import getLogger
-
-logger = getLogger(__name__)
 
 models.options.DEFAULT_NAMES = \
     models.options.DEFAULT_NAMES + \
@@ -1017,8 +1014,6 @@ class Principal(AbstractReplicatableModel):
         except BasicCredential.DoesNotExist:
             pass
 
-        logger.error('TALOS: Password check for %s failed.', self.email)
-
         return False
 
     # django.contrib.auth compatibility
@@ -1084,6 +1079,10 @@ class Principal(AbstractReplicatableModel):
             return True
 
         return False
+
+    # django.contrib.auth compatibility
+    def has_perms(self, perm_list, obj=None):
+        return all(self.has_perm(perm, obj) for perm in perm_list)
 
     # django.contrib.auth compatibility
     def has_module_perms(self, app_label):

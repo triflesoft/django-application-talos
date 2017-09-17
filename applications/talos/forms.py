@@ -294,7 +294,7 @@ class BasicLoginForm(forms.Form):
     def clean_password(self):
         password = self.cleaned_data['password']
 
-        if not self.credential_directory.verify_credentials(self.principal, {'password': password}):
+        if self.principal and (not self.credential_directory.verify_credentials(self.principal, {'password': password})):
             raise forms.ValidationError(
                 'Password is not valid. Note that password is case-sensitive.',
                 code='invalid_password')
@@ -342,7 +342,7 @@ class BasicPasswordChangeConfirmForm(forms.Form):
 
         validate_password(new_password1, self.request.principal)
 
-        if not self.credential_directory.verify_credentials(self.request.principal, {'password': old_password}):
+        if self.principal and (not self.credential_directory.verify_credentials(self.request.principal, {'password': old_password})):
             raise forms.ValidationError(
                 'Old password is not valid. Note that password is case-sensitive.',
                 code='invalid_password')

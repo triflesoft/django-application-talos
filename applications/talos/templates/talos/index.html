@@ -1,25 +1,37 @@
 ﻿{% extends "talos/_base.html" %}
-{% block head_title %}Authentication{% endblock %}
+{% block head_title %}{{ translations.process }}{% endblock %}
 {% block form_media %}{{ form.media }}{% endblock %}
 {% block body_content %}
 	<section class="hero is-info">
 		<div class="hero-body">
 			<div class="container">
-				<h1 class="title">Authentication</h1>
-				<h2 class="subtitle">{% if principal.is_authenticated %}You are logged in as {{ principal.full_name }} ({{ principal.email }}){% endif %}</h2>
+				<nav class="level">
+					<div class="level-left">
+						<div class="level-item">
+							<h1 class="title">{{ translations.step_header }}</h1>
+						</div>
+					</div>
+					<div class="level-right">
+						<a class="level-item button is-ouline is-warning" href="/">{{ translations.home_link }}</a>
+					</div>
+				</nav>
+				{% if principal.is_authenticated %}
+				<h2 class="subtitle">{{ translations.step_summary }}</h2>
+				{% endif %}
 			</div>
 		</div>
+
 	</section>
 	<section class="section is-success">
 		<div class="container">
 			<ul>{% if principal.is_anonymous %}
-				<li><a href="{% url 'talos-principal-registration-request-edit' %}">Register</a></li>
-				<li><a href="{% url 'talos-basic-login' %}">Log in</a>
-				<li><a href="{% url 'talos-basic-password-reset-request-edit' %}">Reset Password</a></li>
+				<li><a href="{% url 'talos-principal-registration-request-edit' %}">{{ translations.principal_register_link }}</a></li>
+				<li><a href="{% url 'talos-basic-login' %}">{{ translations.basic_login_link }}</a>
+				<li><a href="{% url 'talos-basic-password-reset-request-edit' %}">{{ translations.basic_password_reset_link }}</a></li>
 				{% else %}
-				<li><a href="{% url 'talos-basic-password-change-edit' %}">Change Password</a></li>
-				<li><a href="{% url 'talos-email-change-request-edit' %}">Change E-mail</a></li>
-				<li><a href="{% url 'talos-logout' %}">Log out</a></li></li>
+				<li><a href="{% url 'talos-basic-password-change-edit' %}">{{ translations.basic_password_change_link }}</a></li>
+				<li><a href="{% url 'talos-email-change-request-edit' %}">{{ translations.principal_email_change_link }}</a></li>
+				<li><a href="{% url 'talos-logout' %}">{{ translations.logout_link }}</a></li>
 				{% endif %}
 			</ul>
 		</div>

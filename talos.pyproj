@@ -96,7 +96,6 @@
     <Folder Include="applications\talos\templates\talos\principal_registration\" />
     <Folder Include="applications\talos\templates\talos\token_login\" />
     <Folder Include="applications\talos\templates\talos\widgets\" />
-    <Folder Include="configuration\" />
     <Folder Include="projects\" />
     <Folder Include="projects\talos_test\" />
   </ItemGroup>

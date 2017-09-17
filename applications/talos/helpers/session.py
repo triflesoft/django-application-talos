@@ -1,3 +1,21 @@
+from django.http.request import HttpRequest
+
+def request_principal_get(self):
+    return getattr(self, '_principal', None)
+
+def request_principal_set(self, value):
+    setattr(self, '_principal', value)
+
+def request_principal_del(self):
+    delattr(self, '_principal')
+
+
+request_principal_property = property(request_principal_get, request_principal_set, request_principal_del)
+
+HttpRequest.user = request_principal_property
+HttpRequest.principal = request_principal_property
+
+
 class Context(object):
     TEST_COOKIE_NAME = 'cbcf165cfa4e4e30b2e5fe0e9d4fac6d'
     TEST_COOKIE_VALUE = 'c7446479a81643f59314999b2c34ba7b'
@@ -130,7 +148,6 @@ class Context(object):
 
     def init(self):
         self._new_session()
-        self.request.user = self.principal
         self.request.principal = self.principal
 
     def load(self, uuid):
@@ -164,7 +181,6 @@ class Context(object):
             self.principal._load_authentication_context(valid_evidences)
             self._session.valid_from = now
 
-        self.request.user = self.principal
         self.request.principal = self.principal
 
     def save(self):
@@ -264,7 +280,6 @@ class Context(object):
             self._new_session()
             self.principal = Principal.objects.get(id=0)
             self.principal._load_authentication_context([])
-            self.request.user = self.principal
             self.request.principal = self.principal
 
     def cycle_key(self):

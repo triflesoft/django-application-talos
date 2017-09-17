@@ -1,3 +1,9 @@
+from logging import getLogger
+
+
+logger = getLogger('talos')
+
+
 class Internal(object):
     def __init__(self, credential_directory, **kwargs):
         self._credential_directory = credential_directory
@@ -18,6 +24,8 @@ class Internal(object):
                 return True
         except BasicCredential.DoesNotExist:
             pass
+
+        logger.debug('TALOS: Basic credential verification failed for "%s".', principal.email)
 
         return False
 
@@ -62,6 +70,8 @@ class Internal(object):
         except BasicCredential.DoesNotExist:
             pass
 
+        logger.debug('TALOS: Basic credential update failed for "%s".', principal.email)
+
         return False
 
     def reset_credentials(self, super_principal, principal, new_credentials):
@@ -81,5 +91,7 @@ class Internal(object):
             return True
         except BasicCredential.DoesNotExist:
             pass
+
+        logger.debug('TALOS: Basic credential reset failed for "%s".', principal.email)
 
         return False

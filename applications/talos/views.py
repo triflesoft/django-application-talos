@@ -24,8 +24,12 @@ class TranslationContextMixin(object):
 
         context['translations'] = {
             'home_link': 'Home',
+            'principal_register_link': 'Register Principal',
+            'principal_email_change_link': 'Change E-mail',
             'logout_link': 'Log out',
             'basic_login_link': 'Log in',
+            'basic_password_reset_link': 'Reset Password',
+            'basic_password_change_link': 'Change Password',
             'process': getattr(self, 'process', None),
             'step_header': getattr(self, 'step_header', None),
             'step_summary': getattr(self, 'step_summary', None),
@@ -81,6 +85,9 @@ class SecureTemplateViewBaseView(TranslationContextMixin, TemplateView):
 
 
 class IndexView(SecureTemplateViewBaseView):
+    process = 'Authentication'
+    step_header = 'Authentication'
+    step_summary = lazy(lambda slf: 'You are logged in as {0} ({1})'.format(slf.request.principal.full_name, slf.request.principal.email), str)
     template_name = 'talos/index.html'
 
     def get_context_data(self, **kwargs):
@@ -223,11 +230,14 @@ class BasicLoginView(SecureFormViewBaseView):
 
     def form_valid(self, form):
         from django.conf import settings
+        from django.contrib.auth import REDIRECT_FIELD_NAME
         from django.http import HttpResponseRedirect
 
         form.save()
 
-        return HttpResponseRedirect(settings.LOGIN_REDIRECT_URL)
+        redirect_url = self.request.GET.get(REDIRECT_FIELD_NAME, settings.LOGIN_REDIRECT_URL)
+
+        return HttpResponseRedirect(redirect_url)
 
 
 class BasicPasswordChangeConfirmEditView(SecureFormViewBaseView):
