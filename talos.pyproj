@@ -104,6 +104,7 @@
     <Compile Include="applications\talos\__init__.py" />
     <Compile Include="applications\talos\admin.py" />
     <Compile Include="applications\talos\apps.py" />
+    <Compile Include="applications\talos\compatibility\__init__.py" />
     <Compile Include="applications\talos\compatibility\auth.py" />
     <Compile Include="applications\talos\directory\__init__.py" />
     <Compile Include="applications\talos\directory\basic_credential.py" />
