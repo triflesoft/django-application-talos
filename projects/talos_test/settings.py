@@ -6,6 +6,9 @@ from os.path import join
 from os.path import normpath
 from sys import path
 
+from socket import gethostbyname
+from socket import gethostname
+
 PROJECT_PATH = dirname(abspath(__file__))
 PROJECT_NAME = basename(PROJECT_PATH)
 PROJECTS_PATH = normpath(join(PROJECT_PATH, '..'))
