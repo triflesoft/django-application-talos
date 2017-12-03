@@ -874,9 +874,16 @@ class Session(AbstractReplicatableModel):
 _basic_credential_directory_cache = None
 
 
+class PrincipalManager(models.Manager):
+    def get_by_natural_key(self, username):
+        return super(PrincipalManager, self).get(email=username)
+
+
 class Principal(AbstractReplicatableModel):
     REQUIRED_FIELDS = []
     USERNAME_FIELD = 'email'
+
+    objects = PrincipalManager()
 
     brief_name = models.CharField(blank=True, max_length=255)
     full_name = models.CharField(blank=True, max_length=255)
@@ -892,6 +899,13 @@ class Principal(AbstractReplicatableModel):
         object_permissions = ('__all__')
         verbose_name = 'Principal'
         verbose_name_plural = 'Principals'
+
+    def __init__(self, *args, **kwargs):
+        super(Principal, self).__init__(*args, **kwargs)
+        self._evidences_effective = {}
+        self._roles_effective = {}
+        self._privileges_effective = {}
+        self._model_actions_effective = {}
 
     def _ensure_basic_credential_directory(self):
         global _basic_credential_directory_cache

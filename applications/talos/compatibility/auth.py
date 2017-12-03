@@ -12,18 +12,22 @@ class AuthBackend(object):
 
     def authenticate(self, username=None, password=None):
         from ..models import BasicIdentity
+        from ..models import Principal
 
-        try:
-            if self.identity_directory.is_active:
+        if self.identity_directory.is_active:
+            try:
                 basic_identity = self.identity_directory.identities.get(username=username)
                 principal = basic_identity.principal
+            except BasicIdentity.DoesNotExist:
+                try:
+                    principal = Principal.objects.get(email=username)
+                except Principal.DoesNotExist:
+                    principal = None
 
-                if principal.check_password(password):
-                    principal._load_authentication_context(self.evidences)
+        if principal and principal.check_password(password):
+            principal._load_authentication_context(self.evidences)
 
-                    return principal
-        except BasicIdentity.DoesNotExist:
-            pass
+            return principal
 
         return None
 
