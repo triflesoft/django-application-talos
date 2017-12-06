@@ -6,6 +6,8 @@ from .helpers.migration import AppMigrationHelper
 from .helpers.models import AppModelHelper
 
 
+_REQUEST_STARTED_UID='ce23b028-1ac1-4e3d-b51a-55e9e6aa2399'
+
 _is_initialized = False
 admin_helper = AppAdminHelper()
 discovery_helper = AppDiscoveryHelper()
@@ -46,7 +48,7 @@ def _request_started(sender, **kwargs):
     from django.core.signals import request_started
     from logging import getLogger
 
-    request_started.disconnect(dispatch_uid='ce23b028-1ac1-4e3d-b51a-55e9e6aa2399')
+    request_started.disconnect(dispatch_uid=_REQUEST_STARTED_UID)
 
     app_configs = apps.get_app_configs()
     messages = []
@@ -62,6 +64,9 @@ def _request_started(sender, **kwargs):
 
 def _model_checks(app_configs, **kwargs):
     from django.apps import apps
+    from django.core.signals import request_started
+
+    request_started.disconnect(dispatch_uid=_REQUEST_STARTED_UID)
 
     if app_configs is None:
         app_configs = apps.get_app_configs()
@@ -92,4 +97,4 @@ class TalosAppConfig(AppConfig):
         pre_migrate.connect(_pre_migrate, dispatch_uid='{0}.{1}'.format(_pre_migrate.__module__, _pre_migrate.__name__))
         post_migrate.connect(_post_migrate, dispatch_uid='{0}.{1}'.format(_post_migrate.__module__, _post_migrate.__name__))
         checks.register(_model_checks, checks.Tags.models)
-        request_started.connect(_request_started, dispatch_uid='ce23b028-1ac1-4e3d-b51a-55e9e6aa2399')
+        request_started.connect(_request_started, dispatch_uid=_REQUEST_STARTED_UID)
