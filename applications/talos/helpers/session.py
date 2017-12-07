@@ -135,11 +135,12 @@ class Context(object):
                 remote_ua_version=remote_ua_version)
 
     def __init__(self, request):
+        from collections import OrderedDict
         from django.conf import settings
         from ..models import Principal
 
         self._session = None
-        self._variables = {}
+        self._variables = OrderedDict()
         self._geoname_header_name = getattr(settings, 'TALOS_GEONAME_HEADER', '')
         self.request = request
         self.request.session = self
@@ -188,10 +189,13 @@ class Context(object):
         from django.utils.functional import LazyObject
         from json import dumps
 
-        self._session.evidences = ''
-        self._session.roles = ''
-        self._session.privileges = ''
-        self._session.model_actions = ''
+        prev_evidences = self._session.evidences
+        prev_roles = self._session.roles
+        prev_privileges = self._session.privileges
+        prev_model_actions = self._session.model_actions
+        prev_variables = self._session.variables
+        prev_principal = self._session.principal
+
         self._session.variables = dumps(self._variables)
 
         if self.request.principal and self.request.principal.is_authenticated:
@@ -208,8 +212,20 @@ class Context(object):
                     self._session.roles, \
                     self._session.privileges, \
                     self._session.model_actions = self._session.principal._extract_authentication_context()
+        else:
+            self._session.evidences = ''
+            self._session.roles = ''
+            self._session.privileges = ''
+            self._session.model_actions = ''
 
-        self._session.save()
+        if (
+            (self._session.evidences != prev_evidences) or
+            (self._session.roles != prev_roles) or
+            (self._session.privileges != prev_privileges) or
+            (self._session.model_actions != prev_model_actions) or
+            (self._session.variables != prev_variables) or
+            (self._session.principal != prev_principal)):
+            self._session.save()
 
     def get(self, key, default=None):
         return self._variables.get(key, default)
@@ -262,7 +278,9 @@ class Context(object):
         return self._variables.iteritems()
 
     def clear(self):
-        self._variables = {}
+        from collections import OrderedDict
+
+        self._variables = OrderedDict()
 
     def is_empty(self):
         try:

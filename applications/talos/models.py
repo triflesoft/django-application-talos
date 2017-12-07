@@ -304,10 +304,10 @@ class Role(AbstractReplicatableModel):
 
     def _update_effective_permission_sets(self, all_privileges, all_model_actions):
         if self.parent is None:
-            parent_privilege_effective_ids       = set()
+            parent_privilege_effective_ids    = set()
             parent_model_action_effective_ids = set()
         else:
-            parent_privilege_effective_ids       = set(id for id in self.parent.privilege_permissions_effective.all().values_list('id', flat=True))
+            parent_privilege_effective_ids    = set(id for id in self.parent.privilege_permissions_effective.all().values_list('id', flat=True))
             parent_model_action_effective_ids = set(id for id in self.parent.model_action_permissions_effective.all().values_list('id', flat=True))
 
         granted_privilege_ids       = set(id for id in self.privilege_permissions_granted.all().values_list('id', flat=True))
@@ -901,11 +901,12 @@ class Principal(AbstractReplicatableModel):
         verbose_name_plural = 'Principals'
 
     def __init__(self, *args, **kwargs):
+        from collections import OrderedDict
         super(Principal, self).__init__(*args, **kwargs)
-        self._evidences_effective = {}
-        self._roles_effective = {}
-        self._privileges_effective = {}
-        self._model_actions_effective = {}
+        self._evidences_effective = OrderedDict()
+        self._roles_effective = OrderedDict()
+        self._privileges_effective = OrderedDict()
+        self._model_actions_effective = OrderedDict()
 
     def _ensure_basic_credential_directory(self):
         global _basic_credential_directory_cache
@@ -950,12 +951,13 @@ class Principal(AbstractReplicatableModel):
         return evidences, roles, privileges, model_actions
 
     def _inject_authentication_context(self, evidences_json=None, roles_json=None, privileges_json=None, model_actions_json=None):
+        from collections import OrderedDict
         from django.core import serializers
 
-        self._evidences_effective = {}
-        self._roles_effective = {}
-        self._privileges_effective = {}
-        self._model_actions_effective = {}
+        self._evidences_effective = OrderedDict()
+        self._roles_effective = OrderedDict()
+        self._privileges_effective = OrderedDict()
+        self._model_actions_effective = OrderedDict()
 
         if evidences_json:
             for evidence in serializers.deserialize('json', evidences_json):
@@ -976,6 +978,8 @@ class Principal(AbstractReplicatableModel):
         self._complete_authentication_context()
 
     def _load_authentication_context(self, provided_evidences):
+        from collections import OrderedDict
+
         provided_evidence_ids = set(provided_evidence.id for provided_evidence in provided_evidences)
         possible_roles = list(
             membership.role for membership in PrincipalRoleMembership
@@ -989,10 +993,13 @@ class Principal(AbstractReplicatableModel):
                 'role__model_action_permissions_effective',
                 'role__directory__required_evidences'))
 
-        self._evidences_effective = {evidence.code: evidence for evidence in provided_evidences}
-        self._roles_effective = {}
-        self._privileges_effective = {}
-        self._model_actions_effective = {}
+        self._evidences_effective = OrderedDict()
+        self._roles_effective = OrderedDict()
+        self._privileges_effective = OrderedDict()
+        self._model_actions_effective = OrderedDict()
+
+        for evidence in provided_evidences:
+            self._evidences_effective[evidence.code] = evidence
 
         for possible_role in possible_roles:
             possible_role_directory = possible_role.directory

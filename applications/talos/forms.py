@@ -266,7 +266,7 @@ class BasicLoginForm(forms.Form):
 
         self.identity_directory = BasicIdentityDirectory.objects.get(code=kwargs['identity_directory_code'])
         self.credential_directory = self.identity_directory.credential_directory
-        self.evidences = list(self.credential_directory.provided_evidences.all())
+        self.evidences = list(self.credential_directory.provided_evidences.all().order_by('id'))
         self.request = kwargs['request']
 
         del kwargs['identity_directory_code']

@@ -8,7 +8,7 @@ class AuthBackend(object):
         self.evidences = list(self.credential_directory.provided_evidences.filter(code__in=(
             'authenticated',
             'knowledge_factor',
-            'knowledge_factor_password')))
+            'knowledge_factor_password')).order_by('id'))
 
     def authenticate(self, username=None, password=None):
         from ..models import BasicIdentity

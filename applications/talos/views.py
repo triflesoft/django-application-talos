@@ -332,7 +332,7 @@ class TokenLoginView(View):
                 token_directories.append((
                     compile(pattern),
                     token_credential_directory,
-                    list(token_credential_directory.provided_evidences.all())))
+                    list(token_credential_directory.provided_evidences.all().order_by('id'))))
 
         self.token_directories = token_directories
 
