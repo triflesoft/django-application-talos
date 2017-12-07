@@ -1,9 +1,6 @@
 from django.conf import settings
 
 
-SESSION_HEADER_NAME = 'HTTP_X_SESSION_ID'
-
-
 class SessionMiddleware(object):
     def __init__(self, get_response):
         self.get_response = get_response
@@ -13,7 +10,7 @@ class SessionMiddleware(object):
         from uuid import UUID
 
         session = SessionContext(request)
-        session_key = request.COOKIES.get(settings.SESSION_COOKIE_NAME, None) or request.META.get(SESSION_HEADER_NAME, None)
+        session_key = request.COOKIES.get(settings.SESSION_COOKIE_NAME, None) or request.META.get('HTTP_X_SESSION_ID', None)
         session_uuid = None
 
         if session_key:
@@ -30,7 +27,7 @@ class SessionMiddleware(object):
         response = self.get_response(request)
         session.save()
         session_key = str(session.uuid)
-        response[SESSION_HEADER_NAME] = session_key
+        response['X-Session-ID'] = session_key
         response.set_cookie(
             settings.SESSION_COOKIE_NAME,
             value=session_key,
