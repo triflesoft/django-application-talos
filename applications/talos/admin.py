@@ -908,10 +908,10 @@ class SessionAdmin(AbstractReplicatableAdmin, PermissionAdminMixin):
     actions = [terminate_sessions]
 
     def link_to_previous_session(self, obj):
-        from django.core import urlresolvers
+        from django.urls import reverse
 
         if obj.previous_session:
-            link = urlresolvers.reverse("admin:talos_session_change", args=[obj.previous_session.id])
+            link = reverse("admin:talos_session_change", args=[obj.previous_session.id])
 
             return u'<a href="{0}">{1}</a>'.format(link, obj.previous_session.uuid.hex)
 

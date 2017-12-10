@@ -9,7 +9,7 @@ Talos is still work-in-progress and is not generally recommended for production.
 
 Talos provides data required for multipoint master-master application level replication (see AbstractReplicatableModel), but does not include any actual algorithms.
 
-Talos tries to be culture-agnostic, thus Principal field has brief and full names, not first and last ones. It is recommended to create separate UserProfile model customized for actual project needs. For instance some projects may need to store not only given and family names, but also patronymics, matronymics or mononyms. Unlike django.contrib.auth Talos does not enforce and cultural favors.
+Talos tries to be culture-agnostic, thus Principal field has brief and full names, not first and last ones. It is recommended to create separate UserProfile model customized for actual project needs. For instance some projects may need to store not only given and family names, but also patronymics, matronymics or mononyms. Unlike django.contrib.auth Talos does not enforce any cultural favors.
 
 Some of improvements include:
   * Per model and per object permissions.
@@ -63,7 +63,7 @@ Privilege elevation (sudo, UAC, etc. alike) scenarios considered in Talos design
 ## Quick start
 
 ### settings.py
-  1. Add "talos" to your INSTALLED_APPS setting. It sould be last application.
+  1. Add "talos" to your INSTALLED_APPS setting.
 
     INSTALLED_APPS = [
         ...
@@ -113,8 +113,8 @@ Privilege elevation (sudo, UAC, etc. alike) scenarios considered in Talos design
   1. Add talos URLs to project urlpatterns
 
     urlpatterns = [
-        url(r'^admin/', admin.site.urls),
-        url(r'^auth/', include(auth_url_patterns)),
+        path('admin/', admin.site.urls),
+        path('auth/', include(auth_url_patterns)),
         ...
     ]
 
@@ -139,7 +139,7 @@ Privilege elevation (sudo, UAC, etc. alike) scenarios considered in Talos design
 
 ### bash
 
-  1. Creaste new principal
+  1. Create new principal
 
     ./manage.py create_principal --output-status --new-brief-name "Admin" --new-full-name "Administrator" --new-email "administrator@example.com" --new-active
 
@@ -164,9 +164,9 @@ Privilege elevation (sudo, UAC, etc. alike) scenarios considered in Talos design
       * Location factor - somewhere a principal is, for instance IP address.
       * Trust factor - someone who knows a principal, for instance SSL certificate authority.
   2. Privilege - right to perform not model related actions. For example, login to admin panel.
-  3. Model permission - right to mode of access on any instance of specific model. For example select, create, update or delete. Has priority over object permission.
-  4. Object permission - right to mode of access on specific instance of specific model. For example select, create, update or delete.  Has priority under model permission.
-  5. Role directory - collection of roles with the same required evidences. 
+  3. Model permission - right to mode of access on any instance of specific model. For example select, create, update or delete. Has priority above object permission.
+  4. Object permission - right to mode of access on specific instance of specific model. For example select, create, update or delete.  Has priority below model permission.
+  5. Role directory - collection of roles with the same required evidence.
       * Role directory may be internal, i.e. entire information is saved in local database, or external, i.e. information is saved externally and is accessed on demand. for example, LDAP directory may be used as external role directory.
       * Role directory may have options assigned. List of options defined depends on role directory type.
       * Role directory may have required evidences assigned. Principal will be considered member of role from directory, only if all required evidenced were provided during authentication.
@@ -175,7 +175,7 @@ Privilege elevation (sudo, UAC, etc. alike) scenarios considered in Talos design
      * Role may have privileges granted.
      * Role may have a parent model, in which case role inherits model permissions and privileges granted to parent model. Role may revoke some of inherited model permissions and privileges. Revoking model permission or privilege which has not been granted is not an error.
   7. Pricipal - entity that can be authenticated. For instance person or service.
-      * For compatibility reasons Principal implements some credential or identity. This functionality is limited and is provided only for applications dependent on django.contrib.auth.
+      * For compatibility reasons Principal implements some credential and identity related functions. This is limited, should not be used directly, is provided only for applications dependent on django.contrib.auth and supports only compatibility required subset of functionality.
       * Anonymous is a materialized principal. Thus permissions can be granted to anonymous.
   8. Identity directory - collection of identities of principals. For example, usernames.
       * In real world a principal may have multiple identities. For instance 'user', 'user@domain', 'domain\user'. All identities are condired of equal priority, there is no "primary" identity.
@@ -183,4 +183,4 @@ Privilege elevation (sudo, UAC, etc. alike) scenarios considered in Talos design
   9. Identity - something that uniquely identified principal.
   10. Credential directory - collection of principal credentials.
   11. Credential - set of evidences a principal provides during authentication.
-  12. Session - virtual connection between principal and server. Session provides security context for operations, either anonymous or authenticated. Session is restarted by authentication operation, either login or logout, which affect all subsequent operations.
+  12. Session - virtual connection between principal and server. Session provides security context for operations, either anonymous or authenticated. Session is restarted by authentication operation, either login or logout, which affects all subsequent operations.
