@@ -15,41 +15,30 @@ Including another URLconf
 """
 
 from django.urls import path, re_path
-from .views import (BasicLoginAPIView, PrincipalRegistrationRequestEditAPIView,
+from .views import (SessionAPIView, PrincipalRegistrationRequestEditAPIView,
                     PrincipalRegistrationConfirmationAPIView,
                     PrincipalRegistrationTokenValidationAPIView,
-                    LogoutAPIView,
-                    EmailChangeRequestEditAPIView,
-                    EmailChangeConfirmEditAPIView,
-                    GoogleAuthenticationActivateView,
-                    GoogleAuthenticatorVerifyView,
-                    GoogleAuthenticatorDeleteView)
+                    EmailChangeRequestAPIView,
+                    EmailChangeConfirmEditAPIView)
 
 from rest_framework.documentation import include_docs_urls
 
 urlpatterns = [
-    path('docs/', include_docs_urls(title='My API title', public=False, description='test')),
+    path('docs/', include_docs_urls(title='My API title', public=False, description='Talos Rest API overview')),
 
-    # METHOD POST domain/v1/session
-    path('basic_login/', BasicLoginAPIView.as_view(), name='talos-basic-login'),
-    # METHOD DELETE domain/v1/session
-    path('logout', LogoutAPIView.as_view()),
+    path('session', SessionAPIView.as_view(), name='talos-rest-sessions'),
 
-    path('principal', PrincipalRegistrationRequestEditAPIView.as_view(),
+    path('principal/registration_request', PrincipalRegistrationRequestEditAPIView.as_view(),
          name='talos-rest-principal-regisration-request'),
-    path('token/<slug:secret>',
+    path('registration_token/<slug:secret>',
          PrincipalRegistrationTokenValidationAPIView.as_view(),
-         name='talos-principal-token-validation'),
-    path('principal-registration-confirm-edit/<slug:secret>',
+         name='talos-rest-principal-token-validation'),
+    path('principal/registration_token/<slug:secret>',
          PrincipalRegistrationConfirmationAPIView.as_view(),
-         name='talos-principal-registration-confirm-edit'),
+         name='talos-rest-principal-registration-confirm'),
 
-    path('email-change-request-edit/', EmailChangeRequestEditAPIView.as_view(), name='talos-email-change-request-edit'),
-    path('email-change-confirm-edit/<slug:secret>', EmailChangeConfirmEditAPIView.as_view(), name='talos-email-change-confirm-edit'),
+    path('principal/email/request', EmailChangeRequestAPIView.as_view(), name='talos-email-change-request'),
+    path('principal/email/email_change_token/<slug:secret>', EmailChangeConfirmEditAPIView.as_view(), name='talos-email-change-confirm'),
     # TODO VERSIONING
     # re_path(r'^(?P<version>(v1|v2))/bookings/$',BasicLoginAPIView.as_view(),name='bookings-list'),
-
-    path('google-authenticator/', GoogleAuthenticationActivateView.as_view(), name='google-authenticator-activate'),
-    path('google-authenticator/verify', GoogleAuthenticatorVerifyView.as_view(), name='google-authenticator-verify'),
-    path('google-authenticator/delete', GoogleAuthenticatorDeleteView.as_view(), name='google-authenticator-delete'),
 ]

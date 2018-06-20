@@ -18,14 +18,12 @@ class InternalGoogleAuthenticator(object):
         base32_secret = pyotp.random_base32()
         otp_credential.salt = base32_secret.encode()
         otp_credential.save()
-        return otp_credential.salt
 
     def verify_credentials(self, principal, credentials):
         from ..models import _tznow
         from ..models import BasicCredential, OneTimePasswordCredential
-        import pyotp
-
         code = credentials['code']
+        import pyotp
 
         try:
             otp_credential = self._credential_directory.credentials.get(
@@ -37,11 +35,6 @@ class InternalGoogleAuthenticator(object):
             totp = pyotp.TOTP(secret_key)
 
             if totp.verify(code):
-                # If verified and not activated, this means verificiation
-                # happens first time
-                if otp_credential.is_activated is False:
-                    otp_credential.is_activated = True
-                    otp_credential.save()
                 return True
         except OneTimePasswordCredential.DoesNotExist as ex:
             pass
@@ -109,11 +102,6 @@ class InternalPhoneSMS(object):
 
             secret_key = otp_credential.salt.decode()
             if secret_key == code:
-                # If verified and is_activated is False this means
-                # activation happens first time
-                if otp_credential.is_activated is False:
-                    otp_credential.is_activated = True
-                    otp_credential.save()
                 return True
         except OneTimePasswordCredential.DoesNotExist as ex:
             pass
