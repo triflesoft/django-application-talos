@@ -17,13 +17,13 @@ Including another URLconf
 from django.urls import path
 
 from .views import SessionAPIView, EmailChangeRequestAPIView, \
-    GoogleAuthenticationActivateRequestView, \
+    GoogleAuthenticationActivateRequestView,  \
     GoogleAuthenticatorDeleteView, PrincipalSecurityLevelView, \
     GeneratePhoneCodeForAuthorizedUserView, VerifyPhoneCodeForAuthorizedUserView, \
     ChangePasswordInsecureView, ChangePasswordSecureView, AddSMSEvidenceView, \
     AddGoogleEvidenceView, GeneratePhoneCodeForUnAuthorizedUserView, \
     VerifyPhoneCodeForUnAuthorizedUserView, EmailChangeValidationTokenCheckerAPIView, \
-    BasicRegistrationView, PasswordResetRequestView,  \
+    BasicRegistrationView, PasswordResetRequestView, PasswordResetConfirmView, \
     GoogleAuthenticatorDeleteRequestView, GoogleAuthenticatorActivateConfirmView, \
     EmailResetRequestAPIView, EmailResetValidationTokenCheckerAPIView, \
     GoogleAuthenticatorChangeRequestView, GoogleAuthenticatorChangeConfirmView, \
@@ -33,7 +33,7 @@ from .views import SessionAPIView, EmailChangeRequestAPIView, \
     PhoneResetInsecureAPIView, PhoneResetSecureAPIView, PrincipalSecurityLevelByTokenView, \
     EmailResetInsecureAPIView, \
     EmailResetSecureAPIView, ProvidedEvidencesView, TestView, PasswordChangeInsecureView, \
-    PasswordChangeSecureView, PasswordResetInsecureView, PasswordResetSecureView
+    PasswordChangeSecureView
 
 from rest_framework.documentation import include_docs_urls
 
@@ -67,8 +67,6 @@ urlpatterns = [
     path('principal/reset-email-secure', EmailResetSecureAPIView.as_view(),
          name='email-reset-secure'),
 
-
-
     # Phone Change
     path('principal/phone/change-request', PhoneChangeRequestAPIView.as_view(), name='phone-change-request'),
     path('phone/phone_change_token/<slug:secret>', PhoneChangeValidationTokenCheckerAPIView.as_view(),
@@ -89,16 +87,6 @@ urlpatterns = [
     path('principal/reset-phone-secure', PhoneResetSecureAPIView.as_view(),
          name='phone-reset-secure'),
 
-    # Password reset
-    path('principal/password/reset-request', PasswordResetRequestView.as_view(),
-         name='password-reset-request'),
-
-    path('principal/password/reset/insecure', PasswordResetInsecureView.as_view(),
-         name='password-reset-insecure'),
-
-    path('principal/password/reset/secure', PasswordResetSecureView.as_view(),
-         name='password-reset-secure'),
-
     # TODO VERSIONING
     # re_path(r'^(?P<version>(v1|v2))/bookings/$',BasicLoginAPIView.as_view(),name='bookings-list'),
 
@@ -110,7 +98,7 @@ urlpatterns = [
     path('google-authenticator/delete/request', GoogleAuthenticatorDeleteRequestView.as_view(),
          name='google-authenticator-delete-request'),
     path('google-authenticator/delete/confirm', GoogleAuthenticatorDeleteView.as_view(),
-         name='google-authenticator-delete-confirm'),
+         name='google-authenticator-delete'),
     path('google-authenticator/change/request', GoogleAuthenticatorChangeRequestView.as_view(),
          name='google-authenticator-change-request'),
     path('google-authenticator/change/confirm', GoogleAuthenticatorChangeConfirmView.as_view(),
@@ -146,7 +134,11 @@ urlpatterns = [
 
     path('basic-registration', BasicRegistrationView.as_view(), name='basic-registration'),
 
+    path('password-reset-request', PasswordResetRequestView.as_view(),
+         name='password-reset-request'),
 
+    path('password-reset-confirm', PasswordResetConfirmView.as_view(),
+         name='password-reset-confirm'),
 
     path('provided-evidences', ProvidedEvidencesView.as_view(), name='provided-evidences'),
 
