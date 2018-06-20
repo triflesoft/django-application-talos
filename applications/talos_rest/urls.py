@@ -20,7 +20,7 @@ from .views import SessionAPIView, EmailChangeRequestAPIView, \
     GoogleAuthenticationActivateRequestView, GoogleAuthenticatorVerifyView, \
     GoogleAuthenticatorDeleteView, PrincipalSecurityLevelView, \
     GeneratePhoneCodeForAuthorizedUserView, VerifyPhoneCodeForAuthorizedUserView, \
-    ChangePasswordInsecureView, ChangePasswordSecureView, AuthorizationUsingSMSView, \
+    ChangePasswordInsecureView, ChangePasswordSecureView, AddSMSEvidenceView, \
     AuthorizationUsingGoogleAuthenticatorView, GeneratePhoneCodeForUnAuthorizedUserView, \
     VerifyPhoneCodeForUnAuthorizedUserView, EmailChangeValidationTokenCheckerAPIView, \
     BasicRegistrationView, PasswordResetRequestView, PasswordResetConfirmView, \
@@ -31,7 +31,7 @@ from .views import SessionAPIView, EmailChangeRequestAPIView, \
     PhoneChangeValidationTokenCheckerAPIView, PhoneChangeRequestAPIView, PhoneChangeSecureAPIView, \
     PhoneChangeInsecureAPIView, PhoneResetRequestAPIView, PhoneResetValidationTokenCheckerAPIView, \
     PhoneResetInsecureAPIView, PhoneResetSecureAPIView, PrincipalSecurityLevelByTokenView, EmailResetInsecureAPIView, \
-    EmailResetSecureAPIView, ProvidedEvidencesView, TestView, PasswordChangeInsecureView
+    EmailResetSecureAPIView, ProvidedEvidencesView, TestView, PasswordChangeInsecureView, PasswordChangeSecureView
 
 from rest_framework.documentation import include_docs_urls
 
@@ -121,9 +121,9 @@ urlpatterns = [
     path('change-password-secure', ChangePasswordSecureView.as_view(),
          name='change-password-secure'),
 
-    path('auth/login-phone', AuthorizationUsingSMSView.as_view(), name='authorization-using-sms'),
-    path('auth/login-otp', AuthorizationUsingGoogleAuthenticatorView.as_view(),
-         name='authorization-using-google-authenticator'),
+    path('evidence/sms', AddSMSEvidenceView.as_view(), name='add-evidence-sms'),
+    path('evidence/google', AuthorizationUsingGoogleAuthenticatorView.as_view(),
+         name='add-evidence-google'),
 
     path('phone-verification/generate', GeneratePhoneCodeForUnAuthorizedUserView.as_view(),
          name='generate-phone-code-for-unauthorized-user'),
@@ -144,5 +144,7 @@ urlpatterns = [
     path('test', TestView.as_view(), name='test'),
 
     path('password-change-insecure', PasswordChangeInsecureView.as_view(), name='password-change-insecure'),
+
+    path('password-change-secure', PasswordChangeSecureView.as_view(), name='password-change-secure'),
 
 ]
