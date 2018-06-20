@@ -603,6 +603,7 @@ class EmailResetSecureAPIView(SecureAPIViewBaseView):
         else:
             raise APIValidationError(detail=serializer.errors)
 
+
 class PhoneChangeRequestAPIView(SecureAPIViewBaseView):
     serializer_class = PhoneChangeRequestSerializer
 
@@ -719,3 +720,11 @@ class PhoneResetSecureAPIView(SecureAPIViewBaseView):
             return Response(serializer.data)
         else:
             raise APIValidationError(detail=serializer.errors)
+
+
+class ProvidedEvidencesView(SecureAPIViewBaseView):
+
+    def get(self, request, *args, **kwargs):
+        evidences = list(dict(self.request.principal._evidences_effective).keys())
+        data = {'provided-evidences' : evidences}
+        return Response(data)
