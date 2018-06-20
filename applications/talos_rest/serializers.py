@@ -392,28 +392,84 @@ class GoogleAuthenticatorVerifySerializer(serializers.Serializer):
             self.principal._evidences_effective[otp_evidence.code] = otp_evidence
 
 
-class GoogleAuthenticatorDeleteSerializer(serializers.Serializer):
-    code = serializers.CharField()
+class GoogleAuthenticatorDeleteRequestSerializer(serializers.Serializer):
 
     def __init__(self, *args, **kwargs):
         from talos.models import OneTimePasswordCredentialDirectory
         passed_kwargs_from_view = kwargs.get('context')
         self.request = passed_kwargs_from_view['request']
         self.principal = self.request.principal
+        super(GoogleAuthenticatorDeleteRequestSerializer, self).__init__(*args, **kwargs)
+
+    def validate(self, attrs):
+        return attrs
+
+    def save(self):
+        from talos.models import ValidationToken
+
+        validation_token = ValidationToken()
+        validation_token.email = self.principal.email
+        validation_token.type = 'otp_delete'
+        validation_token.save()
+
+
+
+
+class GoogleAuthenticatorDeleteSerializer(serializers.Serializer):
+    token = serializers.CharField()
+    sms_code = serializers.CharField()
+    otp_code = serializers.CharField()
+    password = serializers.CharField()
+
+    def __init__(self, *args, **kwargs):
+        from talos.models import OneTimePasswordCredentialDirectory
+        from talos.models import BasicIdentityDirectory
+        passed_kwargs_from_view = kwargs.get('context')
+        self.request = passed_kwargs_from_view['request']
+        self.principal = self.request.principal
+        self.validation_token = None
+        self.basic_identity_directory = BasicIdentityDirectory.objects.get(
+            code=passed_kwargs_from_view['identity_directory_code'])
+        self.basic_credential_directory = self.basic_identity_directory.credential_directory
         self.otp_credential_directory = OneTimePasswordCredentialDirectory.objects.get(pk=1)
+        self.sms_credential_directory = OneTimePasswordCredentialDirectory.objects.get(pk=2)
         super(GoogleAuthenticatorDeleteSerializer, self).__init__(*args, **kwargs)
 
-    def validate_code(self, code):
+    def validate_otp_code(self, code):
         if self.otp_credential_directory and not self.otp_credential_directory.verify_credentials(self.principal,
                                                                                                   {'code': code}):
             raise serializers.ValidationError('Your code is incorrect')
         return code
+
+    def validate_sms_code(self, sms_code):
+        if self.sms_credential_directory and not self.sms_credential_directory.verify_credentials(self.principal,
+                                                                                                  {'code' : sms_code}):
+            raise serializers.ValidationError('Your code is incorrect')
+        return sms_code
+
+    def validate_password(self, password):
+        if self.basic_credential_directory and not self.basic_credential_directory.verify_credentials(self.principal,
+                                                                                                      {'password' : password}):
+            raise serializers.ValidationError('Your code is incorrect')
+        return password
+
+    def validate_token(self, token):
+        from talos.models import ValidationToken
+        try:
+            self.validation_token = ValidationToken.objects.get(email=self.principal.email,
+                                                                secret=token,
+                                                                is_active=True)
+        except ValidationToken.DoesNotExist:
+            raise serializers.ValidationError('Your token is invalid')
+        return
 
     def delete(self):
         if self.otp_credential_directory:
             self.otp_credential_directory.reset_credentials(self.principal,
                                                             self.principal,
                                                             {})
+        self.validation_token.is_active = False
+        self.validation_token.save()
 
 
 class GeneratePhoneCodeForAuthorizedUserSerializer(serializers.Serializer):

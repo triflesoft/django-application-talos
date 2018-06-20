@@ -29,7 +29,7 @@ from talos_test_app.serializers import (SessionSerializer,
                                         GeneratePhoneCodeForUnAuthorizedUserSerializer,
                                         VerifyPhoneCodeForUnAuthorizedUserSerializer,
                                         BasicRegistrationSerializer, PasswordResetRequestSerializer,
-                                        PasswordResetConfirmSerializer)
+                                        PasswordResetConfirmSerializer, GoogleAuthenticatorDeleteRequestSerializer)
 
 
 class TranslationContextMixin(object):
@@ -221,7 +221,9 @@ class EmailChangeConfirmEditAPIView(SecureAPIViewBaseView):
 
 # Google Authentication
 class GoogleAuthenticationActivateView(SecureAPIViewBaseView):
+    permission_classes = (IsAuthenticated, )
     serializer_class = GoogleAuthenticatorActivateSerializer
+    identity_directory_code = 'basic_internal'
 
     def get(self, request, *args, **kwargs):
         print(request.principal)
@@ -253,8 +255,26 @@ class GoogleAuthenticatorVerifyView(SecureAPIViewBaseView):
         return Response({"text": "verify post"})
 
 
+class GoogleAuthenticatorDeleteRequestView(SecureAPIViewBaseView):
+
+    permission_classes = (IsAuthenticated, )
+    serializer_class = GoogleAuthenticatorDeleteRequestSerializer
+
+    def get(self, request, *args, **kwargs):
+        return Response({"text" : "Google Authenticator Delete"})
+
+    def post(self, request, *args, **kwargs):
+        kwargs = super(GoogleAuthenticatorDeleteRequestView, self).get_serializer_context()
+        serializer = GoogleAuthenticatorDeleteRequestSerializer(data=request.data, context=kwargs)
+        if serializer.is_valid(raise_exception=True):
+            serializer.save()
+            return Response({"text" : "Email has been sent"})
+
+
 class GoogleAuthenticatorDeleteView(SecureAPIViewBaseView):
+    permission_classes = (IsAuthenticated,)
     serializer_class = GoogleAuthenticatorDeleteSerializer
+    identity_directory_code = 'basic_internal'
 
     def get(self, request, *args, **kwargs):
         return Response({"text": "Delete Credential"})
