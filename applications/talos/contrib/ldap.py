@@ -54,31 +54,49 @@ class LdapConnection():
         return connection
 
     def check_credentials(self, username, password):
+        # If user principal name is entered (example@server.com)
         if '@' in username:
             search_filter = "userPrincipalName"
-            search_base = self.user_search_base
             search_value = username
+
+        # If user NetBios\sAMAccountName is entered
         elif "\\" in username:
+            net_bios_name = username.split('\\')[0]
+            username = username.split('\\')[1]
+
             self.connection.search(search_base=self.cn_search_base,
                                    search_filter='(netbiosname=*)',
                                    attributes=['*']
                                    )
             net_bios_name_entries = self.connection.entries
+
             if len(net_bios_name_entries) == 0:
                 raise LDAPAttributeError("NetBos name not found")
-            print (self.connection.entries[0]['nCName'])
-            username = username.split('\\')[1]
-        else:
-            search_base = self.user_search_base
-            search_filter = "sAMAccountName"
-            search_value = username
 
-        self.connection.search(search_base=search_base,
+            # If user input netbios name match netbios name searched in LDAP
+            elif net_bios_name != self.connection.entries[0]['nETBIOSName']:
+                raise LDAPInvalidCredentialsResult("Invalid NetBios name")
+
+            # If dc=server, dc=com is matched to read domain controller
+            elif self.user_search_base != self.connection.entries[0]['nCName']:
+                raise LDAPInvalidCredentialsResult("Invalid NetBios name")
+
+            search_value = username
+            search_filter = "sAMAccountName"
+
+        else:
+            search_value = username
+            search_filter = "sAMAccountName"
+
+        self.connection.search(search_base=self.user_search_base,
                                search_filter='({search_filter}={search_value})'.format(
                                    search_filter=search_filter,
                                    search_value=search_value),
-                               attributes=['*'], get_operational_attributes=True
+                               attributes='userPrincipalName'
                                )
+        # If no user found
+        if len(self.connection.entries) != 1:
+            raise LDAPInvalidCredentialsResult('Username not found in LDAP')
 
         userPrincipalName = str(self.connection.entries[0]['userPrincipalName'])
 
