@@ -15,7 +15,9 @@ from talos_test_app.serializers import (BasicLoginSerializer,
                                         PrincipalRegistrationConfirmSerializer,
                                         PrincipalRegistrationTokenValidationSerializer,
                                         EmailChangeRequestSerializer,
-                                        EmailChangeConfirmSerializer)
+                                        EmailChangeConfirmSerializer,
+                                        GoogleAuthenticatorActivateSerializer,
+                                        GoogleAuthenticatorVerifySerializer)
 
 class TranslationContextMixin(object):
     def get_context_data(self, **kwargs):
@@ -237,3 +239,40 @@ class EmailChangeConfirmEditAPIView(SecureAPIViewBaseView):
             return Response({"text": "email change request done"})
         else:
             raise APIValidationError(detail=dict(serializer.errors.items()))
+
+
+# Google Authentication
+class GoogleAuthenticationActivateView(SecureAPIViewBaseView):
+
+    serializer_class = GoogleAuthenticatorActivateSerializer
+
+    def get(self, request, *args, **kwargs):
+        print(request.principal)
+        print(request.principal._evidences_effective)
+        return Response({"text" : "Google Authentication"})
+
+    def post(self, request, *args, **kwargs):
+        kwargs = super(GoogleAuthenticationActivateView, self).get_serializer_context()
+        serializer = GoogleAuthenticatorActivateSerializer(data=request.data, context=kwargs)
+        if serializer.is_valid(raise_exception=False):
+            serializer.save()
+            return Response({"secret-code" : serializer.salt})
+        else:
+            return Response({"errors" : serializer.errors.items()})
+
+
+class GoogleAuthenticatorVerifyView(SecureAPIViewBaseView):
+    serializer_class = GoogleAuthenticatorVerifySerializer
+
+    def get(self, request, *args, **kwargs):
+        return Response({"text" : "verify get"})
+
+    def post(self, request, *args, **kwargs):
+        kwargs = super(GoogleAuthenticatorVerifyView, self).get_serializer_context()
+        serializer = GoogleAuthenticatorVerifySerializer(data=request.data, context=kwargs)
+        if serializer.is_valid(raise_exception=True):
+            print("serializer is true")
+            serializer.save()
+            return Response({"text" : "Your code is correct"})
+        return Response({"text" : "verify post"})
+    

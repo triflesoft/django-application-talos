@@ -20,7 +20,9 @@ from .views import (BasicLoginAPIView, PrincipalRegistrationRequestEditAPIView,
                     PrincipalRegistrationTokenValidationAPIView,
                     LogoutAPIView,
                     EmailChangeRequestEditAPIView,
-                    EmailChangeConfirmEditAPIView)
+                    EmailChangeConfirmEditAPIView,
+                    GoogleAuthenticationActivateView,
+                    GoogleAuthenticatorVerifyView)
 
 from rest_framework.documentation import include_docs_urls
 
@@ -45,4 +47,8 @@ urlpatterns = [
     path('email-change-confirm-edit/<slug:secret>', EmailChangeConfirmEditAPIView.as_view(), name='talos-email-change-confirm-edit'),
     # TODO VERSIONING
     # re_path(r'^(?P<version>(v1|v2))/bookings/$',BasicLoginAPIView.as_view(),name='bookings-list'),
+
+    path('google-authenticator/', GoogleAuthenticationActivateView.as_view(), name='google-authenticator-activate'),
+    path('google-authenticator/verify', GoogleAuthenticatorVerifyView.as_view(), name='google-authenticator-verify'),
+
 ]
