@@ -10,15 +10,20 @@ HTTP_HOST = 'localhost:8000'
 
 
 class TestUtils(APITestCase):
+    full_name = 'bixtrim'
+    email = 'at@bixtrim.com'
+    password = 'bixtrim_password'
+    phone = '+995555555555'
+
     def __init__(self, *args, **kwargs):
         self.set_values()
         super(TestUtils, self).__init__(*args, **kwargs)
 
     def set_values(self,
-                   full_name='bixtrim',
-                   email='at@bixtrim.com',
-                   password='bixtrim_password',
-                   phone='+995555555555'):
+                   full_name=full_name,
+                   email=email,
+                   password=password,
+                   phone=phone):
         self.full_name = full_name
         self.email = email
         self.password = password
@@ -30,8 +35,8 @@ class TestUtils(APITestCase):
         from talos.models import BasicIdentityDirectory
 
         principal = Principal.objects.create(full_name=self.full_name,
-                                            phone=self.phone,
-                                            email=self.email)
+                                             phone=self.phone,
+                                             email=self.email)
 
         principal.set_password(self.password)
         principal.save()
@@ -42,6 +47,16 @@ class TestUtils(APITestCase):
         basic_identity.directory = BasicIdentityDirectory.objects.get(code='basic_internal')
         basic_identity.save()
 
+    def login(self):
+
+        data = {
+            'email': self.email,
+            'password': self.password
+        }
+        url = reverse('talos-rest-sessions')
+
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
 class TestRegistration(APITestCase):
     def test_registration(self):
@@ -93,17 +108,88 @@ class TestRegistration(APITestCase):
         self.assertTrue(response.data.get('error', False))
 
 
-class TestLogin(TestUtils):
+class TestSessions(TestUtils):
+    url = reverse('talos-rest-sessions')
+
     def test_user_login(self):
         self.create_user()
 
-        url = reverse('talos-rest-sessions')
-
         data = {
-            'email' : self.email,
-            'password' : self.password
+            'email': self.email,
+            'password': self.password
         }
 
-        response = self.client.post(url, data, format='json')
+        response = self.client.post(self.url, data, format='json')
+        response_data = response.data
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response_data['status'], status.HTTP_200_OK)
+        self.assertEqual(response_data['result']['email'], self.email)
+
+    def test_user_login_incorrect_credentials(self):
+        self.create_user()
+
+
+        data = {
+            'email': 'test@test.ge',
+            'password': 'test'
+        }
+
+        response = self.client.post(self.url, data, format='json')
+        response_data = response.data
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response_data['status'], status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response_data['error']['email'][0], 'username_invalid')
+
+    def test_user_login_invalid_credentials(self):
+        self.create_user()
+
+
+        data = {}
+
+        response = self.client.post(self.url, data, format='json')
+        response_data = response.data
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response_data['status'], status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response_data['error']['email'][0], 'required')
+        self.assertEqual(response_data['error']['password'][0], 'required')
+        self.assertTrue(response_data.get('details'), False)
+
+    def test_get_session_after_successful_login(self):
+        from talos.models import  Session
+
+        self.create_user()
+        self.login()
+
+        session = Session.objects.last()
+
+        response = self.client.get(self.url)
+        response_data = response.data
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response_data['status'], status.HTTP_200_OK)
+        self.assertEqual(session.uuid, response_data['result']['session_id'])
+
+    def test_get_session_when_no_login(self):
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data['status'], status.HTTP_404_NOT_FOUND)
+
+    def logout_when_user_isnot_log_in(self):
+        response = self.client.delete(self.url)
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data['status'], status.HTTP_404_NOT_FOUND)
+
+    def logout_when_user_is_log_in(self):
+        self.create_user()
+        self.login()
+
+        response = self.client.delete(self.url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['status'], status.HTTP_200_OK)
+
