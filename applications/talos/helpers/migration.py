@@ -186,6 +186,11 @@ class AppMigrationHelper(object):
                 code='ownership_factor_otp_token',
                 defaults={'name': 'Authenticated by OTP token.'})
 
+            evidence_ownership_factor_google_authenticator, _ = Evidence.objects.get_or_create(
+                code='ownership_factor_google_authenticator',
+                defaults={'name' : 'Authenticated by Google Authenticator'}
+            )
+
             evidence_inherence_factor, _ = Evidence.objects.get_or_create(
                 code='inherence_factor',
                 defaults={'name': 'Authenticated by something a principal is, for instance fingerprint or retina.'})
@@ -341,6 +346,7 @@ class AppMigrationHelper(object):
             for evidence in (
                     evidence_authenticated,
                     evidence_ownership_factor,
+                    evidence_ownership_factor_otp_token,
                     evidence_ownership_factor_phone):
                 OneTimePasswordCredentialDirectoryProvidedEvidence.objects.get_or_create(directory=phone_sms_credential_directory, evidence=evidence)
 
@@ -354,7 +360,8 @@ class AppMigrationHelper(object):
             for evidence in (
                     evidence_authenticated,
                     evidence_ownership_factor,
-                    evidence_ownership_factor_otp_token):
+                    evidence_ownership_factor_otp_token,
+                    evidence_ownership_factor_google_authenticator):
                 OneTimePasswordCredentialDirectoryProvidedEvidence.objects.get_or_create(directory=google_authenticator_credential_directory, evidence=evidence)
 
             anonymous_principal, _ = Principal.objects.get_or_create(

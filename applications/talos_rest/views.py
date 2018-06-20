@@ -5,6 +5,8 @@ from django.views.decorators.cache import never_cache
 from django.views.decorators.debug import sensitive_post_parameters
 
 from rest_framework.response import Response
+
+from talos_test_app import permissions
 from .utils import SuccessResponse, ErrorResponse
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.generics import GenericAPIView
@@ -728,3 +730,11 @@ class ProvidedEvidencesView(SecureAPIViewBaseView):
         evidences = list(dict(self.request.principal._evidences_effective).keys())
         data = {'provided-evidences' : evidences}
         return Response(data)
+
+
+class TestView(SecureAPIViewBaseView):
+
+    permission_classes = (permissions.IsAuthenticated, )
+
+    def get(self, request, *args, **kwargs):
+        return Response({"text" : "Test"})

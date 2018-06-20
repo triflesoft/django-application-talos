@@ -31,3 +31,5 @@ def validate_email(email):
                                           code=constants.EMAIL_INVALID_CODE)
 
 
+def validate_password(password):
+    pass
