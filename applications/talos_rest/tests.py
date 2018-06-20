@@ -83,8 +83,6 @@ class TestUtils(APITestCase):
 
         response = self.client.post(add_evidence_sms_url, data, format='json')
 
-        print(response.data)
-
     def assertResponseStatus(self, response, status = status.HTTP_200_OK):
         self.assertEquals(response.status_code, status)
         self.assertEquals(response.data['status'], status)
@@ -691,15 +689,31 @@ class TestAddSMSEvidence(TestUtils):
         self.assertEqual(response.data.get('error').get('sms_code')[0], constants.SMS_OTP_INVALID_CODE)
 
 
-    def test_something(self):
+    def test_added_provided_evidences(self):
         self.create_user()
         self.login()
-        self.add_evidence_sms()
 
         provided_evidences_url = reverse('provided-evidences')
 
         response = self.client.get(provided_evidences_url, {}, format='json')
 
-        print(response.data)
+        expected_provided_evidences = ['authenticated',
+                                       'knowledge_factor',
+                                       'knowledge_factor_password',
+                                       'knowledge_factor_password_confirmation']
 
+        self.assertResponseStatus(response, status.HTTP_200_OK)
+        self.assertListEqual(response.data.get('result').get('provided-evidences'), expected_provided_evidences)
+
+        expected_provided_evidences = ['authenticated',
+                                       'knowledge_factor',
+                                       'knowledge_factor_password',
+                                       'knowledge_factor_password_confirmation',
+                                       'ownership_factor_otp_token',
+                                       'ownership_factor_phone',
+                                       'ownership_factor']
+        self.add_evidence_sms()
+
+        response = self.client.get(provided_evidences_url, {}, format='json')
+        self.assertListEqual(response.data.get('result').get('provided-evidences'),expected_provided_evidences)
 
