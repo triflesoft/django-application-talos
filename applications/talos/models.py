@@ -798,12 +798,6 @@ class OneTimePasswordCredentialDirectory(AbstractCredentialDirectory):
 
         return self.backend_object.reset_credentials(super_principal, principal, new_credentials)
 
-    def generate_credentials(self, principal, credentials):
-        self._ensure_backend()
-
-        return self.backend_object.generate_credentials(principal, credentials)
-
-
     def save(self, *args, **kwargs):
         super(OneTimePasswordCredentialDirectory, self).save(*args, **kwargs)
         self.backend_object = None
@@ -842,6 +836,7 @@ class OneTimePasswordCredential(AbstractCredential):
     directory = models.ForeignKey(OneTimePasswordCredentialDirectory, related_name='credentials',
                                   on_delete=models.CASCADE)
     salt = models.BinaryField()
+    is_activated = models.BooleanField(default=False)
 
     class Meta:
         unique_together = [
@@ -997,6 +992,9 @@ class Principal(AbstractReplicatableModel):
             self._model_actions_effective_application.add(model_action.application)
             self._model_actions_effective_model_action[model_action.model].add(model_action.action)
 
+    def update_evidences(self, evidences):
+        for evidence in evidences:
+            self._evidences_effective[evidence.code] = evidence
 
     def _extract_authentication_context(self):
         from django.core import serializers
@@ -1051,9 +1049,6 @@ class Principal(AbstractReplicatableModel):
                 self._model_actions_effective[model_action.object.code] = model_action.object
 
         self._complete_authentication_context()
-
-    def get_current_evidence_code_list(self):
-        return list(self._evidences_effective.keys())
 
     def _load_authentication_context(self, provided_evidences):
         from collections import OrderedDict

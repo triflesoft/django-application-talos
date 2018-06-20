@@ -570,13 +570,7 @@ class AddSMSEvidenceSerializer(SMSOtpSerializerMixin, BasicSerializer):
         super(AddSMSEvidenceSerializer, self).__init__(*args, **kwargs)
 
     def save(self):
-        from talos.models import Evidence
-        evidence_codes = [evidence.code for evidence in self.sms_otp_evidences]
-        evidence_codes.extend(self.principal.get_current_evidence_code_list())
-
-        provided_evidences = Evidence.objects.filter(code__in=evidence_codes)
-
-        self.principal._load_authentication_context(provided_evidences)
+        self.principal.update_evidences(self.sms_otp_evidences)
 
 class AddGoogleEvidenceSerializer(GoogleOtpSerializerMixin, serializers.Serializer):
 
@@ -591,13 +585,7 @@ class AddGoogleEvidenceSerializer(GoogleOtpSerializerMixin, serializers.Serializ
         super(AddGoogleEvidenceSerializer, self).__init__(*args, **kwargs)
 
     def save(self):
-        from talos.models import Evidence
-        evidence_codes = [evidence.code for evidence in self.otp_evidences]
-        evidence_codes.extend(self.principal.get_current_evidence_code_list())
-
-        provided_evidences = Evidence.objects.filter(code__in=evidence_codes)
-
-        self.principal._load_authentication_context(provided_evidences)
+        self.principal.update_evidences(self.otp_evidences)
 
 
 class GeneratePhoneCodeForUnAuthorizedUserSerializer(BasicSerializer):
@@ -1543,9 +1531,9 @@ class LdapLoginSerializer(BasicSerializer):
 
     def validate_email(self, value):
 
-        email = value
+        self.email = value
 
-        self.principal = self.identity_directory.get_principal({'username': email})
+        self.principal = self.identity_directory.get_principal({'username': self.email})
 
         if not self.principal:
             raise serializers.ValidationError(
@@ -1557,12 +1545,12 @@ class LdapLoginSerializer(BasicSerializer):
                 'Username is valid, but account is disabled.',
                 code=constants.ACCOUNT_INACTIVE_CODE)
 
-        return email
+        return self.email
 
     def validate_password(self, value):
         password = value
         if self.principal and (
-                not self.credential_directory.verify_credentials(self.principal,
+                not self.credential_directory.verify_credentials(self.email,
                                                                  {'password': password})):
             raise serializers.ValidationError(
                 'Password is not valid. Note that password is case-sensitive.',
