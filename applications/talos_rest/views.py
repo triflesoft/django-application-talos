@@ -17,7 +17,7 @@ from talos_rest.serializers import SessionSerializer, \
     GoogleAuthenticatorDeleteSerializer, GeneratePhoneCodeForAuthorizedUserSerializer, \
     VerifyPhoneCodeForAuthorizedUserSerializer, ChangePasswordInsecureSerializer, \
     ChangePasswordSecureSerializer, AddSMSEvidenceSerializer, \
-    AddGoogleEvidenceSerializer, GeneratePhoneCodeForUnAuthorizedUserSerializer, \
+    AuthorizationUsingGoogleAuthenticatorSerializer, GeneratePhoneCodeForUnAuthorizedUserSerializer, \
     BasicRegistrationSerializer, PasswordResetRequestSerializer, PasswordResetConfirmSerializer, \
     GoogleAuthenticatorDeleteRequestSerializer, GoogleAuthenticatorActivateConfirmSerializer, \
     VerifyPhoneCodeForUnAuthorizedUserSerializer, EmailResetRequestSerializer, \
@@ -384,21 +384,21 @@ class AddSMSEvidenceView(SecureAPIViewBaseView):
             raise APIValidationError(serializer.errors)
 
 
-class AddGoogleEvidenceView(SecureAPIViewBaseView):
+class AuthorizationUsingGoogleAuthenticatorView(SecureAPIViewBaseView):
     permission_classes = (IsAuthenticated,)
-    serializer_class = AddGoogleEvidenceSerializer
+    serializer_class = AuthorizationUsingGoogleAuthenticatorSerializer
+
+    def get(self, request, *args, **kwargs):
+        return Response({"text": "Authorization using Google Authenticator"})
 
     def post(self, request, *args, **kwargs):
-        kwargs = super(AddGoogleEvidenceView, self).get_serializer_context()
-        serializer = AddGoogleEvidenceSerializer(data=request.data,
-                                                 context=kwargs)
+        kwargs = super(AuthorizationUsingGoogleAuthenticatorView, self).get_serializer_context()
+        serializer = AuthorizationUsingGoogleAuthenticatorSerializer(data=request.data,
+                                                                     context=kwargs)
 
-        if serializer.is_valid(raise_exception=False):
+        if serializer.is_valid(raise_exception=True):
             serializer.save()
-            success_response = SuccessResponse()
-            return Response(success_response.data, success_response.status)
-        else:
-            raise APIValidationError(serializer.errors)
+            return Response({"text": "You have logged in succesfully using Google Authenticatr"})
 
 
 class GeneratePhoneCodeForUnAuthorizedUserView(SecureAPIViewBaseView):
@@ -462,7 +462,7 @@ class BasicRegistrationView(SecureAPIViewBaseView):
 
 class EmailChangeRequestAPIView(SecureAPIViewBaseView):
     serializer_class = EmailChangeRequestSerializer
-    # permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated,)
 
     def post(self, request, *args, **kwargs):
         kwargs = super(EmailChangeRequestAPIView, self).get_serializer_context()
@@ -478,7 +478,7 @@ class EmailChangeRequestAPIView(SecureAPIViewBaseView):
 
 
 class EmailChangeValidationTokenCheckerAPIView(SecureAPIViewBaseView):
-    # permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated,)
     identity_directory_code = 'basic_internal'
     serializer_class = EmailChangeValidationTokenCheckerSerializer
 
