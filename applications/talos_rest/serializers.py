@@ -564,7 +564,7 @@ class GeneratePhoneCodeForUnAuthorizedUserSerializer(BasicSerializer):
 
         phone_validation_token = PhoneSMSValidationToken()
         phone_validation_token.phone = phone
-        phone_validation_token.save()
+        phone_validation_token.save(send_message=True)
 
 
 class VerifyPhoneCodeForUnAuthorizedUserSerializer(BasicSerializer):
