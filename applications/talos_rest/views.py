@@ -99,8 +99,8 @@ class SessionAPIView(SecureAPIViewBaseView):
             success_response = SuccessResponse()
             success_response.set_result_pairs('session_id', request.session._session.uuid)
 
-        return Response(data = success_response.data,
-                        status = success_response.status)
+        return Response(data=success_response.data,
+                        status=success_response.status)
 
     def post(self, request, *args, **kwargs):
         kwargs = super(SessionAPIView, self).get_serializer_context()
@@ -119,8 +119,8 @@ class SessionAPIView(SecureAPIViewBaseView):
         else:
             self.request.session.flush()
             success_response = SuccessResponse()
-        return Response(data = success_response.data,
-                        status = success_response.status)
+        return Response(data=success_response.data,
+                        status=success_response.status)
 
 
 class PrincipalRegistrationRequestEditAPIView(SecureAPIViewBaseView):
@@ -135,7 +135,7 @@ class PrincipalRegistrationRequestEditAPIView(SecureAPIViewBaseView):
         if serializer.is_valid(raise_exception=False):
             serializer.save()
             token = serializer.validation_token
-            data = {'token' : str(token)}
+            data = {'token': str(token)}
             data.update(serializer.data)
             return Response(data)
         else:
@@ -177,6 +177,7 @@ class PrincipalRegistrationConfirmationAPIView(SecureAPIViewBaseView):
 class EmailChangeRequestAPIView(SecureAPIViewBaseView):
     serializer_class = EmailChangeRequestSerializer
     permission_classes = (IsAuthenticated,)
+
     def post(self, request, *args, **kwargs):
         kwargs = super(EmailChangeRequestAPIView, self).get_serializer_context()
         data = request.data
@@ -210,53 +211,51 @@ class EmailChangeConfirmEditAPIView(SecureAPIViewBaseView):
 
 # Google Authentication
 class GoogleAuthenticationActivateView(SecureAPIViewBaseView):
-
     serializer_class = GoogleAuthenticatorActivateSerializer
 
     def get(self, request, *args, **kwargs):
         print(request.principal)
         print(request.principal._evidences_effective)
-        return Response({"text" : "Google Authentication"})
+        return Response({"text": "Google Authentication"})
 
     def post(self, request, *args, **kwargs):
         kwargs = super(GoogleAuthenticationActivateView, self).get_serializer_context()
         serializer = GoogleAuthenticatorActivateSerializer(data=request.data, context=kwargs)
         if serializer.is_valid(raise_exception=False):
             serializer.save()
-            return Response({"secret-code" : serializer.salt})
+            return Response({"secret-code": serializer.salt})
         else:
-            return Response({"errors" : serializer.errors.items()})
+            return Response({"errors": serializer.errors.items()})
 
 
 class GoogleAuthenticatorVerifyView(SecureAPIViewBaseView):
     serializer_class = GoogleAuthenticatorVerifySerializer
 
     def get(self, request, *args, **kwargs):
-        return Response({"text" : "verify get"})
+        return Response({"text": "verify get"})
 
     def post(self, request, *args, **kwargs):
         kwargs = super(GoogleAuthenticatorVerifyView, self).get_serializer_context()
         serializer = GoogleAuthenticatorVerifySerializer(data=request.data, context=kwargs)
         if serializer.is_valid(raise_exception=True):
             serializer.save()
-            return Response({"text" : "Your code is correct"})
-        return Response({"text" : "verify post"})
+            return Response({"text": "Your code is correct"})
+        return Response({"text": "verify post"})
 
 
 class GoogleAuthenticatorDeleteView(SecureAPIViewBaseView):
     serializer_class = GoogleAuthenticatorDeleteSerializer
 
     def get(self, request, *args, **kwargs):
-        return Response({"text" : "Delete Credential"})
+        return Response({"text": "Delete Credential"})
 
     def post(self, request, *args, **kwargs):
         kwargs = super(GoogleAuthenticatorDeleteView, self).get_serializer_context()
         serializer = GoogleAuthenticatorDeleteSerializer(data=request.data, context=kwargs)
         if serializer.is_valid(raise_exception=True):
             serializer.delete()
-            return Response({"text" : "Your credential has been deleted"})
-        return Response({"text" : "Delete credential post"})
-
+            return Response({"text": "Your credential has been deleted"})
+        return Response({"text": "Delete credential post"})
 
 
 class PrincipalSecurityLevelView(SecureAPIViewBaseView):
@@ -264,9 +263,9 @@ class PrincipalSecurityLevelView(SecureAPIViewBaseView):
     def get(self, request, *args, **kwargs):
         if request.principal.profile.is_secure:
             content = {
-                'code'      :   '200',
-                'secure'    :   'True',
-                'text'      :    'Your account is secured using OTP token'
+                'code': '200',
+                'secure': 'True',
+                'text': 'Your account is secured using OTP token'
             }
         else:
             content = {
