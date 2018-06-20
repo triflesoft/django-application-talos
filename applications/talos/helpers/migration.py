@@ -332,11 +332,11 @@ class AppMigrationHelper(object):
                 TokenCredentialDirectoryProvidedEvidence.objects.get_or_create(directory=access_token_credential_directory, evidence=evidence)
 
             phone_sms_credential_directory, _ = OneTimePasswordCredentialDirectory.objects.get_or_create(
-                code='onetimepassword_internal_google_authenticator',
+                code='onetimepassword_internal_phone_sms_authenticator',
                 defaults={
-                    'backend_class': 'talos.directory.onetimepassword_credential.InternalGoogleAuthenticator',
+                    'backend_class': 'talos.directory.onetimepassword_credential.InternalPhoneSMS',
                     'is_active': True,
-                    'name': 'Google Authenticator Internal Credential Directory'})
+                    'name': 'Phone SMS Internal Credential Directory'})
 
             for evidence in (
                     evidence_authenticated,
@@ -345,11 +345,11 @@ class AppMigrationHelper(object):
                 OneTimePasswordCredentialDirectoryProvidedEvidence.objects.get_or_create(directory=phone_sms_credential_directory, evidence=evidence)
 
             google_authenticator_credential_directory, _ = OneTimePasswordCredentialDirectory.objects.get_or_create(
-                code='onetimepassword_internal_phone_sms_authenticator',
+                code='onetimepassword_internal_google_authenticator',
                 defaults={
-                    'backend_class': 'talos.directory.onetimepassword_credential.InternalPhoneSMS',
+                    'backend_class': 'talos.directory.onetimepassword_credential.InternalGoogleAuthenticator',
                     'is_active': True,
-                    'name': 'SSL Certificate Internal Credential Directory'})
+                    'name': 'Google Authenticator Internal Credential Directory'})
 
             for evidence in (
                     evidence_authenticated,
