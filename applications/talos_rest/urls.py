@@ -20,7 +20,7 @@ from .views import (SessionAPIView, PrincipalRegistrationRequestEditAPIView,
                     PrincipalRegistrationTokenValidationAPIView,
                     EmailChangeRequestAPIView,
                     EmailChangeConfirmEditAPIView,
-                    GoogleAuthenticationActivateView,
+                    GoogleAuthenticationActivateRequestView,
                     GoogleAuthenticatorVerifyView,
                     GoogleAuthenticatorDeleteView,
                     PrincipalSecurityLevelView,
@@ -33,7 +33,8 @@ from .views import (SessionAPIView, PrincipalRegistrationRequestEditAPIView,
                     GeneratePhoneCodeForUnAuthorizedUserView,
                     VerifyPhoneCodeForUnAuthorizedUserView,
                     BasicRegistrationView,
-                    PasswordResetRequestView, PasswordResetConfirmView, GoogleAuthenticatorDeleteRequestView)
+                    PasswordResetRequestView, PasswordResetConfirmView, GoogleAuthenticatorDeleteRequestView,
+                    GoogleAuthenticatorActivateConfirmView)
 
 
 from rest_framework.documentation import include_docs_urls
@@ -57,7 +58,8 @@ urlpatterns = [
     # TODO VERSIONING
     # re_path(r'^(?P<version>(v1|v2))/bookings/$',BasicLoginAPIView.as_view(),name='bookings-list'),
 
-    path('google-authenticator', GoogleAuthenticationActivateView.as_view(), name='google-authenticator-activate'),
+    path('google-authenticator/activate/request', GoogleAuthenticationActivateRequestView.as_view(), name='google-authenticator-activate-request'),
+    path('google-authenticator/activate/confirm', GoogleAuthenticatorActivateConfirmView.as_view(), name='google-authenticator-activate-confirm'),
     path('google-authenticator/verify', GoogleAuthenticatorVerifyView.as_view(), name='google-authenticator-verify'),
     path('google-authenticator/delete/request', GoogleAuthenticatorDeleteRequestView.as_view(), name='google-authenticator-delete-request'),
     path('google-authenticator/delete/confirm', GoogleAuthenticatorDeleteView.as_view(), name='google-authenticator-delete'),

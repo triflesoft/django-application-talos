@@ -17,7 +17,7 @@ from talos_test_app.serializers import (SessionSerializer,
                                         PrincipalRegistrationTokenValidationSerializer,
                                         EmailChangeRequestSerializer,
                                         EmailChangeConfirmSerializer,
-                                        GoogleAuthenticatorActivateSerializer,
+                                        GoogleAuthenticatorActivateRequestSerializer,
                                         GoogleAuthenticatorVerifySerializer,
                                         GoogleAuthenticatorDeleteSerializer,
                                         GeneratePhoneCodeForAuthorizedUserSerializer,
@@ -29,7 +29,8 @@ from talos_test_app.serializers import (SessionSerializer,
                                         GeneratePhoneCodeForUnAuthorizedUserSerializer,
                                         VerifyPhoneCodeForUnAuthorizedUserSerializer,
                                         BasicRegistrationSerializer, PasswordResetRequestSerializer,
-                                        PasswordResetConfirmSerializer, GoogleAuthenticatorDeleteRequestSerializer)
+                                        PasswordResetConfirmSerializer, GoogleAuthenticatorDeleteRequestSerializer,
+                                        GoogleAuthenticatorActivateConfirmSerializer)
 
 
 class TranslationContextMixin(object):
@@ -220,24 +221,41 @@ class EmailChangeConfirmEditAPIView(SecureAPIViewBaseView):
 
 
 # Google Authentication
-class GoogleAuthenticationActivateView(SecureAPIViewBaseView):
+class GoogleAuthenticationActivateRequestView(SecureAPIViewBaseView):
     permission_classes = (IsAuthenticated, )
-    serializer_class = GoogleAuthenticatorActivateSerializer
+    serializer_class = GoogleAuthenticatorActivateRequestSerializer
     identity_directory_code = 'basic_internal'
 
     def get(self, request, *args, **kwargs):
-        print(request.principal)
-        print(request.principal._evidences_effective)
+        print("Activate Request")
+        print(self.request.session.__dict__)
         return Response({"text": "Google Authentication"})
 
     def post(self, request, *args, **kwargs):
-        kwargs = super(GoogleAuthenticationActivateView, self).get_serializer_context()
-        serializer = GoogleAuthenticatorActivateSerializer(data=request.data, context=kwargs)
+        kwargs = super(GoogleAuthenticationActivateRequestView, self).get_serializer_context()
+        serializer = GoogleAuthenticatorActivateRequestSerializer(data=request.data, context=kwargs)
         if serializer.is_valid(raise_exception=False):
             serializer.save()
-            return Response({"secret-code": serializer.salt})
+            return Response({"secret" : serializer.salt})
         else:
             return Response({"errors": serializer.errors.items()})
+
+
+class GoogleAuthenticatorActivateConfirmView(SecureAPIViewBaseView):
+    permission_classes = (IsAuthenticated,)
+    serializer_class = GoogleAuthenticatorActivateConfirmSerializer
+
+    def get(self, request, *args, **kwargs):
+        print("Activate Confirm")
+        print(self.request.session.__dict__)
+        return Response({"text" : "Google Authenticator Confirm"})
+
+    def post(self, request, *args, **kwargs):
+        kwargs = super(GoogleAuthenticatorActivateConfirmView, self).get_serializer_context()
+        serializer = GoogleAuthenticatorActivateConfirmSerializer(data=request.data, context=kwargs)
+        if serializer.is_valid(raise_exception=True):
+            serializer.save()
+            return Response({"text" : "Google Authenticator has been added"})
 
 
 class GoogleAuthenticatorVerifyView(SecureAPIViewBaseView):
