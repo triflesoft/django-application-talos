@@ -1284,47 +1284,6 @@ class ValidationToken(AbstractReplicatableModel):
     def __str__(self):
         return self.secret
 
-
-class PhoneSMSValidationToken(models.Model):
-    principal = models.ForeignKey(Principal, null=True, blank=True, related_name='+', on_delete=models.CASCADE,
-                                  editable=False)
-    secret = models.CharField(max_length=64, unique=True, editable=False)
-    phone = models.CharField(max_length=255)
-    expires_at = models.DateTimeField(editable=False)
-    is_active = models.BooleanField(default=True)
-    salt = models.CharField(max_length=64, default='')
-
-    def save(self, send_message=False, *args, **kwargs):
-        from binascii import hexlify
-        from datetime import timedelta
-        from os import urandom
-        from .helpers import utils
-        from .contrib.sms_sender import SMSSender
-        from rest_framework.serializers import ValidationError
-        from talos_rest import constants
-
-        if not self.secret:
-            self.secret = hexlify(urandom(32)).decode('ascii').upper()
-
-        if not self.expires_at:
-            self.expires_at = _tznow() + timedelta(minutes=5)
-
-        self.salt = utils.generate_random_number(length=6).encode()
-
-        response = True
-        if send_message:
-            sms_sender = SMSSender()
-            response = sms_sender.send_message(self.phone,
-                                        'Your registraion code is %s' % self.salt.decode())
-        super(PhoneSMSValidationToken, self).save(*args, **kwargs)
-
-        return response
-
-
-    def __str__(self):
-        return self.secret
-
-
 class PrincipalProfile(models.Model):
     principal = models.OneToOneField(Principal, related_name='profile', on_delete=models.CASCADE)
     is_secure = models.BooleanField(default=False)

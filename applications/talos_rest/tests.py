@@ -144,26 +144,34 @@ class TestRegistration(TestUtils):
 
     def test_registration_correct_input(self):
 
-        from talos.models import PhoneSMSValidationToken
+        from talos.models import ValidationToken
         from talos.models import Principal
         from talos.models import BasicIdentity
+        import pyotp
 
         phone = '+995599439670'
 
-        phone_validation_token = PhoneSMSValidationToken()
-        phone_validation_token.phone = phone
+        phone_validation_token = ValidationToken()
+        phone_validation_token.identifier = 'phone'
+        phone_validation_token.identifier_value = phone
+        phone_validation_token.type = 'principal_registration'
+        secret_key = pyotp.random_base32()
+        phone_validation_token.secret = secret_key
         phone_validation_token.save()
+
+        totp = pyotp.TOTP(secret_key)
 
         data = {
             'full_name': 'Giorgi Fafakerashvili',
             'email': 'giorgi.fafa@gmail.com',
             'password': '123456',
-            'token': phone_validation_token.secret,
-            'code': phone_validation_token.salt.decode(),
+            'token': phone_validation_token.uuid,
+            'code': totp.now(),
             'phone': phone,
         }
 
         response = self.client.post(self.url, data, format='json')
+
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data['status'], status.HTTP_201_CREATED)
@@ -231,20 +239,27 @@ class TestRegistration(TestUtils):
         self.assertEqual(response.data.get('error').get('email', '')[0], constants.EMAIL_USED_CODE)
 
     def test_registration_email_lowering(self):
-        from talos.models import PhoneSMSValidationToken
+        from talos.models import ValidationToken
         from talos.models import Principal
+        import pyotp
 
-        phone_sms_token = PhoneSMSValidationToken()
-        phone_sms_token.phone = self.phone
+        phone_sms_token = ValidationToken()
+        phone_sms_token.identifier = 'phone'
+        phone_sms_token.type = 'principal_registration'
+        phone_sms_token.identifier_value = self.phone
+        secret_key = pyotp.random_base32()
+        phone_sms_token.secret = secret_key
         phone_sms_token.save()
+
+        totp = pyotp.TOTP(secret_key)
 
         data = {
             'full_name': self.full_name,
             'email': 'At@bixtrim.com',
             'password': self.password,
-            'token': phone_sms_token.secret,
-            'code': phone_sms_token.salt,
-            'phone': phone_sms_token.phone
+            'token': phone_sms_token.uuid,
+            'code': totp.now(),
+            'phone': phone_sms_token.identifier_value
         }
 
         response = self.client.post(self.url, data, format='json')
@@ -257,19 +272,26 @@ class TestRegistration(TestUtils):
         self.assertEqual(principal.email, 'at@bixtrim.com')
 
     def test_registration_phone_token(self):
-        from talos.models import PhoneSMSValidationToken
+        from talos.models import ValidationToken
+        import pyotp
 
-        phone_sms_token = PhoneSMSValidationToken()
-        phone_sms_token.phone = self.phone
+        phone_sms_token = ValidationToken()
+        phone_sms_token.identifier = 'phone'
+        phone_sms_token.identifier_value = self.phone
+        phone_sms_token.type = 'principal_registration'
+        secret_key = pyotp.random_base32()
+        phone_sms_token.secret = secret_key
         phone_sms_token.save()
+
+        totp = pyotp.TOTP(secret_key)
 
         data = {
             'full_name': self.full_name,
             'email': 'at@bixtrim.com',
             'password': self.password,
-            'token': phone_sms_token.secret,
-            'code': phone_sms_token.salt,
-            'phone': phone_sms_token.phone
+            'token': phone_sms_token.uuid,
+            'code': totp.now(),
+            'phone': phone_sms_token.identifier_value
         }
 
         self.assertTrue(phone_sms_token.is_active)
@@ -279,10 +301,10 @@ class TestRegistration(TestUtils):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data['status'], status.HTTP_201_CREATED)
 
-        phone_sms_token_updated = PhoneSMSValidationToken.objects.last()
+        phone_sms_token_updated = ValidationToken.objects.last()
         self.assertFalse(phone_sms_token_updated.is_active)
-        self.assertEqual(phone_sms_token_updated.phone, self.phone)
-        self.assertEqual(phone_sms_token_updated.secret, phone_sms_token.secret)
+        self.assertEqual(phone_sms_token_updated.identifier_value, self.phone)
+        self.assertEqual(phone_sms_token_updated.uuid, phone_sms_token.uuid)
 
         # Use same token again for registration and check errors
 
@@ -290,8 +312,8 @@ class TestRegistration(TestUtils):
             'full_name': self.full_name,
             'email': 'different@gmail.com',
             'password': self.password,
-            'token': phone_sms_token.secret,
-            'code': phone_sms_token.salt,
+            'token': phone_sms_token.uuid,
+            'code': totp.now(),
             'phone': 'phone'
         }
 
@@ -466,7 +488,7 @@ class GeneratePhoneCodeForUnAuthorizedUser(TestUtils):
     url = reverse('generate-phone-code-for-unauthorized-user')
 
     def test_generate_phone_code(self):
-        from talos.models import PhoneSMSValidationToken
+        from talos.models import ValidationToken
 
         data = {
             'phone' : self.phone
@@ -479,8 +501,8 @@ class GeneratePhoneCodeForUnAuthorizedUser(TestUtils):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['status'], status.HTTP_200_OK)
 
-        phone_sms_token = PhoneSMSValidationToken.objects.last()
-        self.assertEqual(phone_sms_token.phone, self.phone)
+        phone_sms_token = ValidationToken.objects.last()
+        self.assertEqual(phone_sms_token.identifier_value, self.phone)
         self.assertTrue(phone_sms_token.is_active)
 
         data = {
@@ -492,11 +514,11 @@ class GeneratePhoneCodeForUnAuthorizedUser(TestUtils):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        phone_sms_token = PhoneSMSValidationToken.objects.last()
-        self.assertEqual(phone_sms_token.phone, self.phone)
+        phone_sms_token = ValidationToken.objects.last()
+        self.assertEqual(phone_sms_token.identifier_value, self.phone)
         self.assertTrue(phone_sms_token.is_active)
 
-        phone_sms_tokens = PhoneSMSValidationToken.objects.all()
+        phone_sms_tokens = ValidationToken.objects.all()
         self.assertEqual(phone_sms_tokens.count(), 2)
 
     def test_generate_invalid_phone(self):
@@ -533,32 +555,44 @@ class TestVerifyPhoneCodeForUnAuthorizedUser(TestUtils):
     url = reverse('verify-phone-code-for-unauthorized-user')
 
     def test_verify_phone_code_for_unauthorized(self):
-        from talos.models import PhoneSMSValidationToken
+        from talos.models import ValidationToken
+        import pyotp
 
-        phone_sms_token = PhoneSMSValidationToken()
-        phone_sms_token.phone = self.phone
+        phone_sms_token = ValidationToken()
+        phone_sms_token.identifier = 'phone'
+        phone_sms_token.identifier_value = self.phone
+        phone_sms_token.type = 'principal_registration'
+        secret_key = pyotp.random_base32()
+        phone_sms_token.secret = secret_key
         phone_sms_token.save()
+
+        totp = pyotp.TOTP(secret_key)
 
         data = {
             'phone' : self.phone,
-            'code' : phone_sms_token.salt
+            'code' : totp.now()
         }
 
 
         response = self.client.post(self.url, data, format='json')
 
+
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['status'], status.HTTP_200_OK)
 
         self.assertTrue(response.data.get('result').get('token', False))
-        self.assertEqual(response.data.get('result').get('token'), phone_sms_token.secret)
+        self.assertEqual(response.data.get('result').get('token'), phone_sms_token.uuid)
 
 
     def test_verify_phone_invalid_input(self):
-        from talos.models import PhoneSMSValidationToken
+        from talos.models import ValidationToken
+        import pyotp
 
-        phone_sms_token = PhoneSMSValidationToken()
-        phone_sms_token.phone = self.phone
+        phone_sms_token = ValidationToken()
+        phone_sms_token.identifier = 'phone'
+        phone_sms_token.identifier_value = self.phone
+        secret_key = pyotp.random_base32()
+        phone_sms_token.secret = secret_key
         phone_sms_token.save()
 
         data = {
@@ -574,9 +608,12 @@ class TestVerifyPhoneCodeForUnAuthorizedUser(TestUtils):
         self.assertTrue(response.data.get('error').get('code', False))
         self.assertEqual(response.data.get('error').get('code')[0], constants.SMS_OTP_INVALID_CODE)
 
+        totp = pyotp.TOTP(secret_key)
+
+
         data = {
             'phone' : 'phone_valid',
-            'code' : phone_sms_token.salt
+            'code' : totp.now()
         }
 
         response = self.client.post(self.url, data, format='json')
@@ -589,16 +626,22 @@ class TestVerifyPhoneCodeForUnAuthorizedUser(TestUtils):
 
 
     def test_verify_already_used_token(self):
-        from talos.models import PhoneSMSValidationToken
+        from talos.models import ValidationToken
+        import pyotp
 
-        phone_sms_token = PhoneSMSValidationToken()
-        phone_sms_token.phone = self.phone
+        phone_sms_token = ValidationToken()
+        phone_sms_token.identifier = 'phone'
+        phone_sms_token.identifier_value = self.phone
         phone_sms_token.is_active = False
+        secret_key = pyotp.random_base32()
+        phone_sms_token.secret = secret_key
         phone_sms_token.save()
+
+        totp = pyotp.TOTP(secret_key)
 
         data = {
             'phone' : self.phone,
-            'code' : phone_sms_token.salt
+            'code' : totp.now()
         }
 
         response = self.client.post(self.url, data, format='json')
@@ -1095,6 +1138,7 @@ class TestPasswordChangeInsecure(TestUtils):
         self.assertEqual(4, Session.objects.all().count())
 
         response = self.client.put(self.url, data, format='json')
+
 
         self.assertResponseStatus(response, status.HTTP_200_OK)
 

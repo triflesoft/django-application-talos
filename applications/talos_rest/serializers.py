@@ -617,15 +617,27 @@ class GeneratePhoneCodeForUnAuthorizedUserSerializer(BasicSerializer):
         return phone
 
     def save(self):
-        from talos.models import PhoneSMSValidationToken
+        from talos.models import ValidationToken
+        from talos.contrib.sms_sender import SMSSender
+        import pyotp
 
         phone = self.validated_data['phone']
+        phone_validation_token = ValidationToken()
+        phone_validation_token.identifier = 'phone'
+        phone_validation_token.identifier_value = phone
+        phone_validation_token.type = 'principal_registration'
+        secret_key = pyotp.random_base32()
+        phone_validation_token.secret = secret_key
+        phone_validation_token.save()
 
-        phone_validation_token = PhoneSMSValidationToken()
-        phone_validation_token.phone = phone
-        if not phone_validation_token.save(send_message=True):
-            raise serializers.ValidationError('This mobile phonve is invalid',
+        totp = pyotp.TOTP(secret_key)
+        sms_sender = SMSSender()
+        if not sms_sender.send_message(phone, 'You registration code is {}'.format(totp.now())):
+            raise serializers.ValidationError('This mobile phone is invalid',
                                               code=constants.PHONE_INVALID_CODE)
+
+
+
 
 
 class VerifyPhoneCodeForUnAuthorizedUserSerializer(BasicSerializer):
@@ -638,38 +650,68 @@ class VerifyPhoneCodeForUnAuthorizedUserSerializer(BasicSerializer):
         super(VerifyPhoneCodeForUnAuthorizedUserSerializer, self).__init__(*args, **kwargs)
 
     def validate_phone(self, phone):
-        from talos.models import PhoneSMSValidationToken
+        from talos.models import ValidationToken
         try:
-            PhoneSMSValidationToken.objects.get(phone=phone,
-                                                is_active=True)
-        except PhoneSMSValidationToken.DoesNotExist:
-            raise serializers.ValidationError('Phone does not exists', code=constants.PHONE_INVALID_CODE)
+            ValidationToken.objects.get(identifier='phone',
+                                        identifier_value=phone,
+                                        type='principal_registration',
+                                        is_active=True)
+        except ValidationToken.DoesNotExist:
+            raise serializers.ValidationError('Phone does not exists',
+                                              code=constants.PHONE_INVALID_CODE)
         self.phone = phone
         return phone
 
     def validate_code(self, code):
-        from talos.models import PhoneSMSValidationToken
+        from talos.models import ValidationToken
+        import pyotp
         try:
-            PhoneSMSValidationToken.objects.get(phone=self.phone,
-                                                is_active=True,
-                                                salt=code.encode())
-        except PhoneSMSValidationToken.DoesNotExist:
+            validation_token = ValidationToken.objects.filter(identifier='phone',
+                                                            identifier_value=self.phone,
+                                                            type='principal_registration',
+                                                            is_active=True).order_by('-id')
+            if validation_token.count() > 0:
+                validation_token = validation_token[0]
+            else:
+                raise serializers.ValidationError('Code is incorrect',
+                                                  code=constants.SMS_OTP_INVALID_CODE)
+            secret_key = validation_token.secret
+            totp = pyotp.TOTP(secret_key)
+            if not totp.verify(code):
+                raise serializers.ValidationError('Code is incorrect', code=constants.SMS_OTP_INVALID_CODE)
+        except ValidationToken.DoesNotExist:
             raise serializers.ValidationError('Code is incorrect', code=constants.SMS_OTP_INVALID_CODE)
         return code
 
     def validate(self, attrs):
+        from talos.models import ValidationToken
+        import pyotp
 
-        from talos.models import PhoneSMSValidationToken
         phone = attrs['phone']
         code = attrs['code']
 
         try:
-            phone_validation_token = PhoneSMSValidationToken.objects.get(phone=phone,
-                                                                         is_active=True,
-                                                                         salt=code.encode())
-            self.token = phone_validation_token.secret
-        except PhoneSMSValidationToken.DoesNotExist:
-            raise serializers.ValidationError('Your code is incorrect', code=constants.TOKEN_INVALID_CODE)
+            phone_validation_token = ValidationToken.objects.filter(identifier='phone',
+                                                                  identifier_value=phone,
+                                                                  type='principal_registration',
+                                                                  is_active=True).order_by('-id')
+
+            if phone_validation_token.count() > 0:
+                phone_validation_token = phone_validation_token[0]
+            else:
+                raise serializers.ValidationError('Your code is incorect',
+                                                  code=constants.TOKEN_INVALID_CODE)
+
+            secret_key = phone_validation_token.secret
+            totp = pyotp.TOTP(secret_key)
+            if not totp.verify(code):
+                raise serializers.ValidationError('Your code is incorrect',
+                                                  code=constants.TOKEN_INVALID_CODE)
+            self.token = phone_validation_token.uuid
+        except ValidationToken.DoesNotExist:
+            raise serializers.ValidationError('Your code is incorrect',
+                                              code=constants.TOKEN_INVALID_CODE)
+
         return attrs
 
     def save(self):
@@ -728,11 +770,12 @@ class BasicRegistrationSerializer(BasicSerializer):
         return phone
 
     def validate_token(self, token):
-        from talos.models import PhoneSMSValidationToken
+        from talos.models import ValidationToken
         try:
-            PhoneSMSValidationToken.objects.get(secret=token,
-                                                is_active=True)
-        except PhoneSMSValidationToken.DoesNotExist:
+            ValidationToken.objects.get(uuid=token,
+                                        is_active=True,
+                                        type='principal_registration')
+        except ValidationToken.DoesNotExist:
             raise serializers.ValidationError('Token does not exists',
                                               constants.TOKEN_INVALID_CODE)
         return token
@@ -745,17 +788,17 @@ class BasicRegistrationSerializer(BasicSerializer):
         return password
 
     def validate(self, attrs):
-        from talos.models import PhoneSMSValidationToken
+        from talos.models import ValidationToken
 
         token = attrs['token']
         phone = attrs['phone']
 
         try:
-            phone_sms_validation_token = PhoneSMSValidationToken.objects.get(phone=phone,
-                                                                             secret=token,
-                                                                             is_active=True)
-            self.token = phone_sms_validation_token
-        except PhoneSMSValidationToken.DoesNotExist:
+            self.token = ValidationToken.objects.get(identifier='phone',
+                                           identifier_value=phone,
+                                           uuid=token,
+                                           is_active=True)
+        except ValidationToken.DoesNotExist:
             raise serializers.ValidationError('Token and phone is invalid',
                                               code=constants.TOKEN_INVALID_CODE)
         return attrs
