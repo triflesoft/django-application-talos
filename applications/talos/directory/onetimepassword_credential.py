@@ -1,5 +1,3 @@
-import pyotp
-
 class InternalGoogleAuthenticator(object):
     def __init__(self, credential_directory, **kwargs):
         self._credential_directory = credential_directory
@@ -9,6 +7,7 @@ class InternalGoogleAuthenticator(object):
         from ..models import _tzmin
         from ..models import _tzmax
         from ..models import OneTimePasswordCredential
+        import pyotp
 
         otp_credential = OneTimePasswordCredential()
         otp_credential.uuid = uuid4()
@@ -23,8 +22,8 @@ class InternalGoogleAuthenticator(object):
     def verify_credentials(self, principal, credentials):
         from ..models import _tznow
         from ..models import BasicCredential, OneTimePasswordCredential
-
         code = credentials['code']
+        import pyotp
 
         try:
             otp_credential = self._credential_directory.credentials.get(
@@ -70,6 +69,7 @@ class InternalPhoneSMS(object):
         from ..models import _tzmin
         from ..models import _tzmax
         from ..helpers import utils
+        from ..contrib import twilio
 
         try:
             otp_credential = OneTimePasswordCredential.objects.get(principal=principal,
@@ -88,7 +88,7 @@ class InternalPhoneSMS(object):
             otp_credential.save()
 
         # Sending SMS using TWILIO
-        utils.send_message(principal.phone, '+19144494290', body='Your registraion code is %s' % otp_credential.salt.decode())
+        twilio.send_message(principal.phone, '+19144494290', body='Your registraion code is %s' % otp_credential.salt.decode())
 
     def verify_credentials(self, principal, credentials):
         code = credentials['code']
