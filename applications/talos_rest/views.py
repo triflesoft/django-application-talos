@@ -482,9 +482,6 @@ class GeneratePhoneCodeForUnAuthorizedUserView(SecureAPIViewBaseView):
 class VerifyPhoneCodeForUnAuthorizedUserView(SecureAPIViewBaseView):
     serializer_class = VerifyPhoneCodeForUnAuthorizedUserSerializer
 
-    def get(self, request, *args, **kwargs):
-        return Response({"text" : "Verify Phone Code For UnAuthorized user"})
-
     def post(self, request, *args, **kwargs):
         kwargs = super(VerifyPhoneCodeForUnAuthorizedUserView, self).get_serializer_context()
         serializer = VerifyPhoneCodeForUnAuthorizedUserSerializer(data=request.data, context=kwargs)
@@ -508,9 +505,11 @@ class BasicRegistrationView(SecureAPIViewBaseView):
         kwargs = super(BasicRegistrationView, self).get_serializer_context()
         serializer = BasicRegistrationSerializer(data=request.data, context=kwargs)
 
-        if serializer.is_valid(raise_exception=True):
+        if serializer.is_valid(raise_exception=False):
             serializer.save()
-            return Response({"text" : "You have registered succesfully"})
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        else:
+            raise APIValidationError(serializer.errors)
 
 
 class EmailChangeRequestAPIView(SecureAPIViewBaseView):

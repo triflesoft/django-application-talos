@@ -820,7 +820,7 @@ class VerifyPhoneCodeForUnAuthorizedUserSerializer(BasicSerializer):
         pass
 
 
-class BasicRegistrationSerializer(serializers.Serializer):
+class BasicRegistrationSerializer(BasicSerializer):
     full_name = serializers.CharField()
     email = serializers.CharField()
     password = serializers.CharField()
