@@ -547,3 +547,26 @@ class ChangePasswordSecureSerializer(serializers.Serializer):
         self.basic_credential_directory.update_credentials(self.principal,
                                                            old_credentials=old_credentials,
                                                            new_credentials=new_credentials)
+
+
+class AuthorizationUsingSMSSerializer(serializers.Serializer):
+    code = serializers.CharField()
+
+    def __init__(self, *args, **kwargs):
+        from talos.models import OneTimePasswordCredentialDirectory
+        passed_kwargs_from_view = kwargs.get('context')
+        self.request = passed_kwargs_from_view['request']
+        self.principal = self.request.principal
+        self.sms_otp_directory = OneTimePasswordCredentialDirectory.objects.get(pk=2)
+        self.sms_otp_evidences = self.sms_otp_directory.provided_evidences.all().order_by('-id')
+        super(AuthorizationUsingSMSSerializer, self).__init__(*args, **kwargs)
+
+    def validate_code(self, code):
+        if not self.sms_otp_directory.verify_credentials(self.principal,
+                                                         {'code' : code}):
+            raise serializers.ValidationError('Code is incorrect')
+        return code
+
+    def save(self):
+        for sms_otp_evidence in self.sms_otp_evidences:
+            self.principal._evidences_effective[sms_otp_evidence.code] = sms_otp_evidence

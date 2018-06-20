@@ -23,7 +23,8 @@ from talos_test_app.serializers import (SessionSerializer,
                                         GeneratePhoneCodeForAuthorizedUserSerializer,
                                         VerifyPhoneCodeForAuthorizedUserSerializer,
                                         ChangePasswordInsecureSerializer,
-                                        ChangePasswordSecureSerializer)
+                                        ChangePasswordSecureSerializer,
+                                        AuthorizationUsingSMSSerializer)
 
 
 class TranslationContextMixin(object):
@@ -350,3 +351,20 @@ class ChangePasswordSecureView(SecureAPIViewBaseView):
             serializer.save()
             return Response({"text" : "Your password has been changed succesfully"})
         return Response({"text" : "Change Password Secure POST Request"})
+
+
+
+class AuthorizationUsingSMSView(SecureAPIViewBaseView):
+    permission_classes = (IsAuthenticated,)
+    serializer_class = AuthorizationUsingSMSSerializer
+
+    def get(self, request, *args, **kwargs):
+        return Response({"text" : "Change Password Secure"})
+
+    def post(self, request, *args, **kwargs):
+        kwargs = super(AuthorizationUsingSMSView, self).get_serializer_context()
+        serializer = AuthorizationUsingSMSSerializer(data=request.data, context=kwargs)
+
+        if serializer.is_valid(raise_exception=True):
+            serializer.save()
+            return Response({"text" : "You have logged in succesfully using SMS Code"})
