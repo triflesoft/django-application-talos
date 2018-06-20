@@ -12,17 +12,17 @@ class Internal(object):
         basic_identity.uuid = uuid4()
         basic_identity.principal = principal
         basic_identity.directory = self._identity_directory
-        basic_identity.email = username
+        basic_identity.username = username
         basic_identity.save()
 
 
     def get_principal(self, credentials):
         from ..models import BasicIdentity
 
-        username = credentials['email']
+        username = credentials['username']
 
         try:
-            basic_identity = self._identity_directory.identities.get(email=username)
+            basic_identity = self._identity_directory.identities.get(username=username)
 
             return basic_identity.principal
         except BasicIdentity.DoesNotExist:
@@ -42,6 +42,7 @@ class Ldap(object):
 
         try:
             basic_identity = self._identity_directory.identities.get(username=username)
+
             return basic_identity.principal
         except BasicIdentity.DoesNotExist:
             pass

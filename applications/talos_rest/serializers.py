@@ -131,7 +131,7 @@ class BasicSerializer(serializers.Serializer):
 
 
 class SessionSerializer(BasicSerializer):
-    username = serializers.CharField(label='Email', help_text='Please enter email')
+    email = serializers.CharField(label='Email', help_text='Please enter email')
     password = serializers.CharField(label='Password', help_text='Please enter password')
 
     def __init__(self, *args, **kwargs):
@@ -148,11 +148,11 @@ class SessionSerializer(BasicSerializer):
 
         super(SessionSerializer, self).__init__(*args, **kwargs)
 
-    def validate_username(self, value):
+    def validate_email(self, value):
 
-        username = value
+        email = value
 
-        self.principal = self.identity_directory.get_principal({'username': username})
+        self.principal = self.identity_directory.get_principal({'username': email})
 
         if not self.principal:
             raise serializers.ValidationError(
@@ -163,13 +163,13 @@ class SessionSerializer(BasicSerializer):
             raise serializers.ValidationError(
                 'Username is valid, but account is disabled.',
                 code=constants.ACCOUNT_INACTIVE_CODE)
-        self.username = username
-        return username
+
+        return email
 
     def validate_password(self, value):
         password = value
         if self.principal and (
-                not self.credential_directory.verify_credentials(self.username,
+                not self.credential_directory.verify_credentials(self.principal,
                                                                  {'password': password})):
             raise serializers.ValidationError(
                 'Password is not valid. Note that password is case-sensitive.',
@@ -611,7 +611,9 @@ class GeneratePhoneCodeForUnAuthorizedUserSerializer(BasicSerializer):
 
         phone_validation_token = PhoneSMSValidationToken()
         phone_validation_token.phone = phone
-        phone_validation_token.save(send_message=True)
+        if not phone_validation_token.save(send_message=True):
+            raise serializers.ValidationError('This mobile phonve is invalid',
+                                              code=constants.PHONE_INVALID_CODE)
 
 
 class VerifyPhoneCodeForUnAuthorizedUserSerializer(BasicSerializer):
@@ -842,11 +844,11 @@ class EmailChangeInsecureSerializer(SMSOtpSerializerMixin, ValidatePasswordMixin
         self.token.is_active = False
         self.token.save()
 
-        basic_credential = BasicIdentity.objects.get(
+        basic_identity = BasicIdentity.objects.get(
             principal=self.principal
         )
-        basic_credential.email = self.token.identifier_value
-        basic_credential.save()
+        basic_identity.username = self.token.identifier_value
+        basic_identity.save()
         # Remove session to logout
         self.request.session.flush()
 
@@ -872,11 +874,11 @@ class EmailChangeSecureSerializer(GoogleOtpSerializerMixin, ValidateSecretWhenLo
         self.token.is_active = False
         self.token.save()
 
-        basic_credential = BasicIdentity.objects.get(
+        basic_identity = BasicIdentity.objects.get(
             principal=self.principal
         )
-        basic_credential.email = self.token.identifier_value
-        basic_credential.save()
+        basic_identity.username = self.token.identifier_value
+        basic_identity.save()
         self.request.session.flush()
         # TODO Send link to new email
         # TODO Send sms to old phone
@@ -999,11 +1001,11 @@ class EmailResetInsecureSerializer(SMSOtpSerializerMixin, ValidatePasswordMixin,
         self.token.is_active = False
         self.token.save()
 
-        basic_credential = BasicIdentity.objects.get(
+        basic_identity = BasicIdentity.objects.get(
             principal=self.principal
         )
-        basic_credential.email = self.token.identifier_value
-        basic_credential.save()
+        basic_identity.username = self.token.identifier_value
+        basic_identity.save()
         # TODO Send link to new email
         # TODO Send sms to old phone
         # TODO Send mail to old email for 5 days
@@ -1048,11 +1050,11 @@ class EmailResetSecureSerializer(SMSOtpSerializerMixin, GoogleOtpSerializerMixin
         self.token.is_active = False
         self.token.save()
 
-        basic_credential = BasicIdentity.objects.get(
+        basic_identity = BasicIdentity.objects.get(
             principal=self.principal
         )
-        basic_credential.email = self.token.identifier_value
-        basic_credential.save()
+        basic_identity.username = self.token.identifier_value
+        basic_identity.save()
         # TODO Send link to new email
         # TODO Send sms to old phone
         # TODO Send mail to old email for 5 days
@@ -1509,7 +1511,7 @@ class PasswordChangeSecureSerializer(GoogleOtpSerializerMixin, ValidatePasswordM
 
 
 class LdapLoginSerializer(BasicSerializer):
-    username = serializers.CharField(label='Email', help_text='Please enter username')
+    email = serializers.CharField(label='Email', help_text='Please enter email')
     password = serializers.CharField(label='Password', help_text='Please enter password')
 
     def __init__(self, *args, **kwargs):
@@ -1527,11 +1529,11 @@ class LdapLoginSerializer(BasicSerializer):
 
         super(LdapLoginSerializer, self).__init__(*args, **kwargs)
 
-    def validate_username(self, value):
+    def validate_email(self, value):
 
-        username = value
+        email = value
 
-        self.principal = self.identity_directory.get_principal({'username': username})
+        self.principal = self.identity_directory.get_principal({'username': email})
 
         if not self.principal:
             raise serializers.ValidationError(
@@ -1543,7 +1545,7 @@ class LdapLoginSerializer(BasicSerializer):
                 'Username is valid, but account is disabled.',
                 code=constants.ACCOUNT_INACTIVE_CODE)
 
-        return username
+        return email
 
     def validate_password(self, value):
         password = value

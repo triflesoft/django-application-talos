@@ -558,11 +558,11 @@ class BasicIdentityDirectoryOption(AbstractReplicatableModel):
 class BasicIdentity(AbstractIdentity):
     directory = models.ForeignKey(BasicIdentityDirectory, related_name='identities', on_delete=models.CASCADE)
     username = models.CharField(max_length=255)
-    email = models.CharField(max_length=255, default='default_email')
+
 
     class Meta:
         unique_together = [
-            ('directory', 'email')]
+            ('directory', 'username')]
         model_permissions = '__all__'
         related_securables = ('principal', 'directory')
         verbose_name = 'Basic Identity'
@@ -1294,7 +1294,7 @@ class PhoneSMSValidationToken(models.Model):
         from datetime import timedelta
         from os import urandom
         from .helpers import utils
-        from .contrib import twilio
+        from .contrib.sms_sender import SMSSender
         from rest_framework.serializers import ValidationError
         from talos_rest import constants
 
@@ -1306,14 +1306,14 @@ class PhoneSMSValidationToken(models.Model):
 
         self.salt = utils.generate_random_number(length=6).encode()
 
+        response = True
         if send_message:
-            try:
-                twilio.send_message(self.phone, 'bixtrim',
-                                    body='Your registraion code is %s' % self.salt.decode())
-            except Exception as e:
-                raise ValidationError('We could not send sms to this phone',
-                                      code=constants.PHONE_INVALID_CODE)
+            sms_sender = SMSSender()
+            response = sms_sender.send_message(self.phone,
+                                        'Your registraion code is %s' % self.salt.decode())
         super(PhoneSMSValidationToken, self).save(*args, **kwargs)
+
+        return response
 
 
     def __str__(self):
@@ -1326,3 +1326,14 @@ class PrincipalProfile(models.Model):
 
     def __str__(self):
         return str(self.principal) + " is secure" if self.is_secure else "is not secure"
+
+
+class SMSProviders(models.Model):
+    regex = models.CharField(max_length=100)
+    backend_class = models.CharField(max_length=255)
+    username = models.CharField(max_length=255)
+    password = models.CharField(max_length=255)
+
+    def __str__(self):
+        return self.backend_class
+
