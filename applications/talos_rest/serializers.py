@@ -157,7 +157,7 @@ class PrincipalRegistrationTokenValidationSerializer(BasicSerializer):
             raise serializers.ValidationError("Token already used", code='token_already_exist')
         return token
 
-class PrincipalRegistrationConfirmSerializer(serializers.Serializer):
+class PrincipalRegistrationConfirmSerializer(BasicSerializer):
     brief_name = serializers.CharField(label='Brief Name', max_length=255)
     full_name = serializers.CharField(label='Full Name', max_length=255)
     username = serializers.CharField(label='username', max_length=255)
@@ -246,12 +246,11 @@ class PrincipalRegistrationConfirmSerializer(serializers.Serializer):
         self.token.save()
 
 
-class EmailChangeRequestSerializer(serializers.Serializer):
+class EmailChangeRequestSerializer(BasicSerializer):
     new_email = serializers.CharField(label='New E-mail')
 
     def __init__(self, *args, **kwargs):
         self.request = kwargs['context'].get('request')
-
         del kwargs['context']
 
         super(EmailChangeRequestSerializer, self).__init__(*args, **kwargs)
@@ -271,7 +270,7 @@ class EmailChangeRequestSerializer(serializers.Serializer):
 
             raise serializers.ValidationError(
                 'Principal with provided e-mail is already registered.',
-                code='invalid_email')
+                code='email_already_exists')
         except Principal.DoesNotExist:
             pass
 
@@ -313,7 +312,7 @@ class EmailChangeRequestSerializer(serializers.Serializer):
         #     fail_silently=True)
 
 
-class EmailChangeConfirmSerializer(serializers.Serializer):
+class EmailChangeConfirmSerializer(BasicSerializer):
     new_email = serializers.CharField(
         label='New E-mail',
         max_length=255)

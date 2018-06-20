@@ -92,12 +92,14 @@ class SessionAPIView(SecureAPIViewBaseView):
 
     def get(self, request, *args, **kwargs):
         if str(self.request.user) == 'Anonymous':
-            data = SuccessResponse(code=status.HTTP_404_NOT_FOUND)
-        else:
-            data = SuccessResponse()
-            data.set_result_pairs('session_id', request.session._session.uuid)
+            # data = SuccessResponse(code=status.HTTP_404_NOT_FOUND)
+            success_response = SuccessResponse(code=status.HTTP_404_NOT_FOUND)
 
-        return Response(data.response)
+        else:
+            success_response = SuccessResponse()
+            success_response.set_result_pairs('session_id', request.session._session.uuid)
+
+        return Response(success_response.data,success_response.status)
 
     def post(self, request, *args, **kwargs):
         kwargs = super(SessionAPIView, self).get_serializer_context()
@@ -177,7 +179,7 @@ class EmailChangeRequestAPIView(SecureAPIViewBaseView):
 
         if serializer.is_valid(raise_exception=False):
             serializer.save()
-            return Response({"text": "email change request send to mail"})
+            return Response(serializer.data)
         else:
             raise APIValidationError(
                 detail=dict(serializer.errors.items()))
@@ -189,17 +191,14 @@ class EmailChangeConfirmEditAPIView(SecureAPIViewBaseView):
 
     serializer_class = EmailChangeConfirmSerializer
 
-    def get(self, request, *args, **kwargs):
-        return Response({"text": "Email change confirmation"})
-
-    def post(self, request, *args, **kwargs):
+    def PUT(self, request, *args, **kwargs):
         kwargs = super(EmailChangeConfirmEditAPIView, self).get_serializer_context()
         data = request.data
         serializer = EmailChangeConfirmSerializer(data=data, context=kwargs)
 
         if serializer.is_valid(raise_exception=False):
             serializer.save()
-            return Response({"text": "email change request done"})
+            return Response(serializer.data)
         else:
             raise APIValidationError(detail=dict(serializer.errors.items()))
 

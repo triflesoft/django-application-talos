@@ -1,16 +1,17 @@
 from rest_framework import status
 
-
 class SuccessResponse(object):
-    def __init__(self, code=status.HTTP_200_OK):
-        self.code = code
-        self.data = {"status": code,
+    def __init__(self,code=status.HTTP_200_OK):
+        self._code = code
+        self._data = {"status": code,
                      'result': {}
                      }
-
     @property
-    def response(self):
-        return self.data
+    def data(self):
+        return self._data
+    @property
+    def status(self):
+        return self._code
 
     def set_result_pairs(self, key, value):
         self.data['result'].update({key: value})
