@@ -20,7 +20,8 @@ from talos_test_app.serializers import (SessionSerializer,
                                         GoogleAuthenticatorActivateSerializer,
                                         GoogleAuthenticatorVerifySerializer,
                                         GoogleAuthenticatorDeleteSerializer,
-                                        GeneratePhoneCodeForAuthorizedUserSerializer)
+                                        GeneratePhoneCodeForAuthorizedUserSerializer,
+                                        VerifyPhoneCodeForAuthorizedUserSerializer)
 
 
 class TranslationContextMixin(object):
@@ -291,3 +292,22 @@ class GeneratePhoneCodeForAuthorizedUserView(SecureAPIViewBaseView):
         if serializer.is_valid():
             serializer.save()
         return Response({"text" : "giorgi"})
+
+class VerifyPhoneCodeForAuthorizedUserView(SecureAPIViewBaseView):
+    permission_classes = (IsAuthenticated,)
+    serializer_class = VerifyPhoneCodeForAuthorizedUserSerializer
+
+    def get(self, request, *args, **kwargs):
+        return Response({"text" : "Verify SMS Code"})
+
+    def post(self, request, *args, **kwargs):
+        kwargs = super(VerifyPhoneCodeForAuthorizedUserView, self).get_serializer_context()
+        serializer = VerifyPhoneCodeForAuthorizedUserSerializer(data=request.data, context=kwargs)
+        if serializer.is_valid(raise_exception=True):
+            serializer.save()
+            context = {
+                "code" : "200",
+                "text" : "Your code is correct"
+            }
+            return Response(context)
+        return Response({"text" : "Giorgi"})

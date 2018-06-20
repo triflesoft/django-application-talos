@@ -24,7 +24,8 @@ from .views import (SessionAPIView, PrincipalRegistrationRequestEditAPIView,
                     GoogleAuthenticatorVerifyView,
                     GoogleAuthenticatorDeleteView,
                     PrincipalSecurityLevelView,
-                    GeneratePhoneCodeForAuthorizedUserView)
+                    GeneratePhoneCodeForAuthorizedUserView,
+                    VerifyPhoneCodeForAuthorizedUserView)
 
 
 from rest_framework.documentation import include_docs_urls
@@ -56,4 +57,7 @@ urlpatterns = [
 
     path('authorized-phone-verification/generate/', GeneratePhoneCodeForAuthorizedUserView.as_view(),
          name='generate-phone-code-for-authorized-user'),
+
+    path('authorized-phone-verification/verify', VerifyPhoneCodeForAuthorizedUserView.as_view(),
+         name='verify-phone-code-for-authorized-user'),
 ]
