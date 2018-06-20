@@ -15,6 +15,12 @@ VALIDATION_TOKEN_TYPE_CHOICES = [
     ('email_change', 'E-mail change'),
 ]
 
+VALIDATION_TOKEN_IDENTIFIER_CHOICES = [
+    ('email', 'Email'),
+    ('phone', 'Phone'),
+    ('undefined', 'Undefined')
+]
+
 
 def _tznow():
     from datetime import datetime
@@ -556,7 +562,7 @@ class BasicIdentity(AbstractIdentity):
 
     class Meta:
         unique_together = [
-            ('directory', 'email')]
+            ('directory', 'username')]
         model_permissions = '__all__'
         related_securables = ('principal', 'directory')
         verbose_name = 'Basic Identity'
@@ -1239,7 +1245,9 @@ class PrincipalObjectPermission(AbstractObjectPermission):
 class ValidationToken(AbstractReplicatableModel):
     principal = models.ForeignKey(Principal, null=True, blank=True, related_name='+', on_delete=models.CASCADE,
                                   editable=False)
-    email = models.EmailField(max_length=255, editable=False)
+    # email = models.EmailField(max_length=255, editable=False)
+    identifier = models.CharField(max_length= 255, choices= VALIDATION_TOKEN_IDENTIFIER_CHOICES, editable=False, default='undefined')
+    identifier_value = models.CharField(max_length=255, null=True)
     type = models.CharField(max_length=255, choices=VALIDATION_TOKEN_TYPE_CHOICES, editable=False)
     secret = models.CharField(max_length=64, unique=True, editable=False)
     expires_at = models.DateTimeField(editable=False)
@@ -1277,13 +1285,12 @@ class PhoneSMSValidationToken(models.Model):
     is_active = models.BooleanField(default=True)
     salt = models.CharField(max_length=64, default='')
 
-    def save(self, send_message=False, *args, **kwargs):
+    def save(self, *args, **kwargs):
         from binascii import hexlify
         from datetime import timedelta
         from os import urandom
         from .helpers import utils
         from .contrib import twilio
-        from rest_framework.serializers import ValidationError
 
         if not self.secret:
             self.secret = hexlify(urandom(32)).decode('ascii').upper()
@@ -1293,13 +1300,9 @@ class PhoneSMSValidationToken(models.Model):
 
         self.salt = utils.generate_random_number(length=6).encode()
 
-        if send_message:
-            try:
-                twilio.send_message(self.phone, 'bixtrim',
-                                    body='Your registraion code is %s' % self.salt.decode())
-            except Exception as e:
-                print(e)
-                raise ValidationError('We could not send email to this phone')
+        twilio.send_message(self.phone, '+19144494290',
+                            body='Your registraion code is %s' % self.salt.decode())
+
         super(PhoneSMSValidationToken, self).save(*args, **kwargs)
 
 

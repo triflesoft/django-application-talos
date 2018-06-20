@@ -3,8 +3,8 @@ import string
 
 from twilio.rest import Client
 
-twilio_account_sid = 'AC705961ce26e39cba6946ddbdc52ccfe2'
-twilio_auth_token = '811faf06afe584ed7220bb486e9ba1e4'
+twilio_account_sid = 'AC9199f3572d9b0f0cf7709794e7221192'
+twilio_auth_token = '398580003bffe706cd9293c4931472ac'
 
 
 def send_message(to, _from, body):

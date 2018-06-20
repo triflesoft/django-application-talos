@@ -28,9 +28,16 @@ from .views import SessionAPIView, EmailChangeRequestAPIView, \
     EmailResetRequestAPIView, EmailResetValidationTokenCheckerAPIView, \
     GoogleAuthenticatorChangeRequestView, GoogleAuthenticatorChangeConfirmView, \
     GoogleAuthenticatorChangeDoneView, EmailChangeInsecureAPIView, EmailChangeSecureAPIView, \
-    PrincipalSecurityLevelByTokenView, EmailResetInsecureAPIView, EmailResetSecureAPIView, ProvidedEvidencesView
+    PrincipalSecurityLevelByTokenView, EmailResetInsecureAPIView, EmailResetSecureAPIView, \
+    PhoneChangeValidationTokenCheckerAPIView, PhoneChangeRequestAPIView, PhoneChangeSecureAPIView, \
+    PhoneChangeInsecureAPIView, PhoneResetRequestAPIView, PhoneResetValidationTokenCheckerAPIView, \
+    PhoneResetInsecureAPIView, PhoneResetSecureAPIView
 
 from rest_framework.documentation import include_docs_urls
+
+
+
+
 
 urlpatterns = [
     path('docs/', include_docs_urls(title='My API title', public=False,
@@ -42,7 +49,7 @@ urlpatterns = [
     path('principal/email/change-request', EmailChangeRequestAPIView.as_view(),
          name='email-change-request'),
     path('email/email-change-token/<slug:secret>',
-         EmailChangeValidationTokenCheckerAPIView.as_view(), name='email-token-validation'),
+         EmailChangeValidationTokenCheckerAPIView.as_view(), name='email-change-token-validation'),
     path('principal/change-email-insecure', EmailChangeInsecureAPIView.as_view(),
          name='email-change-insecure'),
     path('principal/change-email-secure', EmailChangeSecureAPIView.as_view(),
@@ -52,14 +59,32 @@ urlpatterns = [
     path('principal/email/reset-request', EmailResetRequestAPIView.as_view(),
          name='email-reset-request'),
     path('email/email_reset_token/<slug:secret>', EmailResetValidationTokenCheckerAPIView.as_view(),
-         name='email-token-validation'),
+         name='email-reset-token-validation'),
     path('principal/reset-email-insecure', EmailResetInsecureAPIView.as_view(),
          name='email-reset-insecure'),
     path('principal/reset-email-secure', EmailResetSecureAPIView.as_view(),
          name='email-reset-secure'),
 
     # Phone Change
-    # path('principal/phone/reset-request', PhoneResetRequestAPIView.as_view(), name='phone-reset-request'),
+    path('principal/phone/change-request', PhoneChangeRequestAPIView.as_view(), name='phone-change-request'),
+    path('phone/phone_change_token/<slug:secret>', PhoneChangeValidationTokenCheckerAPIView.as_view(),
+         name='phone-change-token-validation'),
+    path('principal/change-phone-insecure', PhoneChangeInsecureAPIView.as_view(),
+         name='phone-change-insecure'),
+    path('principal/change-phone-secure', PhoneChangeSecureAPIView.as_view(),
+         name='phone-change-secure'),
+
+    # Phone reset
+    path('principal/phone/reset-request', PhoneResetRequestAPIView.as_view(),
+         name='phone-reset-request'),
+    path('phone/phone_reset_token/<slug:secret>',
+         PhoneResetValidationTokenCheckerAPIView.as_view(),
+         name='phone-reset-token-validation'),
+    path('principal/reset-phone-insecure', PhoneResetInsecureAPIView.as_view(),
+         name='phone-reset-insecure'),
+    path('principal/reset-phone-secure', PhoneResetSecureAPIView.as_view(),
+         name='phone-reset-secure'),
+
     # TODO VERSIONING
     # re_path(r'^(?P<version>(v1|v2))/bookings/$',BasicLoginAPIView.as_view(),name='bookings-list'),
 
@@ -113,7 +138,4 @@ urlpatterns = [
 
     path('password-reset-confirm', PasswordResetConfirmView.as_view(),
          name='password-reset-confirm'),
-
-    path('provided-evidences', ProvidedEvidencesView.as_view(), name='provided-evidences'),
-
 ]
