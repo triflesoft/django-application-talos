@@ -24,7 +24,8 @@ from talos_test_app.serializers import (SessionSerializer,
                                         VerifyPhoneCodeForAuthorizedUserSerializer,
                                         ChangePasswordInsecureSerializer,
                                         ChangePasswordSecureSerializer,
-                                        AuthorizationUsingSMSSerializer)
+                                        AuthorizationUsingSMSSerializer,
+                                        AuthorizationUsingGoogleAuthenticatorSerializer)
 
 
 class TranslationContextMixin(object):
@@ -359,7 +360,7 @@ class AuthorizationUsingSMSView(SecureAPIViewBaseView):
     serializer_class = AuthorizationUsingSMSSerializer
 
     def get(self, request, *args, **kwargs):
-        return Response({"text" : "Change Password Secure"})
+        return Response({"text" : "Authorization Using SMS Code"})
 
     def post(self, request, *args, **kwargs):
         kwargs = super(AuthorizationUsingSMSView, self).get_serializer_context()
@@ -368,3 +369,19 @@ class AuthorizationUsingSMSView(SecureAPIViewBaseView):
         if serializer.is_valid(raise_exception=True):
             serializer.save()
             return Response({"text" : "You have logged in succesfully using SMS Code"})
+
+
+class AuthorizationUsingGoogleAuthenticatorView(SecureAPIViewBaseView):
+    permission_classes = (IsAuthenticated,)
+    serializer_class = AuthorizationUsingGoogleAuthenticatorSerializer
+
+    def get(self, request, *args, **kwargs):
+        return Response({"text" : "Authorization using Google Authenticator"})
+
+    def post(self, request, *args, **kwargs):
+        kwargs = super(AuthorizationUsingGoogleAuthenticatorView, self).get_serializer_context()
+        serializer = AuthorizationUsingGoogleAuthenticatorSerializer(data=request.data, context=kwargs)
+
+        if serializer.is_valid(raise_exception=True):
+            serializer.save()
+            return Response({"text" : "You have logged in succesfully using Google Authenticatr"})

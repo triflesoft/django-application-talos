@@ -570,3 +570,26 @@ class AuthorizationUsingSMSSerializer(serializers.Serializer):
     def save(self):
         for sms_otp_evidence in self.sms_otp_evidences:
             self.principal._evidences_effective[sms_otp_evidence.code] = sms_otp_evidence
+
+
+class AuthorizationUsingGoogleAuthenticatorSerializer(serializers.Serializer):
+    code = serializers.CharField()
+
+    def __init__(self, *args, **kwargs):
+        from talos.models import OneTimePasswordCredentialDirectory
+        passed_kwargs_from_view = kwargs.get('context')
+        self.request = passed_kwargs_from_view['request']
+        self.principal = self.request.principal
+        self.otp_credential_directory = OneTimePasswordCredentialDirectory.objects.get(pk=1)
+        self.otp_evidences = self.otp_credential_directory.provided_evidences.all().order_by('id')
+        super(AuthorizationUsingGoogleAuthenticatorSerializer, self).__init__(*args, **kwargs)
+
+    def validate_code(self, value):
+        if self.otp_credential_directory and not self.otp_credential_directory.verify_credentials(self.principal,
+                                                                                                  {'code': value}):
+            raise serializers.ValidationError('Code is incorrect')
+        return value
+
+    def save(self):
+        for otp_evidence in self.otp_evidences:
+            self.principal._evidences_effective[otp_evidence.code] = otp_evidence
