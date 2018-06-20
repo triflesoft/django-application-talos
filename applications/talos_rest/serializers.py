@@ -675,10 +675,11 @@ class BasicRegistrationSerializer(BasicSerializer):
     def validate_token(self, token):
         from talos.models import PhoneSMSValidationToken
         try:
-            PhoneSMSValidationToken.objects.get(secret=token)
+            PhoneSMSValidationToken.objects.get(secret=token,
+                                                is_active=True)
         except PhoneSMSValidationToken.DoesNotExist:
             raise serializers.ValidationError('Token does not exists',
-                                              constants.TOKEN_NOT_EXISTS_CODE)
+                                              constants.TOKEN_INVALID_CODE)
         return token
 
     def validate_password(self, password):
