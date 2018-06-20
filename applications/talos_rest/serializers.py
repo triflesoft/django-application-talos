@@ -183,53 +183,37 @@ class SessionSerializer(BasicSerializer):
         self.request.principal = self.principal
 
 
-class GoogleAuthenticatorActivateRequestSerializer(serializers.Serializer):
-    password = serializers.CharField()
-
+class GoogleAuthenticatorActivateRequestSerializer(ValidatePasswordMixin, BasicSerializer):
     def __init__(self, *args, **kwargs):
         from talos.models import OneTimePasswordCredentialDirectory
-        from talos.models import BasicIdentityDirectory
+
         passed_kwargs_from_view = kwargs.get('context')
         self.request = passed_kwargs_from_view['request']
         self.principal = self.request.principal
-        self.basic_identity_directory = BasicIdentityDirectory.objects.get(
-            code=passed_kwargs_from_view['identity_directory_code'])
-        self.basic_credential_directory = self.basic_identity_directory.credential_directory
         self.otp_credential_directory = OneTimePasswordCredentialDirectory.objects.get(
             code=GOOGLE_OTP_CREDENTIAL_DIRECTORY_CODE)
-        self.salt = None
+        self.secret = None
         super(GoogleAuthenticatorActivateRequestSerializer, self).__init__(*args, **kwargs)
-
-    def validate_password(self, password):
-        if self.basic_credential_directory and not self.basic_credential_directory.verify_credentials(self.principal,
-                                                                                                      {
-                                                                                                          'password': password}):
-            raise serializers.ValidationError('Password is incorrect', code=constants.PASSWORD_INVALID_CODE)
-        return password
 
     def validate(self, attrs):
         from talos.models import OneTimePasswordCredential
+        from talos.models import OneTimePasswordCredentialDirectory
+
         try:
-            google_otp = self.otp_credential_directory.credentials.get(principal=self.principal)
-            if google_otp.is_activated is False:
-                raise serializers.ValidationError('User has turned on google-authentictor but did not activated',
-                                                  code=constants.GOOGLE_OTP_INVALID_CODE)
-            else:
-                raise serializers.ValidationError('User has already activated Google authenticator',
-                                                  code=constants.GOOGLE_OTP_EXISTS_CODE)
+            self.otp_credential_directory.credentials.get(principal=self.principal,
+                                                          directory=self.otp_credential_directory)
+            raise serializers.ValidationError('User has already activated Google authenticator',
+                                              code=constants.GOOGLE_OTP_EXISTS_CODE)
         except OneTimePasswordCredential.DoesNotExist:
             pass
         return attrs
 
     def save(self):
         import pyotp
-        self.request.session['temp_otp_secret_key'] = pyotp.random_base32()
+        secret = pyotp.random_base32()
+        self.request.session['temp_otp_secret_key'] = secret
         self.request.session['secret_key_activated'] = True
-        # Create otp_credential for user
-        # if self.otp_credential_directory:
-        #    salt = self.otp_credential_directory.create_credentials(self.principal, {})
-        #    self.salt = salt
-        self.salt = self.request.session['temp_otp_secret_key']
+        self.secret = secret
 
 
 class GoogleAuthenticatorActivateConfirmSerializer(serializers.Serializer):
@@ -257,40 +241,18 @@ class GoogleAuthenticatorActivateConfirmSerializer(serializers.Serializer):
             raise serializers.ValidationError('Code is incorrect', code=constants.GOOGLE_OTP_INVALID_CODE)
         return code
 
-    def validate(self, attrs):
-        return attrs
-
     def save(self):
         if self.otp_credential_directory:
-            salt = self.otp_credential_directory.create_credentials(self.principal,
+            self.otp_credential_directory.create_credentials(self.principal,
                                                                     {'salt': self.request.session[
                                                                         'temp_otp_secret_key']})
             self.salt = self.request.session['temp_otp_secret_key']
+            self.principal.profile.is_secure = True
+            self.principal.profile.save()
+            del self.request.session['temp_otp_secret_key']
+            del self.request.session['secret_key_activated']
 
 
-class GoogleAuthenticatorVerifySerializer(serializers.Serializer):
-    code = serializers.CharField()
-
-    def __init__(self, *args, **kwargs):
-        from talos.models import OneTimePasswordCredentialDirectory
-        passed_kwargs_from_view = kwargs.get('context')
-        self.request = passed_kwargs_from_view['request']
-        self.principal = self.request.principal
-        self.otp_credential_directory = OneTimePasswordCredentialDirectory.objects.get(
-            code=GOOGLE_OTP_CREDENTIAL_DIRECTORY_CODE)
-        self.otp_evidences = self.otp_credential_directory.provided_evidences.all().order_by('id')
-        super(GoogleAuthenticatorVerifySerializer, self).__init__(*args, **kwargs)
-
-    def validate_code(self, value):
-        if self.otp_credential_directory and not self.otp_credential_directory.verify_credentials(
-                self.principal,
-                {'code': value}):
-            raise serializers.ValidationError('Code is incorrect', code=constants.GOOGLE_OTP_NOT_ACTIVATED_CODE)
-        return value
-
-    def save(self):
-        for otp_evidence in self.otp_evidences:
-            self.principal._evidences_effective[otp_evidence.code] = otp_evidence
 
 
 class GoogleAuthenticatorDeleteRequestSerializer(serializers.Serializer):

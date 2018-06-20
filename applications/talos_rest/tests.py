@@ -1014,3 +1014,52 @@ class TestPasswordChangeSecure(TestUtils):
         principal = Principal.objects.last()
         self.assertFalse(principal.check_password(self.password))
         self.assertTrue(principal.check_password('1234567'))
+
+class TestAddGoogleAuthenticator(TestUtils):
+    request_url = reverse('google-authenticator-activate-request')
+    confirm_url = reverse('google-authenticator-activate-confirm')
+
+
+    def test_add_google_authentictor(self):
+        from talos.models import OneTimePasswordCredentialDirectory
+        from talos.models import OneTimePasswordCredential
+        import pyotp
+
+        self.create_user()
+        self.login()
+        self.add_evidence_sms()
+
+        data = {
+            'password' : self.password
+        }
+
+        response = self.client.post(self.request_url, data, format='json')
+
+
+        self.assertResponseStatus(response, status.HTTP_200_OK)
+        self.assertTrue(response.data.get('result').get('secret', False))
+        secret = response.data.get('result').get('secret')
+
+        totp = pyotp.TOTP(secret)
+        code = totp.now()
+
+        data = {
+            'code' : code
+        }
+
+        self.assertFalse(self.principal.profile.is_secure)
+        
+        response = self.client.post(self.confirm_url, data, format='json')
+
+        self.assertResponseStatus(response, status.HTTP_201_CREATED)
+
+        google_otp_directory = OneTimePasswordCredentialDirectory.objects.get(code='onetimepassword_internal_google_authenticator')
+        otp_credential = OneTimePasswordCredential.objects.last()
+
+        self.assertEqual(otp_credential.directory, google_otp_directory)
+        self.assertEqual(otp_credential.principal, self.principal)
+        self.assertEqual(otp_credential.salt.decode(), secret)
+
+        principal = Principal.objects.get(pk=self.principal.pk)
+        self.assertTrue(principal.profile.is_secure)
+

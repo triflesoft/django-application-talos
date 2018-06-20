@@ -17,7 +17,7 @@ Including another URLconf
 from django.urls import path
 
 from .views import SessionAPIView, EmailChangeRequestAPIView, \
-    GoogleAuthenticationActivateRequestView, GoogleAuthenticatorVerifyView, \
+    GoogleAuthenticationActivateRequestView,  \
     GoogleAuthenticatorDeleteView, PrincipalSecurityLevelView, \
     GeneratePhoneCodeForAuthorizedUserView, VerifyPhoneCodeForAuthorizedUserView, \
     ChangePasswordInsecureView, ChangePasswordSecureView, AddSMSEvidenceView, \
@@ -92,8 +92,7 @@ urlpatterns = [
          name='google-authenticator-activate-request'),
     path('google-authenticator/activate/confirm', GoogleAuthenticatorActivateConfirmView.as_view(),
          name='google-authenticator-activate-confirm'),
-    path('google-authenticator/verify', GoogleAuthenticatorVerifyView.as_view(),
-         name='google-authenticator-verify'),
+
     path('google-authenticator/delete/request', GoogleAuthenticatorDeleteRequestView.as_view(),
          name='google-authenticator-delete-request'),
     path('google-authenticator/delete/confirm', GoogleAuthenticatorDeleteView.as_view(),
