@@ -3,7 +3,8 @@ from rest_framework.test import APITestCase
 from rest_framework import status
 from talos_rest import constants
 
-from talos.models import ValidationToken
+from talos.models import ValidationToken, OneTimePasswordCredential, Principal
+from talos_rest.serializers import PHONE_SMS_CREDENTIAL_DIRECTORY_CODE
 
 
 class TestUtils(APITestCase):
@@ -83,6 +84,15 @@ class TestUtils(APITestCase):
 
         response = self.client.post(add_evidence_sms_url, data, format='json')
 
+    def generate_sms_code(self,principal):
+        from talos.models import  OneTimePasswordCredentialDirectory
+        if self.principal is None:
+            raise Exception('Please run create_user() login() before this function')
+
+        sms_otp_directory = OneTimePasswordCredentialDirectory.objects.get(
+            code=PHONE_SMS_CREDENTIAL_DIRECTORY_CODE)
+        sms_otp_directory.create_credentials(principal, {})
+
     def add_evidence_google(self):
         from talos.models import OneTimePasswordCredentialDirectory
         from talos.models import OneTimePasswordCredential
@@ -90,8 +100,6 @@ class TestUtils(APITestCase):
 
         add_evidence_google_url = reverse('add-evidence-google')
 
-        if self.principal is None:
-            raise Exception('Please run create_user() login() before this function')
 
         otp_directory = OneTimePasswordCredentialDirectory.objects.get(code='onetimepassword_internal_google_authenticator')
         otp_directory.create_credentials(self.principal, {})
@@ -556,7 +564,7 @@ class TestVerifyPhoneCodeForUnAuthorizedUser(TestUtils):
 class TestEmailChange(TestUtils):
     email_change_request_url  = reverse("email-change-request")
     email_change_insecure_url = reverse("email-change-insecure")
-
+    email_change_secure_url = reverse("email-change-secure")
 
     def test_get_method_on_email_change(self):
 
@@ -681,9 +689,116 @@ class TestEmailChange(TestUtils):
         self.assertResponseStatus(response, status.HTTP_400_BAD_REQUEST)
         self.assertListEqual(response.data.get('error').get('secret'),['token_invalid'])
 
-    def test_change_email_insecure(self):
+    def test_change_email_insecure_when_no_session(self):
+        self.create_user()
         response = self.client.put(self.email_change_insecure_url)
-        print (response.data)
+        self.assertResponseStatus(response,status.HTTP_403_FORBIDDEN)
+        self.assertListEqual(response.data.get('error'),
+                             ['permission_denied', 'permission_denied', 'permission_denied',
+                              'permission_denied', 'permission_denied'])
+        self.assertListEqual(response.data.get('details'),
+                             ['authenticated', 'knowledge_factor', 'knowledge_factor_password',
+                              'ownership_factor', 'ownership_factor_otp_token'])
+
+    def test_change_email_insecure_when_no_sms_evidence(self):
+        self.create_user()
+        self.login()
+        response = self.client.put(self.email_change_insecure_url)
+        self.assertResponseStatus(response,status.HTTP_403_FORBIDDEN)
+        self.assertListEqual(response.data.get('error'),
+                             ['permission_denied', 'permission_denied', 'permission_denied'])
+        self.assertListEqual(response.data.get('details'),
+                             ['ownership_factor', 'ownership_factor_otp_token',
+                              'ownership_factor_phone'])
+
+    def test_change_email_when_no_data(self):
+        self.create_user()
+        self.login()
+        self.add_evidence_sms()
+        response = self.client.put(self.email_change_insecure_url)
+        self.assertResponseStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertDictEqual(response.data.get('error'),
+                             {'sms_code': ['required'], 'password': ['required'],
+                              'secret': ['required']})
+        self.assertDictEqual(response.data.get('details'),
+                             {'sms_code': ['This field is required.'],
+                              'password': ['This field is required.'],
+                              'secret': ['This field is required.']})
+
+    def test_change_email_when_wrong_secret(self):
+        from talos.models import OneTimePasswordCredential
+
+        self.create_user()
+        self.login()
+        self.add_evidence_sms()
+        self.generate_sms_code(self.principal)
+
+        code = (OneTimePasswordCredential.objects.last())
+        response = self.client.put(self.email_change_insecure_url, data= {'sms_code' : code.salt.decode(),
+                                                                          'password' : self.password,
+                                                                          'secret' : '1234'})
+        self.assertResponseStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertListEqual(response.data.get('error').get('secret'), ['token_invalid'])
+        self.assertListEqual(response.data.get('details').get('secret'), ['Token is not valid.'])
+
+    def test_change_email_when_wrong_sms(self):
+
+        self.create_user()
+        self.login()
+        self.add_evidence_sms()
+        self.generate_sms_code(self.principal)
+
+        validation_token = ValidationToken.objects.create(identifier = 'email',
+                                                          identifier_value=self.email,
+                                                          principal=self.principal,
+                                                          type='email_change',)
+
+        response = self.client.put(self.email_change_insecure_url, data= {'sms_code': '1234',
+                                                                          'password': self.password,
+                                                                          'secret': validation_token.secret})
+        self.assertResponseStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertListEqual(response.data.get('error').get('sms_code'), ['sms_otp_invalid'])
+        self.assertListEqual(response.data.get('details').get('sms_code'), ['OTP code is incorrect'])
+
+    def test_change_email_when_wrong_password(self):
+        self.create_user()
+        self.login()
+        self.add_evidence_sms()
+        self.generate_sms_code(self.principal)
+
+        validation_token = ValidationToken.objects.create(identifier = 'email',
+                                                          identifier_value=self.email,
+                                                          principal=self.principal,
+                                                          type='email_change',)
+        code = (OneTimePasswordCredential.objects.last())
+        response = self.client.put(self.email_change_insecure_url, data= {'sms_code': code.salt.decode(),
+                                                                          'password': '1234',
+                                                                          'secret': validation_token.secret})
+        self.assertResponseStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertListEqual(response.data.get('error').get('password'),['password_invalid'])
+        self.assertListEqual(response.data.get('details').get('password'), ['Password is incorrect'])
+
+    def test_change_email_when_success(self):
+        self.create_user()
+        self.login()
+        self.add_evidence_sms()
+        self.generate_sms_code(self.principal)
+
+        email_to_change = "change@bixtim.ge"
+        validation_token = ValidationToken.objects.create(identifier = 'email',
+                                                          identifier_value=email_to_change,
+                                                          principal=self.principal,
+                                                          type='email_change',)
+        code = (OneTimePasswordCredential.objects.last())
+
+        response = self.client.put(self.email_change_insecure_url, data= {'sms_code': code.salt.decode(),
+                                                                          'password': self.password,
+                                                                          'secret': validation_token.secret})
+
+        changed_pricipal = Principal.objects.last()
+
+        self.assertResponseStatus(response)
+        self.assertEquals(changed_pricipal.email, email_to_change)
 
 class TestAddSMSEvidence(TestUtils):
     url = reverse('add-evidence-sms')
@@ -752,6 +867,7 @@ class TestAddSMSEvidence(TestUtils):
                                        'ownership_factor_phone',
                                        'ownership_factor']
         self.add_evidence_sms()
+
 
         response = self.client.get(provided_evidences_url, {}, format='json')
         self.assertListEqual(response.data.get('result').get('provided-evidences'),expected_provided_evidences)

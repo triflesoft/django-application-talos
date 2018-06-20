@@ -32,7 +32,7 @@ from talos_rest.serializers import SessionSerializer, \
     PhoneResetSecureSerializer, PasswordChangeInsecureSerializer, PasswordChangeSecureSerializer
 
 
-from talos_rest.permissions import IsAuthenticated, IsBasicAuthenticated
+from talos_rest.permissions import IsAuthenticated, IsBasicAuthenticated, IsSecureLevelOn
 
 
 class TranslationContextMixin(object):
@@ -509,7 +509,7 @@ class EmailChangeInsecureAPIView(SecureAPIViewBaseView):
 
 
 class EmailChangeSecureAPIView(SecureAPIViewBaseView):
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated, IsSecureLevelOn,)
     serializer_class = EmailChangeSecureSerializer
 
     identity_directory_code = 'basic_internal'
