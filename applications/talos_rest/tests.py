@@ -9,151 +9,101 @@ from .utils import SuccessResponse, ErrorResponse
 HTTP_HOST = 'localhost:8000'
 
 
-class TalosRestTest(APITestCase):
-    # Principal Registration
-    # /principal/registration_request
-    registration_url = '/api/principal/registration_token/{secret}'
-    registration_data = {
-        "brief_name": 'Alexandre',
-        "full_name": 'Begijanovi',
-        "username": 'asakura',
-        "password1": '123qwe123qwe',
-        "password2": '123qwe123qwe',
-    }
+class TestUtils(APITestCase):
+    def __init__(self, *args, **kwargs):
+        self.set_values()
+        super(TestUtils, self).__init__(*args, **kwargs)
 
-    def test_principal_registration_request(self):
-        url = reverse('talos-rest-principal-regisration-request')
+    def set_values(self,
+                   full_name='bixtrim',
+                   email='at@bixtrim.com',
+                   password='bixtrim_password',
+                   phone='+995555555555'):
+        self.full_name = full_name
+        self.email = email
+        self.password = password
+        self.phone = phone
 
-        data = {'email': 'test@bixtrim.com'}
+    def create_user(self):
+        from talos.models import Principal
+        from talos.models import BasicIdentity
+        from talos.models import BasicIdentityDirectory
 
-        response = self.client.post(url, data, format='json', HTTP_HOST=HTTP_HOST)
+        principal = Principal.objects.create(full_name=self.full_name,
+                                            phone=self.phone,
+                                            email=self.email)
+
+        principal.set_password(self.password)
+        principal.save()
+
+        basic_identity = BasicIdentity()
+        basic_identity.principal = principal
+        basic_identity.email = self.email
+        basic_identity.directory = BasicIdentityDirectory.objects.get(code='basic_internal')
+        basic_identity.save()
+
+
+class TestRegistration(APITestCase):
+    def test_registration(self):
+        from talos.models import PhoneSMSValidationToken
+        from talos_rest.utils import ErrorResponse
+        from talos.models import Principal
+        from talos.models import BasicIdentity
+
+        phone = '+995599439670'
+
+        phone_validation_token = PhoneSMSValidationToken()
+        phone_validation_token.phone = phone
+        phone_validation_token.save()
+
+        url = reverse('basic-registration')
+
+        data = {
+            'full_name': 'Giorgi Fafakerashvili',
+            'email': 'giorgi.fafa@gmail.com',
+            'password': '123456',
+            'token': phone_validation_token.secret,
+            'code': phone_validation_token.salt.decode(),
+            'phone': phone,
+        }
+
+        response = self.client.post(url, data, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        principal = Principal.objects.last()
+        self.assertIsNotNone(principal)
+        self.assertEqual(principal.phone, phone)
+        self.assertEqual(principal.full_name, 'Giorgi Fafakerashvili')
+        self.assertTrue(principal.check_password('123456'))
+        self.assertEqual(principal.email, 'giorgi.fafa@gmail.com')
+
+        basic_identity = BasicIdentity.objects.last()
+        self.assertIsNotNone(basic_identity)
+        self.assertEqual(basic_identity.principal, principal)
+        self.assertEqual(basic_identity.email, principal.email)
+
+        data = {
+
+        }
+
+        response = self.client.post(url, data, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertTrue(response.data.get('error', False))
+
+
+class TestLogin(TestUtils):
+    def test_user_login(self):
+        self.create_user()
+
+        url = reverse('talos-rest-sessions')
+
+        data = {
+            'email' : self.email,
+            'password' : self.password
+        }
+
+        response = self.client.post(url, data, format='json')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        token = ValidationToken.objects.first()
-
-        self.assertDictEqual(data, response.data['result'])
-        self.assertEqual(ValidationToken.objects.count(), 1)
-        self.assertEqual(data['email'], token.email)
-
-    def test_principal_registration_request_two_times(self):
-        url = reverse('talos-rest-principal-regisration-request')
-
-        data = {'email': 'test@bixtrim.com'}
-
-        response = self.client.post(url, data, format='json', HTTP_HOST=HTTP_HOST)
-        response = self.client.post(url, data, format='json', HTTP_HOST=HTTP_HOST)
-
-        self.assertDictEqual(data, response.data['result'])
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(ValidationToken.objects.count(), 2)
-
-    def test_principal_registration_request_incorrect_mail_format(self):
-        url = reverse('talos-rest-principal-regisration-request')
-
-        data = {'email': 'test'}
-
-        response = self.client.post(url, data, format='json', HTTP_HOST=HTTP_HOST)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        compare_data = ErrorResponse()
-        compare_data.set_error_pairs('email', 'invalid_email')
-        compare_data.set_details_pairs('email', 'E-mail address is ill-formed')
-        compare_data.set_docs(response.data['docs'])
-        self.assertDictEqual(compare_data.response, response.data)
-
-    # Registration token validation.
-    # /api/registration_token/{secret}
-
-    def test_registration_token_validation_when_invalid_token(self):
-        failed_secret = '123'
-        url = '/api/registration_token/{secret}'.format(secret=failed_secret)
-        response = self.client.get(url, HTTP_HOST=HTTP_HOST)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-
-    def test_registration_token_validation_passed(self):
-        url = reverse('talos-rest-principal-regisration-request')
-        data = {'email': 'test@bixtrim.com'}
-        response = self.client.post(url, data, format='json', HTTP_HOST=HTTP_HOST)
-        token = ValidationToken.objects.first().secret
-
-        url = '/api/registration_token/{secret}'.format(secret=token)
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        compare_data = SuccessResponse()
-        compare_data.set_result_pairs('secret', token)
-        self.assertDictEqual(compare_data.response, response.data)
-
-    def test_principal_registration_invalid_token(self):
-        secret = '123'
-
-        response = self.client.post(self.registration_url.format(secret=secret),
-                                    self.registration_data, format='json', HTTP_HOST=HTTP_HOST)
-        compare_data = ErrorResponse()
-        compare_data.set_error_pairs('non_field_errors', 'invalid_token')
-        compare_data.set_details_pairs('non_field_errors', 'Token is not valid.')
-        compare_data.set_docs(response.data['docs'])
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertDictEqual(compare_data.response, response.data)
-
-    # Registration  /api/principal/registration_token/{secret}
-
-    def test_principal_registration_invalid_password(self):
-        registration_data = dict(self.registration_data)
-
-        registration_data['password1'] = '1234'
-        registration_data['password2'] = '1234'
-        # Create registration token
-        url = reverse('talos-rest-principal-regisration-request')
-        data = {'email': 'test@bixtrim.com'}
-        token_response = self.client.post(url, data, format='json', HTTP_HOST=HTTP_HOST)
-        token = ValidationToken.objects.first()
-        response = self.client.post(self.registration_url.format(secret=token),
-                                    registration_data, format='json', HTTP_HOST=HTTP_HOST)
-        compare_data = ErrorResponse()
-        compare_data.set_error_pairs('password', ['invalid', 'invalid', 'invalid'])
-        compare_data.set_details_pairs('password', [
-            'This password is too short. It must contain at least 8 characters.',
-            'This password is too common.', 'This password is entirely numeric.'])
-        compare_data.set_docs(response.data['docs'])
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertDictEqual(compare_data.response, response.data)
-
-    def test_principal_registration_when_principal_already_exists(self):
-        # Create registration token
-        url = reverse('talos-rest-principal-regisration-request')
-        data = {'email': 'test@bixtrim.com'}
-        token_response = self.client.post(url, data, format='json', HTTP_HOST=HTTP_HOST)
-        token = ValidationToken.objects.first()
-        response = self.client.post(self.registration_url.format(secret=token),
-                                    self.registration_data, format='json', HTTP_HOST=HTTP_HOST)
-        response = self.client.post(self.registration_url.format(secret=token),
-                                    self.registration_data, format='json', HTTP_HOST=HTTP_HOST)
-
-        compare_data = ErrorResponse()
-        compare_data.set_error_pairs('username', 'invalid_username')
-        compare_data.set_details_pairs('username', 'Username is already taken')
-        compare_data.set_docs(response.data['docs'])
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertDictEqual(compare_data.response, response.data)
-
-    def test_principal_registration_when_password_didnt_match(self):
-        # Create registration token
-        registration_data = dict(self.registration_data)
-        registration_data['password1'] = '123123123'
-        url = reverse('talos-rest-principal-regisration-request')
-        data = {'email': 'test@bixtrim.com'}
-        token_response = self.client.post(url, data, format='json', HTTP_HOST=HTTP_HOST)
-        token = ValidationToken.objects.first()
-        response = self.client.post(self.registration_url.format(secret=token),
-                                    registration_data, format='json', HTTP_HOST=HTTP_HOST)
-
-        compare_data = ErrorResponse()
-        compare_data.set_error_pairs('password2', 'invalid_password_confirmation')
-        compare_data.set_details_pairs('password2', 'Passwords do not match.')
-        compare_data.set_docs(response.data['docs'])
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertDictEqual(compare_data.response, response.data)
-
-    # Email change /api/principal/email/request
-    def test_principal_email_change_invalid_email(self):
-        url = reverse('talos-email-change-request')
-        data = {'email' : 'test'}
