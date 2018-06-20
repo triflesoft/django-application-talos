@@ -399,6 +399,7 @@ class GoogleAuthenticatorDeleteRequestSerializer(serializers.Serializer):
 
         validation_token = ValidationToken()
         validation_token.email = self.principal.email
+        validation_token.principal = self.principal
         validation_token.type = 'otp_delete'
         validation_token.save()
 
