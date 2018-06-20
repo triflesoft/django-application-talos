@@ -1292,6 +1292,7 @@ class PhoneSMSValidationToken(models.Model):
         from .helpers import utils
         from .contrib import twilio
         from rest_framework.serializers import ValidationError
+        from talos_test_app import constants
 
         if not self.secret:
             self.secret = hexlify(urandom(32)).decode('ascii').upper()
@@ -1306,8 +1307,8 @@ class PhoneSMSValidationToken(models.Model):
                 twilio.send_message(self.phone, 'bixtrim',
                                     body='Your registraion code is %s' % self.salt.decode())
             except Exception as e:
-                print(e)
-                raise ValidationError('We could not send email to this phone')
+                raise ValidationError('We could not send sms to this phone',
+                                      code=constants.PHONE_INVALID_CODE)
         super(PhoneSMSValidationToken, self).save(*args, **kwargs)
 
 
