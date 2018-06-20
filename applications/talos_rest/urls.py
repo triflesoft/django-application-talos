@@ -31,7 +31,7 @@ from .views import SessionAPIView, EmailChangeRequestAPIView, \
     PhoneChangeValidationTokenCheckerAPIView, PhoneChangeRequestAPIView, PhoneChangeSecureAPIView, \
     PhoneChangeInsecureAPIView, PhoneResetRequestAPIView, PhoneResetValidationTokenCheckerAPIView, \
     PhoneResetInsecureAPIView, PhoneResetSecureAPIView, PrincipalSecurityLevelByTokenView, EmailResetInsecureAPIView, \
-    EmailResetSecureAPIView, ProvidedEvidencesView, TestView, PasswordChangeInsecureView
+    EmailResetSecureAPIView, ProvidedEvidencesView, TestView, PasswordChangeInsecureView, PasswordChangeSecureView
 
 from rest_framework.documentation import include_docs_urls
 
@@ -144,5 +144,7 @@ urlpatterns = [
     path('test', TestView.as_view(), name='test'),
 
     path('password-change-insecure', PasswordChangeInsecureView.as_view(), name='password-change-insecure'),
+
+    path('password-change-secure', PasswordChangeSecureView.as_view(), name='password-change-secure'),
 
 ]
