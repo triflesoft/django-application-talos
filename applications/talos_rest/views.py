@@ -765,9 +765,9 @@ class PasswordChangeSecureView(SecureAPIViewBaseView):
         serializer = PasswordChangeSecureSerializer(data=request.data, context=kwargs)
         if serializer.is_valid(raise_exception=False):
             if serializer.save():
-                return Response({'text' : 'Your password has been changed'})
-
-        return Response({'text' : 'Your password has not been changed'})
-
+                success_response = SuccessResponse()
+                return Response(success_response.data, success_response.status)
+        else:
+            raise APIValidationError(serializer.errors)
 
 
