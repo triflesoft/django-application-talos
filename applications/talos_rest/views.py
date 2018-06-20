@@ -9,13 +9,13 @@ from rest_framework.response import Response
 from rest_framework.generics import GenericAPIView
 
 # Serializer classes
+from .exceptions.custom_exceptions import APIValidationError
 from talos_test_app.serializers import (BasicLoginSerializer,
                                         PrincipalRegistrationRequestSerializer,
                                         PrincipalRegistrationConfirmSerializer,
                                         PrincipalRegistrationTokenValidationSerializer,
                                         EmailChangeRequestSerializer,
                                         EmailChangeConfirmSerializer)
-
 
 class TranslationContextMixin(object):
     def get_context_data(self, **kwargs):
@@ -107,15 +107,19 @@ class BasicLoginAPIView(SecureAPIViewBaseView):
         data = request.data
         serializer = BasicLoginSerializer(data=data, context=kwargs)
 
-        if serializer.is_valid(raise_exception=True):
+        if serializer.is_valid(raise_exception=False):
             serializer.save()
             session_id = self.request.session._session.uuid
             principal = str(self.request._request.user)
-            return Response({"Success": session_id,
-                             "principal": principal
-                             })
+            # return Response(
+            #     { "code" : 200,
+            #              "result":{
+            #              "user" : principal,
+            #              'session_id' : session_id}}         )
+            return Response(serializer.data)
         else:
-            return Response({"Success": "NO"})
+            raise APIValidationError(
+                                     detail=dict(serializer.errors.items()))
 
 
 class PrincipalRegistrationRequestEditAPIView(SecureAPIViewBaseView):
@@ -149,10 +153,12 @@ class PrincipalRegistrationTokenValidationAPIView(SecureAPIViewBaseView):
         data = request.data
         serializer = PrincipalRegistrationTokenValidationSerializer(data=data, context=kwargs)
 
-        if serializer.is_valid(raise_exception=True):
+        if serializer.is_valid(raise_exception=False):
             return Response({"token": data['token']})
         else:
-            return Response({"error": dict(serializer.errors.items())})
+            raise APIValidationError(
+                                     detail=dict(serializer.errors.items()))
+
 
 
 class PrincipalRegistrationConfirmationAPIView(SecureAPIViewBaseView):
@@ -168,11 +174,13 @@ class PrincipalRegistrationConfirmationAPIView(SecureAPIViewBaseView):
         data = request.data
         serializer = PrincipalRegistrationConfirmSerializer(data=data, context=kwargs)
 
-        if serializer.is_valid(raise_exception=True):
+        if serializer.is_valid(raise_exception=False):
             serializer.save()
             return Response({"text": "user registered successufly "})
         else:
-            return Response({"text": "error"})
+            raise APIValidationError(
+                                     detail=dict(serializer.errors.items()))
+
 
 
 class LogoutAPIView(SecureTemplateViewBaseView):
@@ -201,11 +209,13 @@ class EmailChangeRequestEditAPIView(SecureAPIViewBaseView):
         data = request.data
         serializer = EmailChangeRequestSerializer(data=data, context=kwargs)
 
-        if serializer.is_valid(raise_exception=True):
+        if serializer.is_valid(raise_exception=False):
             serializer.save()
             return Response({"text": "email change request send to mail"})
         else:
-            return Response({"text": "error"})
+            raise APIValidationError(
+                                     detail=dict(serializer.errors.items()))
+
 
 class EmailChangeConfirmEditAPIView(SecureAPIViewBaseView):
     #  TODO email changed validate via session, or maybe need to pass username?
@@ -221,8 +231,8 @@ class EmailChangeConfirmEditAPIView(SecureAPIViewBaseView):
         data = request.data
         serializer = EmailChangeConfirmSerializer(data=data, context=kwargs)
 
-        if serializer.is_valid(raise_exception=True):
+        if serializer.is_valid(raise_exception=False):
             serializer.save()
             return Response({"text": "email change request done"})
         else:
-            return Response({"text": "error"})
+            raise APIValidationError(detail=dict(serializer.errors.items()))

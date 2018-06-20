@@ -23,3 +23,4 @@ urlpatterns = [
     path('auth/', include(auth_url_patterns)),
     path('api/', include(talos_test_app_urlpatterns)),
 ]
+

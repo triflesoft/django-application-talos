@@ -1,15 +1,23 @@
 from rest_framework import serializers
 from re import compile
 from talos.models import Principal, ValidationToken, _tznow
-#
-from talos import middleware
+from rest_framework import status
 
 email_regex = compile(r'^[^@]+@[^@]+\.[^@]+$')
 
+class BasicSerializer(serializers.Serializer):
+    BASIC_SUCCESS_CODE = status.HTTP_200_OK
 
-class BasicLoginSerializer(serializers.Serializer):
+    def to_representation(self, instance):
+        data = super(BasicSerializer, self).to_representation(instance)
+        final_data = {'code': self.BASIC_SUCCESS_CODE ,
+                      'result' : data}
+        return final_data
+
+
+class BasicLoginSerializer(BasicSerializer):
     username = serializers.CharField(label='Username', help_text='Please enter username')
-    password = serializers.CharField(label='Password', help_text='Please enter username')
+    password = serializers.CharField(label='Password', help_text='Please enter password')
 
     def __init__(self, *args, **kwargs):
         from talos.models import BasicIdentityDirectory
@@ -25,6 +33,7 @@ class BasicLoginSerializer(serializers.Serializer):
         del passed_kwargs_from_view['request']
 
         super(BasicLoginSerializer, self).__init__(*args, **kwargs)
+
 
     def validate_username(self, value):
 
@@ -53,11 +62,12 @@ class BasicLoginSerializer(serializers.Serializer):
                 'Password is not valid. Note that password is case-sensitive.',
                 code='invalid_password')
 
-        return password
+        # return password
 
     def save(self):
         self.principal._load_authentication_context(self.evidences)
         self.request.principal = self.principal
+
 
 
 class PrincipalRegistrationRequestSerializer(serializers.Serializer):
@@ -142,10 +152,10 @@ class PrincipalRegistrationTokenValidationSerializer(serializers.Serializer):
             token = None
         if not token:
             raise serializers.ValidationError("Token don't exists",
-                                              code=999)
+                                              code="token_not_found")
         # If token is not active it means that it was already used(Email verification is passed)
         if not token.is_active:
-            raise serializers.ValidationError("Token already used", code=888)
+            raise serializers.ValidationError("Token already used", code='token_already_exist')
 
 
 class PrincipalRegistrationConfirmSerializer(serializers.Serializer):
@@ -304,7 +314,6 @@ class EmailChangeConfirmSerializer(serializers.Serializer):
     def __init__(self, *args, **kwargs):
         from talos.models import BasicIdentityDirectory
         passed_kwargs_from_view = kwargs['context']
-        print (passed_kwargs_from_view)
         self.request = passed_kwargs_from_view['request']
         self.token = passed_kwargs_from_view['token']
 
@@ -314,8 +323,6 @@ class EmailChangeConfirmSerializer(serializers.Serializer):
         super(EmailChangeConfirmSerializer, self).__init__(*args, **kwargs)
 
     def validate(self, attrs):
-        print ("VALIDADE")
-        print (self.token)
         if not self.token or (self.token.principal != self.request.principal):
             raise serializers.ValidationError(
                 'Token is not valid.',

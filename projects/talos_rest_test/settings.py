@@ -55,9 +55,9 @@ REST_FRAMEWORK = {
     ),
     # TODO VERSIONING
     # 'DEFAULT_VERSIONING_CLASS': 'rest_framework.versioning.URLPathVersioning'
+    'EXCEPTION_HANDLER': 'talos_test_app.exceptions.custom_exceptions.custom_exception_handler'
 
 }
-
 
 
 CORS_ORIGIN_ALLOW_ALL = True

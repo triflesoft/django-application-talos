@@ -14,7 +14,7 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 
-from django.urls import path
+from django.urls import path, re_path
 from .views import (BasicLoginAPIView, PrincipalRegistrationRequestEditAPIView,
                     PrincipalRegistrationConfirmationAPIView,
                     PrincipalRegistrationTokenValidationAPIView,
@@ -43,7 +43,6 @@ urlpatterns = [
 
     path('email-change-request-edit/', EmailChangeRequestEditAPIView.as_view(), name='talos-email-change-request-edit'),
     path('email-change-confirm-edit/<slug:secret>', EmailChangeConfirmEditAPIView.as_view(), name='talos-email-change-confirm-edit'),
-
     # TODO VERSIONING
     # re_path(r'^(?P<version>(v1|v2))/bookings/$',BasicLoginAPIView.as_view(),name='bookings-list'),
 ]
