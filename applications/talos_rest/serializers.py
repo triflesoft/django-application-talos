@@ -675,11 +675,10 @@ class BasicRegistrationSerializer(BasicSerializer):
     def validate_token(self, token):
         from talos.models import PhoneSMSValidationToken
         try:
-            PhoneSMSValidationToken.objects.get(secret=token,
-                                                is_active=True)
+            PhoneSMSValidationToken.objects.get(secret=token)
         except PhoneSMSValidationToken.DoesNotExist:
             raise serializers.ValidationError('Token does not exists',
-                                              constants.TOKEN_INVALID_CODE)
+                                              constants.TOKEN_NOT_EXISTS_CODE)
         return token
 
     def validate_password(self, password):
@@ -1481,7 +1480,9 @@ class PasswordChangeInsecureSerializer(SMSOtpSerializerMixin, ValidatePasswordMi
         passed_kwargs_from_view = kwargs.get('context')
         self.request = passed_kwargs_from_view['request']
         self.principal = self.request.principal
-
+        self.basic_identity_directory = BasicIdentityDirectory.objects.get(
+            code=passed_kwargs_from_view['identity_directory_code'])
+        self.basic_credential_directory = self.basic_identity_directory.credential_directory
         super(PasswordChangeInsecureSerializer, self).__init__(*args, **kwargs)
 
     def validate_new_password(self, new_password):
@@ -1508,6 +1509,9 @@ class PasswordChangeSecureSerializer(GoogleOtpSerializerMixin, ValidatePasswordM
         passed_kwargs_from_view = kwargs.get('context')
         self.request = passed_kwargs_from_view['request']
         self.principal = self.request.principal
+        self.basic_identity_directory = BasicIdentityDirectory.objects.get(
+            code=passed_kwargs_from_view['identity_directory_code'])
+        self.basic_credential_directory = self.basic_identity_directory.credential_directory
         super(PasswordChangeSecureSerializer, self).__init__(self, *args, **kwargs)
 
     def validate_new_password(self, new_password):

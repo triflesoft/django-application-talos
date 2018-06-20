@@ -30,7 +30,7 @@ from talos_rest.serializers import SessionSerializer, \
     PhoneChangeValidationTokenCheckerSerializer, PhoneChangeSecureSerializer, \
     PhoneChangeInsecureSerializer, PhoneResetRequestSerializer, \
     PhoneResetValidationTokenCheckerSerializer, PhoneResetInsecureSerializer, \
-    PhoneResetSecureSerializer, PasswordChangeInsecureSerializer, PasswordChangeSecureSerializer
+    PhoneResetSecureSerializer, PasswordChangeInsecureSerializer
 
 
 class TranslationContextMixin(object):
@@ -442,8 +442,11 @@ class BasicRegistrationView(SecureAPIViewBaseView):
 
         if serializer.is_valid(raise_exception=False):
             serializer.save()
-            success_response = SuccessResponse(status=status.HTTP_201_CREATED)
-            return Response(success_response.data, status=success_response.status)
+            data = {
+                'status': status.HTTP_201_CREATED,
+                'result': {},
+            }
+            return Response(data, status=status.HTTP_201_CREATED)
         else:
             raise APIValidationError(serializer.errors)
 
@@ -725,9 +728,8 @@ class ProvidedEvidencesView(SecureAPIViewBaseView):
 
     def get(self, request, *args, **kwargs):
         evidences = list(dict(self.request.principal._evidences_effective).keys())
-        success_response = SuccessResponse()
-        success_response.set_result_pairs('provided-evidences', evidences)
-        return Response(success_response.data)
+        data = {'provided-evidences' : evidences}
+        return Response(data)
 
 
 class TestView(SecureAPIViewBaseView):
@@ -753,16 +755,3 @@ class PasswordChangeInsecureView(SecureAPIViewBaseView):
 
         else:
             raise APIValidationError(detail=serializer.errors)
-
-class PasswordChangeSecureView(SecureAPIViewBaseView):
-    serializer_class = PasswordChangeSecureSerializer
-    identity_directory_code = 'basic_internal'
-
-    def post(self, request, *args, **kwargs):
-        kwargs = super(PasswordChangeSecureView, self).get_serializer_context()
-        serializer = PasswordChangeSecureSerializer(data=request.data, context=kwargs)
-        if serializer.is_valid(raise_exception=True):
-            if serializer.save():
-                return Response({'text' : 'Your password has been changed'})
-
-        return Response({'text' : 'Your password has not been changed'})
