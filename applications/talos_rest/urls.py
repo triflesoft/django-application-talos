@@ -43,7 +43,9 @@ from .views import (SessionAPIView, PrincipalRegistrationRequestEditAPIView,
 
                     EmailResetValidationTokenCheckerAPIView, GoogleAuthenticatorChangeRequestView,
                     GoogleAuthenticatorChangeConfirmView, GoogleAuthenticatorChangeDoneView,
-                    EmailChangeInsecureAPIView, EmailChangeSecureAPIView)
+                    EmailChangeInsecureAPIView, EmailChangeSecureAPIView,
+                    PrincipalSecurityLevelByTokenView, EmailResetInsecureAPIView,
+                    EmailResetSecureAPIView, PhoneResetRequestAPIView)
 
 
 
@@ -65,22 +67,19 @@ urlpatterns = [
     #      name='talos-rest-principal-registration-confirm'),
 
     # Email Change
-    path('principal/email/change-request', EmailChangeRequestAPIView.as_view(),
-         name='talos-email-change-request'),
-    path('email/email-change-token/<slug:secret>',EmailChangeValidationTokenCheckerAPIView.as_view(),
-         name='email-token-validation'),
-    path('principal/change-email-insecure', EmailChangeInsecureAPIView.as_view(), name='principal-email-change-insecure'),
-    path('principal/change-email-secure', EmailChangeSecureAPIView.as_view(), name='principal-email-change-secure'),
+    path('principal/email/change-request', EmailChangeRequestAPIView.as_view(),name='email-change-request'),
+    path('email/email-change-token/<slug:secret>',EmailChangeValidationTokenCheckerAPIView.as_view(),name='email-token-validation'),
+    path('principal/change-email-insecure', EmailChangeInsecureAPIView.as_view(), name='email-change-insecure'),
+    path('principal/change-email-secure', EmailChangeSecureAPIView.as_view(), name='email-change-secure'),
+
     # Email Reset
-    path('principal/email/reset_request', EmailResetRequestAPIView.as_view(),
-         name='talos-email-reset-request'),
-    path('email/email_reset_token/<slug:secret>',
-         EmailResetValidationTokenCheckerAPIView.as_view(),
-         name='email-token-validation'),
-    # path('principal/reset_email', EmailResetAPIView.as_view(),
-    #      name='principal-email-change-confirm'),
+    path('principal/email/reset-request', EmailResetRequestAPIView.as_view(), name='email-reset-request'),
+    path('email/email_reset_token/<slug:secret>', EmailResetValidationTokenCheckerAPIView.as_view(), name='email-token-validation'),
+    path('principal/reset-email-insecure', EmailResetInsecureAPIView.as_view(), name='email-reset-insecure'),
+    path('principal/reset-email-secure', EmailResetSecureAPIView.as_view(), name='email-reset-secure'),
 
-
+    # Phone Change
+    path('principal/phone/reset-request', PhoneResetRequestAPIView.as_view(), name='phone-reset-request'),
     # TODO VERSIONING
     # re_path(r'^(?P<version>(v1|v2))/bookings/$',BasicLoginAPIView.as_view(),name='bookings-list'),
 
@@ -94,6 +93,7 @@ urlpatterns = [
     path('google-authenticator/change/done', GoogleAuthenticatorChangeDoneView.as_view(), name='google-authneticator-change-done'),
 
     path('principal/security-level', PrincipalSecurityLevelView.as_view(), name='principal-security-level'),
+    path('principal/security-level/token/<slug:secret>', PrincipalSecurityLevelByTokenView.as_view(), name='principal-security-level-by-token'),
 
     path('authorized-phone-verification/generate', GeneratePhoneCodeForAuthorizedUserView.as_view(),
          name='generate-phone-code-for-authorized-user'),

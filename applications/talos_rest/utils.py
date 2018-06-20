@@ -1,29 +1,27 @@
 from rest_framework import status
 
 class SuccessResponse(object):
-    def __init__(self, status=status.HTTP_200_OK, data=dict):
-        self._status = status
-        self._data = {"status": status,
-                     'result': data,
+    def __init__(self,code=status.HTTP_200_OK):
+        self._code = code
+        self._data = {"status": code,
+                     'result': {}
                      }
     @property
     def data(self):
         return self._data
     @property
     def status(self):
-        return self._status
+        return self._code
 
     def set_result_pairs(self, key, value):
         self.data['result'].update({key: value})
 
 
-
-
 class ErrorResponse(object):
-    def __init__(self, code=status.HTTP_400_BAD_REQUEST):
-        self.code = code
-        self.data = {
-            'status': code,
+    def __init__(self, status=status.HTTP_400_BAD_REQUEST):
+        self._status = status
+        self._data = {
+            'status': status,
             'error': {},
             'details': {},
             'docs': None
@@ -43,5 +41,9 @@ class ErrorResponse(object):
         self.data['docs'] = value
 
     @property
-    def response(self):
-        return self.data
+    def data(self):
+        return self._data
+
+    @property
+    def status(self):
+        return self._status
