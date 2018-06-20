@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from re import compile
-from talos.models import Principal
+from talos.models import Principal, ValidationToken, _tznow
 #
 from talos import middleware
 
@@ -15,7 +15,8 @@ class BasicLoginSerializer(serializers.Serializer):
         from talos.models import BasicIdentityDirectory
 
         passed_kwargs_from_view = kwargs.get('context')
-        self.identity_directory = BasicIdentityDirectory.objects.get(code=passed_kwargs_from_view['identity_directory_code'])
+        self.identity_directory = BasicIdentityDirectory.objects.get(
+            code=passed_kwargs_from_view['identity_directory_code'])
         self.credential_directory = self.identity_directory.credential_directory
         self.evidences = list(self.credential_directory.provided_evidences.all().order_by('id'))
         self.request = passed_kwargs_from_view['request']
@@ -25,7 +26,8 @@ class BasicLoginSerializer(serializers.Serializer):
 
         return super(BasicLoginSerializer, self).__init__(*args, **kwargs)
 
-    def validate_username(self,value):
+    def validate_username(self, value):
+
         username = value
 
         self.principal = self.identity_directory.get_principal({'username': username})
@@ -42,9 +44,11 @@ class BasicLoginSerializer(serializers.Serializer):
 
         return username
 
-    def validate_password(self,value):
+    def validate_password(self, value):
         password = value
-        if self.principal and (not self.credential_directory.verify_credentials(self.principal, {'password': password})):
+        if self.principal and (
+                not self.credential_directory.verify_credentials(self.principal,
+                                                                 {'password': password})):
             raise serializers.ValidationError(
                 'Password is not valid. Note that password is case-sensitive.',
                 code='invalid_password')
@@ -74,13 +78,15 @@ class PrincipalRegistrationRequestSerializer(serializers.Serializer):
         try:
             principal = Principal.objects.get(email=email)
 
-            raise serializers.ValidationError('Principal with provided e-mail is already registered',
-                                              code='invalid_email')
+            raise serializers.ValidationError(
+                'Principal with provided e-mail is already registered',
+                code='invalid_email')
         except Principal.DoesNotExist:
             pass
         return email
 
     def save(self):
+        # TODO send mail
         from django.core.mail import send_mail
         from django.template.loader import render_to_string
         from django.urls import reverse
@@ -93,16 +99,42 @@ class PrincipalRegistrationRequestSerializer(serializers.Serializer):
         validation_token.type = 'principal_registration'
         validation_token.save()
 
-
-
         context = {
             'url': '{0}://{1}{2}'.format(
                 self.request.scheme,
                 self.request.META['HTTP_HOST'],
-                reverse('talos-principal-registration-confirm-edit', args=[validation_token.secret])),
+                reverse('talos-principal-registration-confirm-edit',
+                        args=[validation_token.secret])),
             'email': email}
 
 
+class PrincipalRegistrationTokenValidationSerializer(serializers.Serializer):
+    """ Validate token from PrincipalRegistrationRequest
+        if token is valid it means that email is validated successfully
+    """
+    token = serializers.CharField(label='Token', max_length=255)
+
+    def __init__(self, *args, **kwargs):
+        self.request = kwargs['context'].get('request')
+        super(PrincipalRegistrationTokenValidationSerializer, self).__init__(*args, **kwargs)
+
+    def validate_token(self, value):
+        """ Validate token"""
+        try:
+            token = ValidationToken.objects.get(
+                secret=value,
+                type='principal_registration',
+                expires_at__gt=_tznow(),
+            )
+
+        except ValidationToken.DoesNotExist:
+            token = None
+        if not token:
+            raise serializers.ValidationError("Token don't exists",
+                                              code=999)
+        # If token is not active it means that it was already used(Email verification is passed)
+        if not token.is_active:
+            raise serializers.ValidationError("Token already used", code=888)
 
 
 class PrincipalRegistrationConfirmSerializer(serializers.Serializer):
@@ -113,16 +145,18 @@ class PrincipalRegistrationConfirmSerializer(serializers.Serializer):
     password2 = serializers.CharField(label='Password Confirmation')
 
     def __init__(self, *args, **kwargs):
+
         from talos.models import BasicIdentityDirectory
 
         passed_kwargs_from_view = kwargs.get('context')
-        self.identity_directory = BasicIdentityDirectory.objects.get(code=passed_kwargs_from_view['identity_directory_code'])
+        self.identity_directory = BasicIdentityDirectory.objects.get(
+            code=passed_kwargs_from_view['identity_directory_code'])
         self.credential_directory = self.identity_directory.credential_directory
         self.request = passed_kwargs_from_view.get('request')
         self.token = passed_kwargs_from_view.get('token')
         self.principal = None
 
-        #del kwargs['context']['token']
+        del kwargs['context']['token']
         del kwargs['context']['identity_directory_code']
         del kwargs['context']['request']
 
@@ -131,7 +165,7 @@ class PrincipalRegistrationConfirmSerializer(serializers.Serializer):
     def validate_username(self, value):
         username = value
 
-        if self.identity_directory.get_principal({'username' : username}):
+        if self.identity_directory.get_principal({'username': username}):
             raise serializers.ValidationError('Username is already taken',
                                               code='invalid_username')
 
@@ -139,19 +173,17 @@ class PrincipalRegistrationConfirmSerializer(serializers.Serializer):
 
     def validate_password1(self, value):
 
-        password1 = value
+        self.password1 = value
 
-
-
-        return password1
+        return self.password1
 
     def validate_password2(self, value):
-        #password1 = self.validated_data.get('password1', None)
-        password2 = value #self.validated_data.get('password2', None)
+        password1 = self.password1
+        password2 = value  # self.validated_data.get('password2', None)
 
-        #if password1 and password2 and (password1 != password2):
-        #    raise serializers.ValidationError('Passwords do not match.',
-        #                                      code='invalid_password_confirmation')
+        if password1 and password2 and (password1 != password2):
+           raise serializers.ValidationError('Passwords do not match.',
+                                             code='invalid_password_confirmation')
 
         return password2
 
@@ -161,7 +193,6 @@ class PrincipalRegistrationConfirmSerializer(serializers.Serializer):
                                               code='invalid_token')
 
         return attrs
-
 
     def save(self):
         from django.contrib.auth.password_validation import validate_password
@@ -181,14 +212,8 @@ class PrincipalRegistrationConfirmSerializer(serializers.Serializer):
         validate_password(password1, self.principal)
 
         self.principal.save()
-        self.identity_directory.create_credentials(self.principal, {'username' : username})
-        self.credential_directory.create_credentials(self.principal, {'password' : password})
+        self.identity_directory.create_credentials(self.principal, {'username': username})
+        self.credential_directory.create_credentials(self.principal, {'password': password})
         self.token.principal = self.principal
         self.token.is_active = False
         self.token.save()
-
-
-
-
-
-

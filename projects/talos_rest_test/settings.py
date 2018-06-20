@@ -52,7 +52,10 @@ AUTHENTICATION_BACKENDS = (
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'talos_test_app.authentication.CsrfExemptSessionAuthentication',
-    )
+    ),
+    # TODO VERSIONING
+    # 'DEFAULT_VERSIONING_CLASS': 'rest_framework.versioning.URLPathVersioning'
+
 }
 
 

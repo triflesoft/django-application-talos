@@ -1,33 +1,19 @@
-from django.urls import reverse
 from django.utils.decorators import method_decorator
-from django.utils.functional import lazy
+
 from django.views.decorators.cache import never_cache
-from django.views.decorators.csrf import csrf_protect, csrf_exempt
+
 from django.views.decorators.debug import sensitive_post_parameters
-from rest_framework.authentication import BasicAuthentication, SessionAuthentication
-from rest_framework.permissions import IsAuthenticated
+
 from rest_framework.response import Response
 
-from talos.forms import BasicLoginForm
-from talos.forms import BasicPasswordChangeConfirmForm
-from talos.forms import BasicPasswordResetRequestForm
-from talos.forms import BasicPasswordResetConfirmForm
-from talos.forms import EmailChangeConfirmForm
-from talos.forms import EmailChangeRequestForm
-from talos.forms import PrincipalRegistrationConfirmForm
-from talos.forms import PrincipalRegistrationRequestForm
-
 from rest_framework.generics import GenericAPIView
-from rest_framework.views import  APIView
-
-
-
-from talos_test_app.authentication import CsrfExemptSessionAuthentication
 
 # Serializer classes
-from talos_test_app.serializers import BasicLoginSerializer
-from talos_test_app.serializers import PrincipalRegistrationRequestSerializer
-from talos_test_app.serializers import PrincipalRegistrationConfirmSerializer
+from talos_test_app.serializers import (BasicLoginSerializer,
+                                        PrincipalRegistrationRequestSerializer,
+                                        PrincipalRegistrationConfirmSerializer,
+                                        PrincipalRegistrationTokenValidationSerializer)
+
 
 class TranslationContextMixin(object):
     def get_context_data(self, **kwargs):
@@ -51,14 +37,12 @@ class TranslationContextMixin(object):
         return context
 
 
-class SecureFormViewBaseView(TranslationContextMixin, GenericAPIView):
-
-
+class SecureAPIViewBaseView(TranslationContextMixin, GenericAPIView):
     def get_serializer_context(self):
         from talos.models import _tznow
         from talos.models import ValidationToken
 
-        kwargs = super(SecureFormViewBaseView, self).get_serializer_context()
+        kwargs = super(SecureAPIViewBaseView, self).get_serializer_context()
         identity_directory_code = getattr(self, 'identity_directory_code', None)
 
         if identity_directory_code:
@@ -66,16 +50,16 @@ class SecureFormViewBaseView(TranslationContextMixin, GenericAPIView):
 
         token_type = getattr(self, 'token_type', None)
 
-
         if token_type:
             try:
                 token = ValidationToken.objects.get(
-                    secret=self.kwargs['secret'],
+                    secret=self.kwargs.get('secret'),
                     type=token_type,
                     expires_at__gt=_tznow(),
                     is_active=True)
                 kwargs['token'] = token
-                #kwargs['initial'].update({'new_email': token.email})
+                # TODO For what is this?
+                # kwargs['initial'].update({'new_email': token.email})
             except ValidationToken.DoesNotExist:
                 kwargs['token'] = None
 
@@ -86,40 +70,58 @@ class SecureFormViewBaseView(TranslationContextMixin, GenericAPIView):
     @method_decorator(sensitive_post_parameters())
     @method_decorator(never_cache)
     def dispatch(self, request, *args, **kwargs):
-        return super(SecureFormViewBaseView, self).dispatch(request, *args, **kwargs)
+        return super(SecureAPIViewBaseView, self).dispatch(request, *args, **kwargs)
 
 
-class BasicLoginAPIView(SecureFormViewBaseView):   
+class SecureTemplateViewBaseView(TranslationContextMixin, GenericAPIView):
+    @method_decorator(sensitive_post_parameters())
+    @method_decorator(never_cache)
+    def dispatch(self, request, *args, **kwargs):
+        return super(SecureTemplateViewBaseView, self).dispatch(request, *args, **kwargs)
+
+
+class BasicLoginAPIView(SecureAPIViewBaseView):
+    """
+    get:
+    Return a list of all the existing users.
+
+    {"user": str(request.principal)}
+
+    post:
+    Create a new user instance.
+
+    {"Success": session_id,
+     "principal": principal }
+    """
     identity_directory_code = 'basic_internal'
 
     serializer_class = BasicLoginSerializer
-    #
-    def get(self, request, *args, **kwargs):
-        return Response({"user":str(request.principal)})
 
+    def get(self, request, *args, **kwargs):
+        return Response({"user": str(request.principal)})
 
     def post(self, request, *args, **kwargs):
         kwargs = super(BasicLoginAPIView, self).get_serializer_context()
         data = request.data
-        serializer = BasicLoginSerializer(data = data, context=kwargs)
+        serializer = BasicLoginSerializer(data=data, context=kwargs)
 
         if serializer.is_valid(raise_exception=True):
             serializer.save()
             session_id = self.request.session._session.uuid
-            return Response({"Success": session_id})
+            principal = str(self.request._request.user)
+            return Response({"Success": session_id,
+                             "principal": principal
+                             })
         else:
             return Response({"Success": "NO"})
 
 
-
-
-
-class PrincipalRegistrationRequestEditAPIView(SecureFormViewBaseView):
+class PrincipalRegistrationRequestEditAPIView(SecureAPIViewBaseView):
     identity_directory_code = 'basic_internal'
     serializer_class = PrincipalRegistrationRequestSerializer
 
     def get(self, request, *args, **kwargs):
-        return Response({"text" : "user registration request"})
+        return Response({"text": "user registration request"})
 
     def post(self, request, *args, **kwargs):
         kwargs = super(PrincipalRegistrationRequestEditAPIView, self).get_serializer_context()
@@ -128,20 +130,36 @@ class PrincipalRegistrationRequestEditAPIView(SecureFormViewBaseView):
 
         if serializer.is_valid(raise_exception=True):
             serializer.save()
-            return Response({"text" : "registration url has been sent on your email"})
+            return Response({"text": "registration url has been sent on your email"})
         else:
-            return Response({"error" : dict(serializer.errors.items())})
+            return Response({"error": dict(serializer.errors.items())})
 
 
+class PrincipalRegistrationTokenValidationAPIView(SecureAPIViewBaseView):
+    identity_directory_code = 'basic_internal'
+    serializer_class = PrincipalRegistrationTokenValidationSerializer
+
+    def get(self, request, *args, **kwargs):
+        return Response({"text": "token validation"})
+
+    def post(self, request, *args, **kwargs):
+        kwargs = super(PrincipalRegistrationTokenValidationAPIView, self).get_serializer_context()
+        data = request.data
+        serializer = PrincipalRegistrationTokenValidationSerializer(data=data, context=kwargs)
+
+        if serializer.is_valid(raise_exception=True):
+            return Response({"token": data['token']})
+        else:
+            return Response({"error": dict(serializer.errors.items())})
 
 
-class PrincipalRegistrationConfirmationAPIView(SecureFormViewBaseView):
+class PrincipalRegistrationConfirmationAPIView(SecureAPIViewBaseView):
     identity_directory_code = 'basic_internal'
     serializer_class = PrincipalRegistrationConfirmSerializer
     token_type = 'principal_registration'
 
     def get(self, request, *args, **kwargs):
-        return Response({"text" : "user registration confirmation"})
+        return Response({"text": "user registration confirmation"})
 
     def post(self, request, *args, **kwargs):
         kwargs = super(PrincipalRegistrationConfirmationAPIView, self).get_serializer_context()
@@ -150,6 +168,21 @@ class PrincipalRegistrationConfirmationAPIView(SecureFormViewBaseView):
 
         if serializer.is_valid(raise_exception=True):
             serializer.save()
-            return Response({"text" : "registration url has"})
+            return Response({"text": "user registered successufly "})
         else:
-            return Response({"text" : "error"})
+            return Response({"text": "error"})
+
+
+class LogoutAPIView(SecureTemplateViewBaseView):
+    def get_context_data(self, **kwargs):
+        # TODO What what we need this part?
+        # context = super(LogoutAPIView, self).get_context_data(**kwargs)
+        pass
+        # old_principal = self.request.principal
+
+        # context['old_principal'] = old_principal
+
+    def get(self, request, *args, **kwargs):
+        self.request.session.flush()
+
+        return Response({"text": "user logged out"})
