@@ -555,6 +555,10 @@ class GeneratePhoneCodeForUnAuthorizedUserSerializer(BasicSerializer):
         super(GeneratePhoneCodeForUnAuthorizedUserSerializer, self).__init__(*args, **kwargs)
 
     def validate_phone(self, phone):
+        from talos_test_app.validators import validate_phone
+
+        validate_phone(phone)
+
         if Principal.objects.filter(phone=phone).count() > 0:
             raise serializers.ValidationError('This mobile phone is already user')
         return phone
@@ -613,7 +617,7 @@ class VerifyPhoneCodeForUnAuthorizedUserSerializer(BasicSerializer):
     def save(self):
         pass
 
-from django.core.validators import RegexValidator
+
 class BasicRegistrationSerializer(BasicSerializer):
     full_name = serializers.CharField()
     email = serializers.CharField()
@@ -637,16 +641,11 @@ class BasicRegistrationSerializer(BasicSerializer):
         super(BasicRegistrationSerializer, self).__init__(*args, **kwargs)
 
     def validate_email(self, email):
-        from django.core.validators import validate_email
-        from django.core.exceptions import ValidationError
+        from talos_test_app.validators import validate_email
 
         email = email.lower()
 
-        try:
-            validate_email(email)
-        except ValidationError:
-            raise serializers.ValidationError('Email is invalid',
-                                              code='invalid_email')
+        validate_email(email)
 
         try:
             Principal.objects.get(email=email)
@@ -657,21 +656,14 @@ class BasicRegistrationSerializer(BasicSerializer):
         return email
 
     def validate_phone(self, phone):
-        from django.core.validators import RegexValidator
-        from django.core.exceptions import ValidationError
+        from talos_test_app.validators import validate_phone
 
-        phone_regex = RegexValidator(regex=r'^\+?1?\d{9,15}$',
-                                     message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.")
+        validate_phone(phone)
 
-        try:
-            phone_regex(phone)
-        except ValidationError:
-            raise serializers.ValidationError('Phone number invalid',
-                                              code='phone_invalid')
         try:
             Principal.objects.get(phone=phone)
             raise serializers.ValidationError("Phone is already used",
-                                              code='phone_user')
+                                              code='phone_used')
         except Principal.DoesNotExist:
             pass
         return phone
