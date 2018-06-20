@@ -761,13 +761,14 @@ class ValidatePasswordMixin():
         self.basic_identity_directory = BasicIdentityDirectory.objects.get(
             code=passed_kwargs_from_view['identity_directory_code'])
         self.basic_credential_directory = self.basic_identity_directory.credential_directory
-
+        self.password = None
         super(ValidatePasswordMixin, self).__init__(*args, **kwargs)
 
     def validate_password(self, password):
         if not self.basic_credential_directory.verify_credentials(self.principal,
                                                                   {'password': password}):
             raise serializers.ValidationError('Password is incorrect', code= constants.PASSWORD_INVALID_CODE)
+        self.password = password
 
 class ValidateSecretWhenLogedInMixin():
     def __init__(self, *args, **kwargs):
@@ -1469,3 +1470,33 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
         if self.validation_token:
             self.validation_token.is_active = False
             self.validation_token.save()
+
+
+class PasswordChangeInsecureSerializer(SMSOtpSerializerMixin, ValidatePasswordMixin, BasicSerializer):
+    new_password = serializers.CharField()
+
+    def __init__(self, *args, **kwargs):
+        from talos.models import BasicIdentityDirectory
+        passed_kwargs_from_view = kwargs.get('context')
+        self.request = passed_kwargs_from_view['request']
+        self.principal = self.request.principal
+        self.basic_identity_directory = BasicIdentityDirectory.objects.get(
+            code=passed_kwargs_from_view['identity_directory_code'])
+        self.basic_credential_directory = self.basic_identity_directory.credential_directory
+        super(PasswordChangeInsecureSerializer, self).__init__(*args, **kwargs)
+
+    def validate_new_password(self, new_password):
+        from talos_rest.validators import validate_password
+
+        validate_password(new_password)
+
+        return new_password
+
+    def save(self):
+        return self.basic_credential_directory.update_credentials(self.principal,
+                                                           {'password' : self.password},
+                                                           {'password' : self.validated_data['new_password']})
+
+
+
+

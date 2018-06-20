@@ -30,7 +30,7 @@ from talos_rest.serializers import SessionSerializer, \
     PhoneChangeValidationTokenCheckerSerializer, PhoneChangeSecureSerializer, \
     PhoneChangeInsecureSerializer, PhoneResetRequestSerializer, \
     PhoneResetValidationTokenCheckerSerializer, PhoneResetInsecureSerializer, \
-    PhoneResetSecureSerializer
+    PhoneResetSecureSerializer, PasswordChangeInsecureSerializer
 
 
 class TranslationContextMixin(object):
@@ -738,3 +738,20 @@ class TestView(SecureAPIViewBaseView):
 
     def get(self, request, *args, **kwargs):
         return Response({"text" : "Test"})
+
+
+class PasswordChangeInsecureView(SecureAPIViewBaseView):
+    serializer_class = PasswordChangeInsecureSerializer
+    identity_directory_code = 'basic_internal'
+
+    def post(self, request, *args, **kwargs):
+        kwargs = super(PasswordChangeInsecureView, self).get_serializer_context()
+        serializer = PasswordChangeInsecureSerializer(data=request.data, context=kwargs)
+        if serializer.is_valid(raise_exception=False):
+            if serializer.save():
+                return Response({'text': 'Your password has been changed succesfully'})
+            else:
+                return Response({'text' : 'Your password has not been changed'})
+
+        else:
+            raise APIValidationError(detail=serializer.errors)
