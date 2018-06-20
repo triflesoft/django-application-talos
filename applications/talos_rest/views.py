@@ -5,6 +5,7 @@ from django.views.decorators.cache import never_cache
 from django.views.decorators.debug import sensitive_post_parameters
 
 from rest_framework.response import Response
+from .utils import SuccessResponse
 
 from rest_framework.generics import GenericAPIView
 from rest_framework import status
@@ -15,8 +16,10 @@ from talos_test_app.serializers import (SessionSerializer,
                                         PrincipalRegistrationConfirmSerializer,
                                         PrincipalRegistrationTokenValidationSerializer,
                                         EmailChangeRequestSerializer,
-                                        EmailChangeConfirmSerializer)
-from .utils import SuccessResponse
+                                        EmailChangeConfirmSerializer,
+                                        GoogleAuthenticatorActivateSerializer,
+                                        GoogleAuthenticatorVerifySerializer,
+                                        GoogleAuthenticatorDeleteSerializer)
 
 
 class TranslationContextMixin(object):
@@ -199,3 +202,54 @@ class EmailChangeConfirmEditAPIView(SecureAPIViewBaseView):
             return Response({"text": "email change request done"})
         else:
             raise APIValidationError(detail=dict(serializer.errors.items()))
+
+
+# Google Authentication
+class GoogleAuthenticationActivateView(SecureAPIViewBaseView):
+
+    serializer_class = GoogleAuthenticatorActivateSerializer
+
+    def get(self, request, *args, **kwargs):
+        print(request.principal)
+        print(request.principal._evidences_effective)
+        return Response({"text" : "Google Authentication"})
+
+    def post(self, request, *args, **kwargs):
+        kwargs = super(GoogleAuthenticationActivateView, self).get_serializer_context()
+        serializer = GoogleAuthenticatorActivateSerializer(data=request.data, context=kwargs)
+        if serializer.is_valid(raise_exception=False):
+            serializer.save()
+            return Response({"secret-code" : serializer.salt})
+        else:
+            return Response({"errors" : serializer.errors.items()})
+
+
+class GoogleAuthenticatorVerifyView(SecureAPIViewBaseView):
+    serializer_class = GoogleAuthenticatorVerifySerializer
+
+    def get(self, request, *args, **kwargs):
+        return Response({"text" : "verify get"})
+
+    def post(self, request, *args, **kwargs):
+        kwargs = super(GoogleAuthenticatorVerifyView, self).get_serializer_context()
+        serializer = GoogleAuthenticatorVerifySerializer(data=request.data, context=kwargs)
+        if serializer.is_valid(raise_exception=True):
+            serializer.save()
+            return Response({"text" : "Your code is correct"})
+        return Response({"text" : "verify post"})
+
+
+class GoogleAuthenticatorDeleteView(SecureAPIViewBaseView):
+    serializer_class = GoogleAuthenticatorDeleteSerializer
+
+    def get(self, request, *args, **kwargs):
+        return Response({"text" : "Delete Credential"})
+
+    def post(self, request, *args, **kwargs):
+        kwargs = super(GoogleAuthenticatorDeleteView, self).get_serializer_context()
+        serializer = GoogleAuthenticatorDeleteSerializer(data=request.data, context=kwargs)
+        if serializer.is_valid(raise_exception=True):
+            serializer.delete()
+            return Response({"text" : "Your credential has been deleted"})
+        return Response({"text" : "Delete credential post"})
+

@@ -14,12 +14,16 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 
-from django.urls import path, re_path
+from django.urls import path
 from .views import (SessionAPIView, PrincipalRegistrationRequestEditAPIView,
                     PrincipalRegistrationConfirmationAPIView,
                     PrincipalRegistrationTokenValidationAPIView,
                     EmailChangeRequestAPIView,
-                    EmailChangeConfirmEditAPIView)
+                    EmailChangeConfirmEditAPIView,
+                    GoogleAuthenticationActivateView,
+                    GoogleAuthenticatorVerifyView,
+                    GoogleAuthenticatorDeleteView)
+
 
 from rest_framework.documentation import include_docs_urls
 
@@ -41,4 +45,8 @@ urlpatterns = [
     path('principal/email/email_change_token/<slug:secret>', EmailChangeConfirmEditAPIView.as_view(), name='talos-email-change-confirm'),
     # TODO VERSIONING
     # re_path(r'^(?P<version>(v1|v2))/bookings/$',BasicLoginAPIView.as_view(),name='bookings-list'),
+
+    path('google-authenticator/', GoogleAuthenticationActivateView.as_view(), name='google-authenticator-activate'),
+    path('google-authenticator/verify', GoogleAuthenticatorVerifyView.as_view(), name='google-authenticator-verify'),
+    path('google-authenticator/delete', GoogleAuthenticatorDeleteView.as_view(), name='google-authenticator-delete'),
 ]

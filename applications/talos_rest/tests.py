@@ -119,7 +119,6 @@ class TalosRestTest(APITestCase):
 
     def test_principal_registration_when_principal_already_exists(self):
         # Create registration token
-        print(self.registration_data)
         url = reverse('talos-rest-principal-regisration-request')
         data = {'email': 'test@bixtrim.com'}
         token_response = self.client.post(url, data, format='json', HTTP_HOST=HTTP_HOST)
