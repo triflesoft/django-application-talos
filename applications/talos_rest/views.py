@@ -508,7 +508,7 @@ class BasicRegistrationView(SecureAPIViewBaseView):
         if serializer.is_valid(raise_exception=False):
             serializer.save()
             success_response = SuccessResponse(status=status.HTTP_201_CREATED, data=serializer.data)
-            return Response(success_response.data)
+            return Response(success_response.data, status=status.HTTP_201_CREATED)
         else:
             raise APIValidationError(serializer.errors)
 
