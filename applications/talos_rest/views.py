@@ -268,21 +268,16 @@ class GoogleAuthenticatorDeleteView(SecureAPIViewBaseView):
 
 
 class PrincipalSecurityLevelView(SecureAPIViewBaseView):
+    permission_classes = (IsAuthenticated, )
 
     def get(self, request, *args, **kwargs):
+        success_response = SuccessResponse()
+
         if request.principal.profile.is_secure:
-            content = {
-                'code': '200',
-                'secure': 'True',
-                'text': 'Your account is secured using OTP token'
-            }
+            success_response.set_result_pairs('secure', 'True')
         else:
-            content = {
-                'code': '200',
-                'secure': 'False',
-                'text': 'Your account is not secure'
-            }
-        return Response(content)
+            success_response.set_result_pairs('secure', 'False')
+        return Response(data=success_response.data)
 
 
 class GeneratePhoneCodeForAuthorizedUserView(SecureAPIViewBaseView):
@@ -434,3 +429,6 @@ class BasicRegistrationView(SecureAPIViewBaseView):
         if serializer.is_valid(raise_exception=True):
             serializer.save()
             return Response({"text" : "You have registered succesfully"})
+
+
+
