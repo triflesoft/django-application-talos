@@ -389,3 +389,88 @@ class GeneratePhoneCodeForUnAuthorizedUser(TestUtils):
 
         self.assertTrue(response.data.get('error').get('phone', False))
         self.assertEqual(response.data.get('error').get('phone')[0], constants.PHONE_USED_CODE)
+
+
+
+class TestVerifyPhoneCodeForUnAuthorizedUser(TestUtils):
+    url = reverse('verify-phone-code-for-unauthorized-user')
+
+    def test_verify_phone_code_for_unauthorized(self):
+        from talos.models import PhoneSMSValidationToken
+
+        phone_sms_token = PhoneSMSValidationToken()
+        phone_sms_token.phone = self.phone
+        phone_sms_token.save()
+
+        data = {
+            'phone' : self.phone,
+            'code' : phone_sms_token.salt
+        }
+
+
+        response = self.client.post(self.url, data, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['status'], status.HTTP_200_OK)
+
+        self.assertTrue(response.data.get('result').get('token', False))
+        self.assertEqual(response.data.get('result').get('token'), phone_sms_token.secret)
+
+
+    def test_verify_phone_invalid_input(self):
+        from talos.models import PhoneSMSValidationToken
+
+        phone_sms_token = PhoneSMSValidationToken()
+        phone_sms_token.phone = self.phone
+        phone_sms_token.save()
+
+        data = {
+            'phone' : self.phone,
+            'code' : 'aaaa'
+        }
+
+        response = self.client.post(self.url, data, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['status'], status.HTTP_400_BAD_REQUEST)
+
+        self.assertTrue(response.data.get('error').get('code', False))
+        self.assertEqual(response.data.get('error').get('code')[0], constants.SMS_OTP_INVALID_CODE)
+
+        data = {
+            'phone' : '+8855555555',
+            'code' : phone_sms_token.salt
+        }
+
+        response = self.client.post(self.url, data, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['status'], status.HTTP_400_BAD_REQUEST)
+
+        self.assertTrue(response.data.get('error').get('phone', False))
+        self.assertEqual(response.data.get('error').get('phone')[0], constants.PHONE_INVALID_CODE)
+
+
+    def test_verify_already_used_token(self):
+        from talos.models import PhoneSMSValidationToken
+
+        phone_sms_token = PhoneSMSValidationToken()
+        phone_sms_token.phone = self.phone
+        phone_sms_token.is_active = False
+        phone_sms_token.save()
+
+        data = {
+            'phone' : self.phone,
+            'code' : phone_sms_token.salt
+        }
+
+        response = self.client.post(self.url, data, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['status'], status.HTTP_400_BAD_REQUEST)
+
+        self.assertTrue(response.data.get('error').get('phone', False))
+        self.assertEqual(response.data.get('error').get('phone')[0], constants.PHONE_INVALID_CODE)
+
+        self.assertTrue(response.data.get('error').get('code', False))
+        self.assertEqual(response.data.get('error').get('code')[0], constants.SMS_OTP_INVALID_CODE)
