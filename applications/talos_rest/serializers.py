@@ -263,6 +263,9 @@ class GoogleAuthenticatorDeleteRequestSerializer(serializers.Serializer):
         self.principal = self.request.principal
         super(GoogleAuthenticatorDeleteRequestSerializer, self).__init__(*args, **kwargs)
 
+    def validate(self, attrs):
+        return attrs
+
     def save(self):
         from talos.models import ValidationToken
 
@@ -274,8 +277,11 @@ class GoogleAuthenticatorDeleteRequestSerializer(serializers.Serializer):
         validation_token.save()
 
 
-class GoogleAuthenticatorDeleteSerializer(GoogleOtpSerializerMixin, SMSOtpSerializerMixin,ValidatePasswordMixin, BasicSerializer):
+class GoogleAuthenticatorDeleteSerializer(serializers.Serializer):
     token = serializers.CharField()
+    sms_code = serializers.CharField()
+    otp_code = serializers.CharField()
+    password = serializers.CharField()
 
     def __init__(self, *args, **kwargs):
         from talos.models import OneTimePasswordCredentialDirectory
@@ -293,17 +299,34 @@ class GoogleAuthenticatorDeleteSerializer(GoogleOtpSerializerMixin, SMSOtpSerial
             code=PHONE_SMS_CREDENTIAL_DIRECTORY_CODE)
         super(GoogleAuthenticatorDeleteSerializer, self).__init__(*args, **kwargs)
 
+    def validate_otp_code(self, code):
+        if self.otp_credential_directory and not self.otp_credential_directory.verify_credentials(self.principal,
+                                                                                                  {'code': code}):
+            raise serializers.ValidationError('Your code is incorrect', code=constants.GOOGLE_OTP_INVALID_CODE)
+        return code
+
+    def validate_sms_code(self, sms_code):
+        if self.sms_credential_directory and not self.sms_credential_directory.verify_credentials(self.principal,
+                                                                                                  {'code': sms_code}):
+            raise serializers.ValidationError('Your code is incorrect', code=constants.SMS_OTP_INVALID_CODE)
+        return sms_code
+
+    def validate_password(self, password):
+        if self.basic_credential_directory and not self.basic_credential_directory.verify_credentials(self.principal,
+                                                                                                      {
+                                                                                                          'password': password}):
+            raise serializers.ValidationError('Your code is incorrect', code=constants.PASSWORD_INVALID_CODE)
+        return password
+
     def validate_token(self, token):
         from talos.models import ValidationToken
         try:
-            self.validation_token = ValidationToken.objects.get(identifier='email',
-                                                                identifier_value=self.principal.email,
-                                                                type='otp_delete',
+            self.validation_token = ValidationToken.objects.get(email=self.principal.email,
                                                                 secret=token,
                                                                 is_active=True)
         except ValidationToken.DoesNotExist:
             raise serializers.ValidationError('Your token is invalid', code=constants.TOKEN_INVALID_CODE)
-        return token
+        return
 
     def delete(self):
         if self.otp_credential_directory:
@@ -1286,10 +1309,9 @@ class PhoneResetSecureSerializer(GoogleOtpSerializerMixin, ValidatePasswordMixin
         # TODO Send sms to new phone
 
 
-class PasswordResetRequestSerializer(BasicSerializer):
-    email = serializers.CharField()
-
+class PasswordResetRequestSerializer(serializers.Serializer):
     token_type = 'password_reset'
+    email = serializers.CharField()
 
     def __init__(self, *args, **kwargs):
         from talos.models import OneTimePasswordCredentialDirectory
@@ -1308,7 +1330,11 @@ class PasswordResetRequestSerializer(BasicSerializer):
             raise serializers.ValidationError("Email doesn't exists", code=constants.EMAIL_INVALID_CODE)
         return email
 
+    def validate(self, attrs):
+        return attrs
+
     def save(self):
+
         from django.core.mail import send_mail
         from django.template.loader import render_to_string
         from django.urls import reverse
@@ -1321,6 +1347,9 @@ class PasswordResetRequestSerializer(BasicSerializer):
         validation_token.type = self.token_type
         validation_token.save()
 
+        # Send SMS Verification code to user
+        if self.principal and self.principal.profile.is_secure is False:
+            self.sms_otp_directory.create_credentials(self.principal, {})
 
         # context = {
         #     'url': '{0}://{1}{2}'.format(
@@ -1344,11 +1373,11 @@ class PasswordResetRequestSerializer(BasicSerializer):
         #     fail_silently=True)
 
 
-class PasswordResetInsecureSerializer(SMSOtpSerializerMixin, BasicSerializer):
-    token = serializers.CharField()
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    email = serializers.CharField()
     password = serializers.CharField()
-
-    token_type = 'password_reset'
+    token = serializers.CharField()
+    code = serializers.CharField()
 
     def __init__(self, *args, **kwargs):
         from talos.models import OneTimePasswordCredentialDirectory
@@ -1360,77 +1389,43 @@ class PasswordResetInsecureSerializer(SMSOtpSerializerMixin, BasicSerializer):
         self.basic_identity_directory = BasicIdentityDirectory.objects.get(
             code=passed_kwargs_from_view['identity_directory_code'])
         self.basic_credential_directory = self.basic_identity_directory.credential_directory
+        self.google_authenticator_directory = OneTimePasswordCredentialDirectory.objects.get(
+            code=GOOGLE_OTP_CREDENTIAL_DIRECTORY_CODE)
         self.principal = None
         self.validation_token = None
-        super(PasswordResetInsecureSerializer, self).__init__(*args, **kwargs)
+        super(PasswordResetConfirmSerializer, self).__init__(*args, **kwargs)
+
+    def validate_email(self, email):
+        try:
+            principal = Principal.objects.get(email=email)
+            self.principal = principal
+        except Principal.DoesNotExist:
+            raise serializers.ValidationError("Email doesn't exists", code=constants.EMAIL_INVALID_CODE)
+        return email
+
+    def validate_password(self, password):
+        return password
 
     def validate_token(self, token):
         try:
-            validation_token = ValidationToken.objects.get(secret=token,
-                                                           is_active=True,
-                                                           type=self.token_type)
+            validation_token = ValidationToken.objects.get(secret=token, principal=self.principal, is_active=True)
             self.validation_token = validation_token
-            self.principal = self.validation_token.principal
         except ValidationToken.DoesNotExist:
             raise serializers.ValidationError("Token doesn't exits", code=constants.TOKEN_INVALID_CODE)
         return token
 
-    def validate_password(self, password):
-        from talos_rest.validators import validate_password
+    def validate_code(self, code):
+        if self.principal:
+            if not self.principal.profile.is_secure and not self.sms_otp_directory.verify_credentials(self.principal,
+                                                                                                      {'code': code}):
+                raise serializers.ValidationError("Code is incorrect", code=constants.SMS_OTP_INVALID_CODE)
+            if self.principal.profile.is_secure and not self.google_authenticator_directory.verify_credentials(
+                    self.principal, {'code': code}):
+                raise serializers.ValidationError("Code is incorrect", code=constants.GOOGLE_OTP_INVALID_CODE)
+        return code
 
-        validate_password(password)
-
-        return password
-
-    def save(self):
-        password = self.validated_data['password']
-
-        if self.principal and self.basic_credential_directory:
-            self.basic_credential_directory.reset_credentials(self.principal, self.principal, {'password': password})
-
-        if self.validation_token:
-            self.validation_token.is_active = False
-            self.validation_token.save()
-
-
-class PasswordResetSecureSerializer(GoogleOtpSerializerMixin, BasicSerializer):
-    password = serializers.CharField()
-    token = serializers.CharField()
-
-    token_type = 'password_reset'
-
-    def __init__(self, *args, **kwargs):
-        from talos.models import OneTimePasswordCredentialDirectory
-        from talos.models import BasicIdentityDirectory
-        passed_kwargs_from_view = kwargs.get('context')
-
-        self.basic_identity_directory = BasicIdentityDirectory.objects.get(
-            code=passed_kwargs_from_view['identity_directory_code'])
-        self.basic_credential_directory = self.basic_identity_directory.credential_directory
-
-        self.principal = None
-        self.validation_token = None
-        super(PasswordResetSecureSerializer, self).__init__(*args, **kwargs)
-
-    def validate_token(self, token):
-        try:
-
-            validation_token = ValidationToken.objects.get(secret=token,
-                                                           is_active=True)
-            self.validation_token = validation_token
-            self.principal = self.validation_token.principal
-        except ValidationToken.DoesNotExist:
-            raise serializers.ValidationError("Token doesn't exits", code=constants.TOKEN_INVALID_CODE)
-        return token
-
-
-    def validate_password(self, password):
-        from talos_rest.validators import validate_password
-
-        validate_password(password)
-
-        return password
-
+    def validate(self, attrs):
+        return attrs
 
     def save(self):
         password = self.validated_data['password']
