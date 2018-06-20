@@ -570,7 +570,13 @@ class AddSMSEvidenceSerializer(SMSOtpSerializerMixin, BasicSerializer):
         super(AddSMSEvidenceSerializer, self).__init__(*args, **kwargs)
 
     def save(self):
-        self.principal.update_evidences(self.sms_otp_evidences)
+        from talos.models import Evidence
+        evidence_codes = [evidence.code for evidence in self.sms_otp_evidences]
+        evidence_codes.extend(self.principal.get_current_evidence_code_list())
+
+        provided_evidences = Evidence.objects.filter(code__in=evidence_codes)
+
+        self.principal._load_authentication_context(provided_evidences)
 
 class AddGoogleEvidenceSerializer(GoogleOtpSerializerMixin, serializers.Serializer):
 
@@ -585,7 +591,13 @@ class AddGoogleEvidenceSerializer(GoogleOtpSerializerMixin, serializers.Serializ
         super(AddGoogleEvidenceSerializer, self).__init__(*args, **kwargs)
 
     def save(self):
-        self.principal.update_evidences(self.otp_evidences)
+        from talos.models import Evidence
+        evidence_codes = [evidence.code for evidence in self.otp_evidences]
+        evidence_codes.extend(self.principal.get_current_evidence_code_list())
+
+        provided_evidences = Evidence.objects.filter(code__in=evidence_codes)
+
+        self.principal._load_authentication_context(provided_evidences)
 
 
 class GeneratePhoneCodeForUnAuthorizedUserSerializer(BasicSerializer):

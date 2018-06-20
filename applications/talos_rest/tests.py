@@ -921,7 +921,10 @@ class TestAddSMSEvidence(TestUtils):
 
 
         response = self.client.get(provided_evidences_url, {}, format='json')
-        self.assertListEqual(response.data.get('result').get('provided-evidences'),expected_provided_evidences)
+
+        response_list = list(response.data.get('result').get('provided-evidences'))
+
+        self.assertListEqual(sorted(response_list),sorted(expected_provided_evidences))
 
 
 class TestAddGoogleEvidence(TestUtils):
@@ -999,7 +1002,9 @@ class TestAddGoogleEvidence(TestUtils):
         self.add_evidence_google()
 
         response = self.client.get(provided_evidences_url, {}, format='json')
-        self.assertListEqual(response.data.get('result').get('provided-evidences'), expected_provided_evidences)
+
+        response_list = response.data.get('result').get('provided-evidences')
+        self.assertListEqual(sorted(response_list), sorted(expected_provided_evidences))
 
 
 class TestPasswordChangeInsecure(TestUtils):
