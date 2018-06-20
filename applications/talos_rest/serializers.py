@@ -629,8 +629,8 @@ class VerifyPhoneCodeForUnAuthorizedUserSerializer(serializers.Serializer):
 
         try:
             phone_validation_token = PhoneSMSValidationToken.objects.get(phone=phone,
-                                                   is_active=True,
-                                                   salt=code.encode())
+                                                                         is_active=True,
+                                                                         salt=code.encode())
             self.secret = phone_validation_token.secret
         except PhoneSMSValidationToken.DoesNotExist:
             raise serializers.ValidationError('Your code is incorrect')
@@ -638,3 +638,79 @@ class VerifyPhoneCodeForUnAuthorizedUserSerializer(serializers.Serializer):
 
     def save(self):
         pass
+
+
+class BasicRegistrationSerializer(serializers.Serializer):
+    full_name = serializers.CharField()
+    email = serializers.CharField()
+    password = serializers.CharField()
+    phone = serializers.CharField()
+    token = serializers.CharField()
+
+    def __init__(self, *args, **kwargs):
+        from talos.models import BasicIdentityDirectory
+        from talos.models import OneTimePasswordCredentialDirectory
+
+        passed_kwargs_from_view = kwargs.get('context')
+        self.identity_directory = BasicIdentityDirectory.objects.get(
+            code=passed_kwargs_from_view['identity_directory_code'])
+        self.credential_directory = self.identity_directory.credential_directory
+        self.otp_credential_directory = OneTimePasswordCredentialDirectory.objects.get(pk=2)
+        self.request = passed_kwargs_from_view.get('request')
+        self.principal = None
+        self.token = None
+
+        super(BasicRegistrationSerializer, self).__init__(*args, **kwargs)
+
+    def validate_email(self, email):
+        try:
+            Principal.objects.get(email=email)
+            raise serializers.ValidationError("Email is already used")
+        except Principal.DoesNotExist:
+            pass
+        return email
+
+    def validate_phone(self, phone):
+        try:
+            Principal.objects.get(phone=phone)
+            raise serializers.ValidationError("Phone is already used")
+        except Principal.DoesNotExist:
+            pass
+        return phone
+
+    def validate_token(self, token):
+        from talos.models import PhoneSMSValidationToken
+        try:
+            PhoneSMSValidationToken.objects.get(secret=token)
+        except PhoneSMSValidationToken.DoesNotExist:
+            raise serializers.ValidationError("Token doesn't exists")
+        return token
+
+    def validate(self, attrs):
+        from talos.models import PhoneSMSValidationToken
+
+        token = attrs['token']
+        phone = attrs['phone']
+
+        try:
+            self.token = PhoneSMSValidationToken.objects.get(phone=phone,
+                                                             secret=token,
+                                                             is_active=True)
+        except PhoneSMSValidationToken.DoesNotExist:
+            raise serializers.ValidationError("Token and phone is invalid")
+        return attrs
+
+    def save(self):
+        self.principal = Principal()
+        self.principal.email = self.validated_data['email']
+        self.principal.phone = self.validated_data['phone']
+        self.principal.full_name = self.validated_data['full_name']
+
+        self.principal.save()
+        self.identity_directory.create_credentials(self.principal, {'username': self.validated_data['email']})
+        self.credential_directory.create_credentials(self.principal, {'password': self.validated_data['password']})
+        # self.otp_credential_directory.create_credentials(self.principal, {})
+        if self.token:
+            self.token.principal = self.principal
+            self.token.is_active = False
+            self.token.save()

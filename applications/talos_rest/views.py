@@ -27,7 +27,8 @@ from talos_test_app.serializers import (SessionSerializer,
                                         AuthorizationUsingSMSSerializer,
                                         AuthorizationUsingGoogleAuthenticatorSerializer,
                                         GeneratePhoneCodeForUnAuthorizedUserSerializer,
-                                        VerifyPhoneCodeForUnAuthorizedUserSerializer)
+                                        VerifyPhoneCodeForUnAuthorizedUserSerializer,
+                                        BasicRegistrationSerializer)
 
 
 class TranslationContextMixin(object):
@@ -412,8 +413,24 @@ class VerifyPhoneCodeForUnAuthorizedUserView(SecureAPIViewBaseView):
         return Response({"text" : "Verify Phone Code For UnAuthorized user"})
 
     def post(self, request, *args, **kwargs):
-        kwargs = super(VerifyPhoneCodeForUnAuthorizedUserView, self).__init__(*args, **kwargs)
+        kwargs = super(VerifyPhoneCodeForUnAuthorizedUserView, self).get_serializer_context()
         serializer = VerifyPhoneCodeForUnAuthorizedUserSerializer(data=request.data, context=kwargs)
 
         if serializer.is_valid(raise_exception=True):
             return Response({"token" : serializer.secret})
+
+
+class BasicRegistrationView(SecureAPIViewBaseView):
+    serializer_class = BasicRegistrationSerializer
+    identity_directory_code = 'basic_internal'
+
+    def get(self, request, *args, **kwargs):
+        return Response({"text" : "Basic Registration"})
+
+    def post(self, request, *args, **kwargs):
+        kwargs = super(BasicRegistrationView, self).get_serializer_context()
+        serializer = BasicRegistrationSerializer(data=request.data, context=kwargs)
+
+        if serializer.is_valid(raise_exception=True):
+            serializer.save()
+            return Response({"text" : "You have registered succesfully"})

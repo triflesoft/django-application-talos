@@ -12,7 +12,7 @@ class Internal(object):
         basic_identity.uuid = uuid4()
         basic_identity.principal = principal
         basic_identity.directory = self._identity_directory
-        basic_identity.username = username
+        basic_identity.email = username
         basic_identity.save()
 
 
