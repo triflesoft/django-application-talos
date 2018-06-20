@@ -13,7 +13,7 @@ from rest_framework import status
 # Serializer classes
 from .exceptions.custom_exceptions import APIValidationError
 from talos_rest.serializers import SessionSerializer, \
-    GoogleAuthenticatorActivateRequestSerializer, GoogleAuthenticatorVerifySerializer, \
+    GoogleAuthenticatorActivateRequestSerializer,  \
     GoogleAuthenticatorDeleteSerializer, GeneratePhoneCodeForAuthorizedUserSerializer, \
     VerifyPhoneCodeForAuthorizedUserSerializer, ChangePasswordInsecureSerializer, \
     ChangePasswordSecureSerializer, AddSMSEvidenceSerializer, \
@@ -147,51 +147,34 @@ class GoogleAuthenticationActivateRequestView(SecureAPIViewBaseView):
     serializer_class = GoogleAuthenticatorActivateRequestSerializer
     identity_directory_code = 'basic_internal'
 
-    def get(self, request, *args, **kwargs):
-        print("Activate Request")
-        print(self.request.session.__dict__)
-        return Response({"text": "Google Authentication"})
 
     def post(self, request, *args, **kwargs):
         kwargs = super(GoogleAuthenticationActivateRequestView, self).get_serializer_context()
         serializer = GoogleAuthenticatorActivateRequestSerializer(data=request.data, context=kwargs)
         if serializer.is_valid(raise_exception=False):
             serializer.save()
-            return Response({"secret": serializer.salt})
+            success_response = SuccessResponse()
+            success_response.set_result_pairs('secret', serializer.secret)
+            return Response(success_response.data, success_response.status)
         else:
-            return Response({"errors": serializer.errors.items()})
+            raise APIValidationError(serializer.errors)
 
 
 class GoogleAuthenticatorActivateConfirmView(SecureAPIViewBaseView):
     permission_classes = (IsAuthenticated,)
     serializer_class = GoogleAuthenticatorActivateConfirmSerializer
 
-    def get(self, request, *args, **kwargs):
-        print("Activate Confirm")
-        print(self.request.session.__dict__)
-        return Response({"text": "Google Authenticator Confirm"})
-
     def post(self, request, *args, **kwargs):
         kwargs = super(GoogleAuthenticatorActivateConfirmView, self).get_serializer_context()
         serializer = GoogleAuthenticatorActivateConfirmSerializer(data=request.data, context=kwargs)
-        if serializer.is_valid(raise_exception=True):
+        if serializer.is_valid(raise_exception=False):
             serializer.save()
-            return Response({"text": "Google Authenticator has been added"})
+            success_response = SuccessResponse(status.HTTP_201_CREATED)
+            return Response(success_response.data, success_response.status)
+        else:
+            raise APIValidationError(serializer.errors)
 
 
-class GoogleAuthenticatorVerifyView(SecureAPIViewBaseView):
-    serializer_class = GoogleAuthenticatorVerifySerializer
-
-    def get(self, request, *args, **kwargs):
-        return Response({"text": "verify get"})
-
-    def post(self, request, *args, **kwargs):
-        kwargs = super(GoogleAuthenticatorVerifyView, self).get_serializer_context()
-        serializer = GoogleAuthenticatorVerifySerializer(data=request.data, context=kwargs)
-        if serializer.is_valid(raise_exception=True):
-            serializer.save()
-            return Response({"text": "Your code is correct"})
-        return Response({"text": "verify post"})
 
 
 class GoogleAuthenticatorDeleteRequestView(SecureAPIViewBaseView):
@@ -757,29 +740,32 @@ class TestView(SecureAPIViewBaseView):
 
 
 class PasswordChangeInsecureView(SecureAPIViewBaseView):
+    permission_classes = (IsAuthenticated, )
     serializer_class = PasswordChangeInsecureSerializer
     identity_directory_code = 'basic_internal'
 
-    def post(self, request, *args, **kwargs):
+    def put(self, request, *args, **kwargs):
         kwargs = super(PasswordChangeInsecureView, self).get_serializer_context()
         serializer = PasswordChangeInsecureSerializer(data=request.data, context=kwargs)
         if serializer.is_valid(raise_exception=False):
             if serializer.save():
-                return Response({'text': 'Your password has been changed succesfully'})
+                success_response = SuccessResponse()
+                return Response(success_response.data, success_response.status)
             else:
-                return Response({'text' : 'Your password has not been changed'})
-
+                error_response = ErrorResponse()
+                return Response(error_response.data, error_response.status)
         else:
             raise APIValidationError(detail=serializer.errors)
 
 class PasswordChangeSecureView(SecureAPIViewBaseView):
+    permission_classes = (IsAuthenticated, )
     serializer_class = PasswordChangeSecureSerializer
     identity_directory_code = 'basic_internal'
 
-    def post(self, request, *args, **kwargs):
+    def put(self, request, *args, **kwargs):
         kwargs = super(PasswordChangeSecureView, self).get_serializer_context()
         serializer = PasswordChangeSecureSerializer(data=request.data, context=kwargs)
-        if serializer.is_valid(raise_exception=True):
+        if serializer.is_valid(raise_exception=False):
             if serializer.save():
                 return Response({'text' : 'Your password has been changed'})
 
@@ -801,3 +787,4 @@ class LdapLoginAPIView(SecureAPIViewBaseView):
             return Response(serializer.data)
         else:
             raise APIValidationError(detail=serializer.errors)
+
