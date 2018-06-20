@@ -34,15 +34,14 @@ from .views import (SessionAPIView, PrincipalRegistrationRequestEditAPIView,
                     GeneratePhoneCodeForUnAuthorizedUserView,
                     VerifyPhoneCodeForUnAuthorizedUserView,
 
-                    EmailChangeAPIView,
                     EmailChangeValidationTokenCheckerAPIView,
 
                     BasicRegistrationView,
                     PasswordResetRequestView, PasswordResetConfirmView,
                     GoogleAuthenticatorDeleteRequestView,
                     GoogleAuthenticatorActivateConfirmView, EmailResetRequestAPIView,
-                    EmailResetValidationTokenCheckerAPIView, GoogleAuthenticatorChangeRequestView,
-                    GoogleAuthenticatorChangeConfirmView, GoogleAuthenticatorChangeDoneView)
+                    EmailResetValidationTokenCheckerAPIView,
+                    EmailChangeInsecureAPIView, EmailChangeSecureAPIView)
 
 
 
@@ -63,12 +62,12 @@ urlpatterns = [
     #      name='talos-rest-principal-registration-confirm'),
 
     # Email Change
-    path('principal/email/change_request', EmailChangeRequestAPIView.as_view(),
+    path('principal/email/change-request', EmailChangeRequestAPIView.as_view(),
          name='talos-email-change-request'),
-    path('email/email_change_token/<slug:secret>',EmailChangeValidationTokenCheckerAPIView.as_view(),
+    path('email/email-change-token/<slug:secret>',EmailChangeValidationTokenCheckerAPIView.as_view(),
          name='email-token-validation'),
-    path('principal/change_email', EmailChangeAPIView.as_view(), name='principal-email-change-confirm'),
-
+    path('principal/change-email-insecure', EmailChangeInsecureAPIView.as_view(), name='principal-email-change-insecure'),
+    path('principal/change-email-secure', EmailChangeSecureAPIView.as_view(), name='principal-email-change-secure'),
     # Email Reset
     path('principal/email/reset_request', EmailResetRequestAPIView.as_view(),
          name='talos-email-reset-request'),
@@ -87,9 +86,6 @@ urlpatterns = [
     path('google-authenticator/verify', GoogleAuthenticatorVerifyView.as_view(), name='google-authenticator-verify'),
     path('google-authenticator/delete/request', GoogleAuthenticatorDeleteRequestView.as_view(), name='google-authenticator-delete-request'),
     path('google-authenticator/delete/confirm', GoogleAuthenticatorDeleteView.as_view(), name='google-authenticator-delete'),
-    path('google-authenticator/change/request', GoogleAuthenticatorChangeRequestView.as_view(), name='google-authenticator-change-request'),
-    path('google-authenticator/change/confirm', GoogleAuthenticatorChangeConfirmView.as_view(), name='google-authenticator-change-confirm'),
-    path('google-authenticator/change/done', GoogleAuthenticatorChangeDoneView.as_view(), name='google-authneticator-change-done'),
 
     path('principal/security-level', PrincipalSecurityLevelView.as_view(), name='principal-security-level'),
 
