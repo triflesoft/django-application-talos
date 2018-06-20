@@ -314,7 +314,7 @@ class GoogleAuthenticatorDeleteSerializer(GoogleOtpSerializerMixin, SMSOtpSerial
         self.validation_token.save()
 
 
-class GoogleAuthenticatorChangeRequestSerializer(serializers.Serializer):
+class GoogleAuthenticatorChangeRequestSerializer(BasicSerializer):
     token_type = 'otp_change'
 
     def __init__(self, *args, **kwargs):
@@ -335,7 +335,7 @@ class GoogleAuthenticatorChangeRequestSerializer(serializers.Serializer):
         validation_token.save()
 
 
-class GoogleAuthenticatorChangeConfirmSerializer(serializers.Serializer):
+class GoogleAuthenticatorChangeConfirmSerializer(BasicSerializer):
     token = serializers.CharField()
     password = serializers.CharField()
     otp_code = serializers.CharField()
@@ -391,7 +391,7 @@ class GoogleAuthenticatorChangeConfirmSerializer(serializers.Serializer):
         self.salt = self.request.session['temp_otp_token']
 
 
-class GoogleAuthenticatorChangeDoneSerializer(serializers.Serializer):
+class GoogleAuthenticatorChangeDoneSerializer(BasicSerializer):
     otp_code = serializers.CharField()
 
     def __init__(self, *args, **kwargs):
@@ -470,7 +470,7 @@ class VerifyPhoneCodeForAuthorizedUserSerializer(serializers.Serializer):
             self.principal._evidences_effective[sms_otp_evidence.code] = sms_otp_evidence
 
 
-class ChangePasswordInsecureSerializer(serializers.Serializer):
+class ChangePasswordInsecureSerializer(BasicSerializer):
     old_password = serializers.CharField()
     new_password = serializers.CharField()
     sms_code = serializers.CharField()
@@ -516,7 +516,7 @@ class ChangePasswordInsecureSerializer(serializers.Serializer):
                                                            new_credentials=new_credentials)
 
 
-class ChangePasswordSecureSerializer(serializers.Serializer):
+class ChangePasswordSecureSerializer(BasicSerializer):
     old_password = serializers.CharField()
     new_password = serializers.CharField()
     otp_code = serializers.CharField()
@@ -1462,9 +1462,16 @@ class PasswordChangeInsecureSerializer(SMSOtpSerializerMixin, ValidatePasswordMi
         return new_password
 
     def save(self):
+        from talos.models import Session
+        from django.db.models import Q
+
+        #Delete every other active session user has
+        Session.objects.filter(Q(principal=self.request.principal), ~Q(uuid=self.request.session._session.uuid)).update(evidences=None)
+
         return self.basic_credential_directory.update_credentials(self.principal,
                                                                   {'password': self.password},
                                                                   {'password': self.validated_data['new_password']})
+
 
 
 class PasswordChangeSecureSerializer(GoogleOtpSerializerMixin, ValidatePasswordMixin, BasicSerializer):
