@@ -16,7 +16,7 @@ from talos_rest.serializers import SessionSerializer, \
     GoogleAuthenticatorActivateRequestSerializer, GoogleAuthenticatorVerifySerializer, \
     GoogleAuthenticatorDeleteSerializer, GeneratePhoneCodeForAuthorizedUserSerializer, \
     VerifyPhoneCodeForAuthorizedUserSerializer, ChangePasswordInsecureSerializer, \
-    ChangePasswordSecureSerializer, AuthorizationUsingSMSSerializer, \
+    ChangePasswordSecureSerializer, AddSMSEvidenceSerializer, \
     AuthorizationUsingGoogleAuthenticatorSerializer, GeneratePhoneCodeForUnAuthorizedUserSerializer, \
     BasicRegistrationSerializer, PasswordResetRequestSerializer, PasswordResetConfirmSerializer, \
     GoogleAuthenticatorDeleteRequestSerializer, GoogleAuthenticatorActivateConfirmSerializer, \
@@ -368,16 +368,16 @@ class ChangePasswordSecureView(SecureAPIViewBaseView):
         return Response({"text": "Change Password Secure POST Request"})
 
 
-class AuthorizationUsingSMSView(SecureAPIViewBaseView):
+class AddSMSEvidenceView(SecureAPIViewBaseView):
     permission_classes = (IsAuthenticated,)
-    serializer_class = AuthorizationUsingSMSSerializer
+    serializer_class = AddSMSEvidenceSerializer
 
     def get(self, request, *args, **kwargs):
         return Response({"text": "Authorization Using SMS Code"})
 
     def post(self, request, *args, **kwargs):
-        kwargs = super(AuthorizationUsingSMSView, self).get_serializer_context()
-        serializer = AuthorizationUsingSMSSerializer(data=request.data, context=kwargs)
+        kwargs = super(AddSMSEvidenceView, self).get_serializer_context()
+        serializer = AddSMSEvidenceSerializer(data=request.data, context=kwargs)
 
         if serializer.is_valid(raise_exception=True):
             serializer.save()
