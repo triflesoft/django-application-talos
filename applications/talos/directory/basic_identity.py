@@ -19,7 +19,7 @@ class Internal(object):
     def get_principal(self, credentials):
         from ..models import BasicIdentity
 
-        username = credentials['username']
+        username = credentials['email']
 
         try:
             basic_identity = self._identity_directory.identities.get(email=username)

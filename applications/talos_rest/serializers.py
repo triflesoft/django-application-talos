@@ -20,7 +20,7 @@ class BasicSerializer(serializers.Serializer):
 
 
 class SessionSerializer(BasicSerializer):
-    username = serializers.CharField(label='Username', help_text='Please enter username')
+    email = serializers.CharField(label='Email', help_text='Please enter email')
     password = serializers.CharField(label='Password', help_text='Please enter password')
 
     def __init__(self, *args, **kwargs):
@@ -38,11 +38,11 @@ class SessionSerializer(BasicSerializer):
 
         super(SessionSerializer, self).__init__(*args, **kwargs)
 
-    def validate_username(self, value):
+    def validate_email(self, value):
 
-        username = value
+        email = value
 
-        self.principal = self.identity_directory.get_principal({'username': username})
+        self.principal = self.identity_directory.get_principal({'email': email})
 
         if not self.principal:
             raise serializers.ValidationError(
@@ -54,7 +54,7 @@ class SessionSerializer(BasicSerializer):
                 'Username is valid, but account is disabled.',
                 code=constants.ACCOUNT_INACTIVE_CODE)
 
-        return username
+        return email
 
     def validate_password(self, value):
         password = value
@@ -1500,3 +1500,28 @@ class PasswordChangeInsecureSerializer(SMSOtpSerializerMixin, ValidatePasswordMi
 
 
 
+
+class PasswordChangeSecureSerializer(GoogleOtpSerializerMixin, ValidatePasswordMixin, BasicSerializer):
+    new_password = serializers.CharField()
+
+    def __init__(self, *args, **kwargs):
+        from talos.models import BasicIdentityDirectory
+        passed_kwargs_from_view = kwargs.get('context')
+        self.request = passed_kwargs_from_view['request']
+        self.principal = self.request.principal
+        self.basic_identity_directory = BasicIdentityDirectory.objects.get(
+            code=passed_kwargs_from_view['identity_directory_code'])
+        self.basic_credential_directory = self.basic_identity_directory.credential_directory
+        super(PasswordChangeSecureSerializer, self).__init__(self, *args, **kwargs)
+
+    def validate_new_password(self, new_password):
+        from talos_rest.validators import validate_password
+
+        validate_password(new_password)
+
+        return new_password
+
+    def save(self):
+        return self.basic_credential_directory.update_credentials(self.principal,
+                                                                  {'password' : self.password},
+                                                                  {'password' : self.validated_data['new_password']})

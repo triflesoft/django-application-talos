@@ -25,8 +25,7 @@ class ErrorResponse(object):
         self._data = {
             'status': status,
             'error': {},
-            'details': {},
-            'docs': None
+            'details': {}
         }
 
     def set_error_pairs(self, key, value):
