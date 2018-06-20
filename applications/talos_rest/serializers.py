@@ -152,7 +152,7 @@ class SessionSerializer(BasicSerializer):
 
         email = value
 
-        self.principal = self.identity_directory.get_principal({'email': email})
+        self.principal = self.identity_directory.get_principal({'username': email})
 
         if not self.principal:
             raise serializers.ValidationError(
@@ -842,11 +842,11 @@ class EmailChangeInsecureSerializer(SMSOtpSerializerMixin, ValidatePasswordMixin
         self.token.is_active = False
         self.token.save()
 
-        basic_credential = BasicIdentity.objects.get(
+        basic_identity = BasicIdentity.objects.get(
             principal=self.principal
         )
-        basic_credential.email = self.token.identifier_value
-        basic_credential.save()
+        basic_identity.username = self.token.identifier_value
+        basic_identity.save()
         # Remove session to logout
         self.request.session.flush()
 
@@ -872,11 +872,11 @@ class EmailChangeSecureSerializer(GoogleOtpSerializerMixin, ValidateSecretWhenLo
         self.token.is_active = False
         self.token.save()
 
-        basic_credential = BasicIdentity.objects.get(
+        basic_identity = BasicIdentity.objects.get(
             principal=self.principal
         )
-        basic_credential.email = self.token.identifier_value
-        basic_credential.save()
+        basic_identity.username = self.token.identifier_value
+        basic_identity.save()
         self.request.session.flush()
         # TODO Send link to new email
         # TODO Send sms to old phone
@@ -999,11 +999,11 @@ class EmailResetInsecureSerializer(SMSOtpSerializerMixin, ValidatePasswordMixin,
         self.token.is_active = False
         self.token.save()
 
-        basic_credential = BasicIdentity.objects.get(
+        basic_identity = BasicIdentity.objects.get(
             principal=self.principal
         )
-        basic_credential.email = self.token.identifier_value
-        basic_credential.save()
+        basic_identity.username = self.token.identifier_value
+        basic_identity.save()
         # TODO Send link to new email
         # TODO Send sms to old phone
         # TODO Send mail to old email for 5 days
@@ -1048,11 +1048,11 @@ class EmailResetSecureSerializer(SMSOtpSerializerMixin, GoogleOtpSerializerMixin
         self.token.is_active = False
         self.token.save()
 
-        basic_credential = BasicIdentity.objects.get(
+        basic_identity = BasicIdentity.objects.get(
             principal=self.principal
         )
-        basic_credential.email = self.token.identifier_value
-        basic_credential.save()
+        basic_identity.username = self.token.identifier_value
+        basic_identity.save()
         # TODO Send link to new email
         # TODO Send sms to old phone
         # TODO Send mail to old email for 5 days
@@ -1531,7 +1531,7 @@ class LdapLoginSerializer(BasicSerializer):
 
         email = value
 
-        self.principal = self.identity_directory.get_principal({'email': email})
+        self.principal = self.identity_directory.get_principal({'username': email})
 
         if not self.principal:
             raise serializers.ValidationError(

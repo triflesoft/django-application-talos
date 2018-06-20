@@ -44,7 +44,7 @@ class TestUtils(APITestCase):
 
         basic_identity = BasicIdentity()
         basic_identity.principal = self.principal
-        basic_identity.email = self.email
+        basic_identity.username = self.email
         basic_identity.directory = BasicIdentityDirectory.objects.get(code='basic_internal')
         basic_identity.save()
 
@@ -166,7 +166,7 @@ class TestRegistration(TestUtils):
         basic_identity = BasicIdentity.objects.last()
         self.assertIsNotNone(basic_identity)
         self.assertEqual(basic_identity.principal, principal)
-        self.assertEqual(basic_identity.email, principal.email)
+        self.assertEqual(basic_identity.username, principal.email)
 
     def test_registration_without_phone_sms_token(self):
         data = {
@@ -383,7 +383,7 @@ class TestSessions(TestUtils):
 
         basic_identity = BasicIdentity()
         basic_identity.principal = self.principal
-        basic_identity.email = self.email
+        basic_identity.username = self.email
         basic_identity.directory = BasicIdentityDirectory.objects.get(code='ldap')
         basic_identity.save()
 

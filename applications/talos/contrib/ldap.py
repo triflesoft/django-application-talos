@@ -1,9 +1,9 @@
 from ldap3 import Server, Connection, ALL
 from ldap3.core.exceptions import *
-from django.conf   import settings
+
 
 class LdapConnection():
-    host = settings.LDAP_HOST
+    host = 'bixtrim.com'
 
     def __init__(self, host=host, port=389):
         self.host = host

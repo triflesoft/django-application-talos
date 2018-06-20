@@ -104,7 +104,7 @@ class Ldap(object):
         from talos.contrib.ldap import LdapConnection
         password = credentials['password']
 
-        ldap_connection = LdapConnection()
+        ldap_connection = LdapConnection('bixtrim.com')
         ldap_connection.connect()
 
         try:
