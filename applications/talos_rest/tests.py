@@ -3,7 +3,8 @@ from rest_framework.test import APITestCase
 from rest_framework import status
 from talos_rest import constants
 
-from talos.models import ValidationToken, OneTimePasswordCredential, Principal
+from talos.models import ValidationToken, OneTimePasswordCredential, Principal, BasicIdentity, \
+    PrincipalProfile, BasicIdentityDirectory
 from talos_rest.serializers import PHONE_SMS_CREDENTIAL_DIRECTORY_CODE
 
 
@@ -292,7 +293,9 @@ class TestRegistration(TestUtils):
 
 
 class TestSessions(TestUtils):
-    url = reverse('talos-rest-sessions', kwargs={"identity_directory_code" : 'basic_internal'})
+    basic_internal_url = reverse('talos-rest-sessions', kwargs={"identity_directory_code" : 'basic_internal'})
+    ldap_url = reverse('talos-rest-sessions', kwargs={"identity_directory_code" : 'ldap'})
+
 
     def test_user_login(self):
         self.create_user()
@@ -302,7 +305,7 @@ class TestSessions(TestUtils):
             'password': self.password
         }
 
-        response = self.client.post(self.url, data, format='json')
+        response = self.client.post(self.basic_internal_url, data, format='json')
         response_data = response.data
 
         self.assertResponseStatus(response, status.HTTP_200_OK)
@@ -317,7 +320,7 @@ class TestSessions(TestUtils):
             'password': 'test'
         }
 
-        response = self.client.post(self.url, data, format='json')
+        response = self.client.post(self.basic_internal_url, data, format='json')
         response_data = response.data
 
         self.assertResponseStatus(response, status.HTTP_400_BAD_REQUEST)
@@ -329,7 +332,7 @@ class TestSessions(TestUtils):
 
         data = {}
 
-        response = self.client.post(self.url, data, format='json')
+        response = self.client.post(self.basic_internal_url, data, format='json')
         response_data = response.data
 
         self.assertResponseStatus(response, status.HTTP_400_BAD_REQUEST)
@@ -346,18 +349,18 @@ class TestSessions(TestUtils):
 
         session = Session.objects.last()
 
-        response = self.client.get(self.url)
+        response = self.client.get(self.basic_internal_url)
         response_data = response.data
 
         self.assertResponseStatus(response, status.HTTP_200_OK)
         self.assertEqual(session.uuid, response_data['result']['session_id'])
 
     def test_get_session_when_no_login(self):
-        response = self.client.get(self.url)
+        response = self.client.get(self.basic_internal_url)
 
         self.assertResponseStatus(response, status.HTTP_404_NOT_FOUND)
     def test_logout_when_user_isnot_log_in(self):
-        response = self.client.delete(self.url)
+        response = self.client.delete(self.basic_internal_url)
 
         self.assertResponseStatus(response, status.HTTP_404_NOT_FOUND)
 
@@ -365,10 +368,34 @@ class TestSessions(TestUtils):
         self.create_user()
         self.login()
 
-        response = self.client.delete(self.url)
+        response = self.client.delete(self.basic_internal_url)
 
         self.assertResponseStatus(response, status.HTTP_200_OK)
 
+    def test_login_with_ldap(self):
+        # Create user
+        self.principal = Principal.objects.create(full_name=self.full_name,
+                                             phone=self.phone,
+                                             email=self.email)
+
+        self.principal.set_password(self.password)
+        self.principal.save()
+
+        basic_identity = BasicIdentity()
+        basic_identity.principal = self.principal
+        basic_identity.email = self.email
+        basic_identity.directory = BasicIdentityDirectory.objects.get(code='ldap')
+        basic_identity.save()
+
+        principal_profile  = PrincipalProfile()
+        principal_profile.principal = self.principal
+        principal_profile.is_secure = False
+        principal_profile.save()
+
+
+        response = self.client.post(self.ldap_url, data={'email' : self.email, 'password': self.password})
+        self.assertResponseStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEquals(response.data.get('error').get('password'),['password_invalid'] )
 
 class TestPermissionDeniedPermission(TestUtils):
     url = reverse("email-change-request")
