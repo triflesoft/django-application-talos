@@ -305,3 +305,24 @@ class TestSessions(TestUtils):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['status'], status.HTTP_200_OK)
+
+    def test_login_added_correct_evidences(self):
+        self.create_user()
+        self.login()
+
+        provided_evidences_url = reverse('provided-evidences')
+
+
+        expected_provided_evidences = ['authenticated',
+                                       'knowledge_factor',
+                                       'knowledge_factor_password',
+                                       'knowledge_factor_password_confirmation']
+
+        response = self.client.get(provided_evidences_url, {}, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['status'], status.HTTP_200_OK)
+
+        self.assertListEqual(expected_provided_evidences, response.data.get('result').get('provided-evidences', []))
+
+

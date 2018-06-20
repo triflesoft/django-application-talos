@@ -725,8 +725,9 @@ class ProvidedEvidencesView(SecureAPIViewBaseView):
 
     def get(self, request, *args, **kwargs):
         evidences = list(dict(self.request.principal._evidences_effective).keys())
-        data = {'provided-evidences' : evidences}
-        return Response(data)
+        success_response = SuccessResponse()
+        success_response.set_result_pairs('provided-evidences', evidences)
+        return Response(success_response.data)
 
 
 class TestView(SecureAPIViewBaseView):
