@@ -157,6 +157,7 @@ class PrincipalRegistrationTokenValidationSerializer(BasicSerializer):
             raise serializers.ValidationError("Token already used", code='token_already_exist')
         return token
 
+
 class PrincipalRegistrationConfirmSerializer(BasicSerializer):
     brief_name = serializers.CharField(label='Brief Name', max_length=255)
     full_name = serializers.CharField(label='Full Name', max_length=255)
@@ -195,8 +196,6 @@ class PrincipalRegistrationConfirmSerializer(BasicSerializer):
 
         self.password1 = value
 
-
-
     def validate_password2(self, value):
         password1 = self.password1
         password2 = value  # self.validated_data.get('password2', None)
@@ -204,8 +203,6 @@ class PrincipalRegistrationConfirmSerializer(BasicSerializer):
         if password1 and password2 and (password1 != password2):
             raise serializers.ValidationError('Passwords do not match.',
                                               code='invalid_password_confirmation')
-
-
 
     def validate(self, attrs):
         if not self.token:
@@ -233,10 +230,10 @@ class PrincipalRegistrationConfirmSerializer(BasicSerializer):
         try:
             validate_password(password1, self.principal)
         except ValidationError as e:
-             errors['password'] = list(e.messages)
+            errors['password'] = list(e.messages)
 
         if errors:
-                 raise serializers.ValidationError(errors)
+            raise serializers.ValidationError(errors)
 
         self.principal.save()
         self.identity_directory.create_credentials(self.principal, {'username': username})
@@ -407,7 +404,8 @@ class GoogleAuthenticatorDeleteSerializer(serializers.Serializer):
         super(GoogleAuthenticatorDeleteSerializer, self).__init__(*args, **kwargs)
 
     def validate_code(self, code):
-        if self.otp_credential_directory and not self.otp_credential_directory.verify_credentials(self.principal, {'code' : code}):
+        if self.otp_credential_directory and not self.otp_credential_directory.verify_credentials(self.principal,
+                                                                                                  {'code': code}):
             raise serializers.ValidationError('Your code is incorrect')
         return code
 
@@ -429,7 +427,6 @@ class GeneratePhoneCodeForAuthorizedUserSerializer(serializers.Serializer):
         super(GeneratePhoneCodeForAuthorizedUserSerializer, self).__init__(*args, **kwargs)
 
     def validate(self, attrs):
-
         return attrs
 
     def save(self):
@@ -451,7 +448,7 @@ class VerifyPhoneCodeForAuthorizedUserSerializer(serializers.Serializer):
 
     def validate_code(self, code):
         if self.sms_otp_directory and not self.sms_otp_directory.verify_credentials(self.principal,
-                                                                                    {'code' : code}):
+                                                                                    {'code': code}):
             raise serializers.ValidationError('Code is incorrect')
         return code
 
@@ -466,7 +463,7 @@ class VerifyPhoneCodeForAuthorizedUserSerializer(serializers.Serializer):
 class ChangePasswordInsecureSerializer(serializers.Serializer):
     old_password = serializers.CharField()
     new_password = serializers.CharField()
-    sms_code =  serializers.CharField()
+    sms_code = serializers.CharField()
 
     def __init__(self, *args, **kwargs):
         from talos.models import OneTimePasswordCredentialDirectory
@@ -485,13 +482,13 @@ class ChangePasswordInsecureSerializer(serializers.Serializer):
 
     def validate_sms_code(self, sms_code):
         if not self.sms_otp_directory.verify_credentials(self.principal,
-                                                         {'code' : sms_code}):
+                                                         {'code': sms_code}):
             raise serializers.ValidationError('Sms Code is incorrect')
         return sms_code
 
     def validate_old_password(self, old_password):
         if not self.basic_credential_directory.verify_credentials(self.principal,
-                                                              {'password' : old_password}):
+                                                                  {'password': old_password}):
             raise serializers.ValidationError('Password is incorrect')
         return old_password
 
@@ -501,11 +498,12 @@ class ChangePasswordInsecureSerializer(serializers.Serializer):
         return attrs
 
     def save(self):
-        old_credentials = {'password' : self.validated_data['old_password']}
-        new_credentials = {'password' : self.validated_data['new_password']}
+        old_credentials = {'password': self.validated_data['old_password']}
+        new_credentials = {'password': self.validated_data['new_password']}
         self.basic_credential_directory.update_credentials(self.principal,
                                                            old_credentials=old_credentials,
                                                            new_credentials=new_credentials)
+
 
 class ChangePasswordSecureSerializer(serializers.Serializer):
     old_password = serializers.CharField()
@@ -526,7 +524,7 @@ class ChangePasswordSecureSerializer(serializers.Serializer):
 
     def validate_old_password(self, old_password):
         if not self.basic_credential_directory.verify_credentials(self.principal,
-                                                              {'password' : old_password}):
+                                                                  {'password': old_password}):
             raise serializers.ValidationError('Password is incorrect')
         return old_password
 
@@ -537,13 +535,13 @@ class ChangePasswordSecureSerializer(serializers.Serializer):
 
     def validate_otp_code(self, otp_code):
         if not self.otp_directory.verify_credentials(self.principal,
-                                                         {'code' : otp_code}):
+                                                     {'code': otp_code}):
             raise serializers.ValidationError('Sms Code is incorrect')
         return otp_code
 
     def save(self):
-        old_credentials = {'password' : self.validated_data['old_password']}
-        new_credentials = {'password' : self.validated_data['new_password']}
+        old_credentials = {'password': self.validated_data['old_password']}
+        new_credentials = {'password': self.validated_data['new_password']}
         self.basic_credential_directory.update_credentials(self.principal,
                                                            old_credentials=old_credentials,
                                                            new_credentials=new_credentials)
@@ -563,7 +561,7 @@ class AuthorizationUsingSMSSerializer(serializers.Serializer):
 
     def validate_code(self, code):
         if not self.sms_otp_directory.verify_credentials(self.principal,
-                                                         {'code' : code}):
+                                                         {'code': code}):
             raise serializers.ValidationError('Code is incorrect')
         return code
 
