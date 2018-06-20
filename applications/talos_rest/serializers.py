@@ -754,7 +754,7 @@ class AuthorizationUsingGoogleAuthenticatorSerializer(serializers.Serializer):
             self.principal._evidences_effective[otp_evidence.code] = otp_evidence
 
 
-class GeneratePhoneCodeForUnAuthorizedUserSerializer(serializers.Serializer):
+class GeneratePhoneCodeForUnAuthorizedUserSerializer(BasicSerializer):
     phone = serializers.CharField()
 
     def __init__(self, *args, **kwargs):

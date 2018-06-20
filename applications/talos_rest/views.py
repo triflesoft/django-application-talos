@@ -467,17 +467,16 @@ class AuthorizationUsingGoogleAuthenticatorView(SecureAPIViewBaseView):
 class GeneratePhoneCodeForUnAuthorizedUserView(SecureAPIViewBaseView):
     serializer_class = GeneratePhoneCodeForUnAuthorizedUserSerializer
 
-    def get(self, request, *args, **kwargs):
-        return Response({"text" : "Generate Phone Code for UnAuthorized user"})
 
     def post(self, request, *args, **kwargs):
         kwargs = super(GeneratePhoneCodeForUnAuthorizedUserView, self).__init__(*args, **kwargs)
         serializer = GeneratePhoneCodeForUnAuthorizedUserSerializer(data=request.data, context=kwargs)
 
-        if serializer.is_valid(raise_exception=True):
+        if serializer.is_valid(raise_exception=False):
             serializer.save()
-            return Response({"code" : "200",
-                             "text" : "SMS code has been sent on you phone"})
+            return Response(serializer.data)
+        else:
+            raise APIValidationError(serializer.errors)
 
 
 
