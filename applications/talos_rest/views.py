@@ -178,34 +178,36 @@ class GoogleAuthenticatorActivateConfirmView(SecureAPIViewBaseView):
 
 
 class GoogleAuthenticatorDeleteRequestView(SecureAPIViewBaseView):
-    permission_classes = (IsAuthenticated, IsSecureLevelOn, )
+    permission_classes = (IsAuthenticated,)
     serializer_class = GoogleAuthenticatorDeleteRequestSerializer
+
+    def get(self, request, *args, **kwargs):
+        return Response({"text": "Google Authenticator Delete"})
 
     def post(self, request, *args, **kwargs):
         kwargs = super(GoogleAuthenticatorDeleteRequestView, self).get_serializer_context()
         serializer = GoogleAuthenticatorDeleteRequestSerializer(data=request.data, context=kwargs)
-        if serializer.is_valid(raise_exception=False):
+        if serializer.is_valid(raise_exception=True):
             serializer.save()
-            success_response = SuccessResponse()
-            return Response(success_response.data, success_response.status)
-        else:
-            raise APIValidationError(serializer.errors)
+            return Response({"text": "Email has been sent"})
 
 
 class GoogleAuthenticatorDeleteView(SecureAPIViewBaseView):
-    permission_classes = (IsAuthenticated, IsSecureLevelOn,)
+    permission_classes = (IsAuthenticated,)
     serializer_class = GoogleAuthenticatorDeleteSerializer
     identity_directory_code = 'basic_internal'
+
+    def get(self, request, *args, **kwargs):
+        return Response({"text": "Delete Credential"})
 
     def post(self, request, *args, **kwargs):
         kwargs = super(GoogleAuthenticatorDeleteView, self).get_serializer_context()
         serializer = GoogleAuthenticatorDeleteSerializer(data=request.data, context=kwargs)
-        if serializer.is_valid(raise_exception=False):
+        if serializer.is_valid(raise_exception=True):
             serializer.delete()
-            success_response = SuccessResponse()
-            return Response(success_response.data, success_response.status)
-        else:
-            raise APIValidationError(serializer.errors)
+            return Response({"text": "Your credential has been deleted"})
+        return Response({"text": "Delete credential post"})
+
 
 class GoogleAuthenticatorChangeRequestView(SecureAPIViewBaseView):
     permission_classes = (IsAuthenticated,)
@@ -770,19 +772,4 @@ class PasswordChangeSecureView(SecureAPIViewBaseView):
         return Response({'text' : 'Your password has not been changed'})
 
 
-class LdapLoginAPIView(SecureAPIViewBaseView):
-    identity_directory_code = 'ldap'
-
-    serializer_class = LdapLoginSerializer
-
-    def post(self, request, *args, **kwargs):
-        kwargs = super(LdapLoginAPIView, self).get_serializer_context()
-        data = request.data
-        serializer = LdapLoginSerializer(data=data, context=kwargs)
-
-        if serializer.is_valid(raise_exception=False):
-            serializer.save()
-            return Response(serializer.data)
-        else:
-            raise APIValidationError(detail=serializer.errors)
 

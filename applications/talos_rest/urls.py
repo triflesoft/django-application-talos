@@ -33,7 +33,7 @@ from .views import SessionAPIView, EmailChangeRequestAPIView, \
     PhoneResetInsecureAPIView, PhoneResetSecureAPIView, PrincipalSecurityLevelByTokenView, \
     EmailResetInsecureAPIView, \
     EmailResetSecureAPIView, ProvidedEvidencesView, TestView, PasswordChangeInsecureView, \
-    PasswordChangeSecureView, LdapLoginAPIView
+    PasswordChangeSecureView
 
 from rest_framework.documentation import include_docs_urls
 
@@ -46,7 +46,6 @@ urlpatterns = [
                                     description='Talos Rest API overview')),
 
     path('<slug:identity_directory_code>/session', SessionAPIView.as_view(), name='talos-rest-sessions'),
-    path('ldap/session', LdapLoginAPIView.as_view(), name = 'talos-rest-ldap-login'),
 
     # Email Change
     path('principal/email/change-request', EmailChangeRequestAPIView.as_view(),
@@ -99,7 +98,7 @@ urlpatterns = [
     path('google-authenticator/delete/request', GoogleAuthenticatorDeleteRequestView.as_view(),
          name='google-authenticator-delete-request'),
     path('google-authenticator/delete/confirm', GoogleAuthenticatorDeleteView.as_view(),
-         name='google-authenticator-delete-confirm'),
+         name='google-authenticator-delete'),
     path('google-authenticator/change/request', GoogleAuthenticatorChangeRequestView.as_view(),
          name='google-authenticator-change-request'),
     path('google-authenticator/change/confirm', GoogleAuthenticatorChangeConfirmView.as_view(),

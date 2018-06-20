@@ -57,7 +57,7 @@ class TestUtils(APITestCase):
             'email': self.email,
             'password': self.password
         }
-        url = reverse('talos-rest-sessions')
+        url = reverse('talos-rest-sessions', kwargs={"identity_directory_code": 'basic_internal'})
 
         response = self.client.post(url, data, format='json')
 
@@ -103,9 +103,6 @@ class TestUtils(APITestCase):
 
         otp_directory = OneTimePasswordCredentialDirectory.objects.get(code='onetimepassword_internal_google_authenticator')
         otp_directory.create_credentials(self.principal, {})
-
-        self.principal.profile.is_secure = True
-        self.principal.profile.save()
 
         otp_credential = OneTimePasswordCredential.objects.last()
 
@@ -292,7 +289,7 @@ class TestRegistration(TestUtils):
 
 
 class TestSessions(TestUtils):
-    url = reverse('talos-rest-sessions')
+    url = reverse('talos-rest-sessions', kwargs={"identity_directory_code" : 'basic_internal'})
 
     def test_user_login(self):
         self.create_user()
@@ -1051,7 +1048,7 @@ class TestAddGoogleAuthenticator(TestUtils):
         }
 
         self.assertFalse(self.principal.profile.is_secure)
-
+        
         response = self.client.post(self.confirm_url, data, format='json')
 
         self.assertResponseStatus(response, status.HTTP_201_CREATED)
@@ -1065,61 +1062,4 @@ class TestAddGoogleAuthenticator(TestUtils):
 
         principal = Principal.objects.get(pk=self.principal.pk)
         self.assertTrue(principal.profile.is_secure)
-
-class TestGoogleAuthenticatorDelete(TestUtils):
-    request_url = reverse('google-authenticator-delete-request')
-    confirm_url = reverse('google-authenticator-delete-confirm')
-
-    def test_google_authenticator_delete(self):
-        from talos.models import ValidationToken
-        from talos.models import OneTimePasswordCredentialDirectory
-        from talos.models import OneTimePasswordCredential
-        import pyotp
-
-        self.create_user()
-        self.login()
-        self.add_evidence_sms()
-
-        response = self.client.post(self.request_url, {}, format='json')
-
-        self.assertResponseStatus(response, status.HTTP_403_FORBIDDEN)
-
-        self.add_evidence_google()
-
-        response = self.client.post(self.request_url, {}, format='json')
-
-        self.assertResponseStatus(response, status.HTTP_200_OK)
-
-        validation_token = ValidationToken.objects.last()
-        self.assertEqual(validation_token.principal, self.principal)
-        self.assertEqual(validation_token.type, 'otp_delete')
-
-
-        sms_otp_directory = OneTimePasswordCredentialDirectory.objects.get(code='onetimepassword_internal_phone_sms_authenticator')
-        google_otp_directory = OneTimePasswordCredentialDirectory.objects.get(code='onetimepassword_internal_google_authenticator')
-
-
-        sms_otp_credential = OneTimePasswordCredential.objects.get(principal=self.principal,
-                                                                   directory=sms_otp_directory)
-        google_otp_credential = OneTimePasswordCredential.objects.get(principal=self.principal,
-                                                                      directory=google_otp_directory)
-
-
-        sms_code = sms_otp_credential.salt
-        totp = pyotp.TOTP(google_otp_credential.salt)
-        google_code = totp.now()
-
-        data = {
-            'sms_code' : sms_code,
-            'google_otp_code' : google_code,
-            'password' : self.password,
-            'token' : validation_token.secret
-        }
-
-        response = self.client.post(self.confirm_url, data, format='json')
-
-        self.assertResponseStatus(response, status.HTTP_200_OK)
-        self.assertEqual(OneTimePasswordCredential.objects.filter(directory=google_otp_directory).count(), 0)
-
-
 
