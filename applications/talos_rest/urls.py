@@ -20,7 +20,7 @@ from .views import SessionAPIView, EmailChangeRequestAPIView, \
     GoogleAuthenticationActivateRequestView, GoogleAuthenticatorVerifyView, \
     GoogleAuthenticatorDeleteView, PrincipalSecurityLevelView, \
     GeneratePhoneCodeForAuthorizedUserView, VerifyPhoneCodeForAuthorizedUserView, \
-    ChangePasswordInsecureView, ChangePasswordSecureView, AddSMSEvidenceView, \
+    ChangePasswordInsecureView, ChangePasswordSecureView, AuthorizationUsingSMSView, \
     AuthorizationUsingGoogleAuthenticatorView, GeneratePhoneCodeForUnAuthorizedUserView, \
     VerifyPhoneCodeForUnAuthorizedUserView, EmailChangeValidationTokenCheckerAPIView, \
     BasicRegistrationView, PasswordResetRequestView, PasswordResetConfirmView, \
@@ -121,9 +121,9 @@ urlpatterns = [
     path('change-password-secure', ChangePasswordSecureView.as_view(),
          name='change-password-secure'),
 
-    path('evidence/sms', AddSMSEvidenceView.as_view(), name='add-evidence-sms'),
-    path('evidence/google', AuthorizationUsingGoogleAuthenticatorView.as_view(),
-         name='add-evidence-google'),
+    path('auth/login-phone', AuthorizationUsingSMSView.as_view(), name='authorization-using-sms'),
+    path('auth/login-otp', AuthorizationUsingGoogleAuthenticatorView.as_view(),
+         name='authorization-using-google-authenticator'),
 
     path('phone-verification/generate', GeneratePhoneCodeForUnAuthorizedUserView.as_view(),
          name='generate-phone-code-for-unauthorized-user'),

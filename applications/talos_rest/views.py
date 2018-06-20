@@ -16,7 +16,7 @@ from talos_rest.serializers import SessionSerializer, \
     GoogleAuthenticatorActivateRequestSerializer, GoogleAuthenticatorVerifySerializer, \
     GoogleAuthenticatorDeleteSerializer, GeneratePhoneCodeForAuthorizedUserSerializer, \
     VerifyPhoneCodeForAuthorizedUserSerializer, ChangePasswordInsecureSerializer, \
-    ChangePasswordSecureSerializer, AddSMSEvidenceSerializer, \
+    ChangePasswordSecureSerializer, AuthorizationUsingSMSSerializer, \
     AuthorizationUsingGoogleAuthenticatorSerializer, GeneratePhoneCodeForUnAuthorizedUserSerializer, \
     BasicRegistrationSerializer, PasswordResetRequestSerializer, PasswordResetConfirmSerializer, \
     GoogleAuthenticatorDeleteRequestSerializer, GoogleAuthenticatorActivateConfirmSerializer, \
@@ -368,16 +368,16 @@ class ChangePasswordSecureView(SecureAPIViewBaseView):
         return Response({"text": "Change Password Secure POST Request"})
 
 
-class AddSMSEvidenceView(SecureAPIViewBaseView):
+class AuthorizationUsingSMSView(SecureAPIViewBaseView):
     permission_classes = (IsAuthenticated,)
-    serializer_class = AddSMSEvidenceSerializer
+    serializer_class = AuthorizationUsingSMSSerializer
 
     def get(self, request, *args, **kwargs):
         return Response({"text": "Authorization Using SMS Code"})
 
     def post(self, request, *args, **kwargs):
-        kwargs = super(AddSMSEvidenceView, self).get_serializer_context()
-        serializer = AddSMSEvidenceSerializer(data=request.data, context=kwargs)
+        kwargs = super(AuthorizationUsingSMSView, self).get_serializer_context()
+        serializer = AuthorizationUsingSMSSerializer(data=request.data, context=kwargs)
 
         if serializer.is_valid(raise_exception=True):
             serializer.save()
@@ -462,7 +462,7 @@ class BasicRegistrationView(SecureAPIViewBaseView):
 
 class EmailChangeRequestAPIView(SecureAPIViewBaseView):
     serializer_class = EmailChangeRequestSerializer
-    permission_classes = (IsAuthenticated,)
+    # permission_classes = (IsAuthenticated,)
 
     def post(self, request, *args, **kwargs):
         kwargs = super(EmailChangeRequestAPIView, self).get_serializer_context()
@@ -478,7 +478,7 @@ class EmailChangeRequestAPIView(SecureAPIViewBaseView):
 
 
 class EmailChangeValidationTokenCheckerAPIView(SecureAPIViewBaseView):
-    permission_classes = (IsAuthenticated,)
+    # permission_classes = (IsAuthenticated,)
     identity_directory_code = 'basic_internal'
     serializer_class = EmailChangeValidationTokenCheckerSerializer
 

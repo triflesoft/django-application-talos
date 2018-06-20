@@ -3,6 +3,8 @@ from rest_framework.test import APITestCase
 from rest_framework import status
 from talos_rest import constants
 
+from talos.models import ValidationToken
+
 
 class TestUtils(APITestCase):
     full_name = 'bixtrim'
@@ -30,21 +32,21 @@ class TestUtils(APITestCase):
         from talos.models import BasicIdentityDirectory
         from talos.models import PrincipalProfile
 
-        principal = Principal.objects.create(full_name=self.full_name,
+        self.principal = Principal.objects.create(full_name=self.full_name,
                                              phone=self.phone,
                                              email=self.email)
 
-        principal.set_password(self.password)
-        principal.save()
+        self.principal.set_password(self.password)
+        self.principal.save()
 
         basic_identity = BasicIdentity()
-        basic_identity.principal = principal
+        basic_identity.principal = self.principal
         basic_identity.email = self.email
         basic_identity.directory = BasicIdentityDirectory.objects.get(code='basic_internal')
         basic_identity.save()
 
         principal_profile  = PrincipalProfile()
-        principal_profile.principal = principal
+        principal_profile.principal = self.principal
         principal_profile.is_secure = False
         principal_profile.save()
 
@@ -56,13 +58,17 @@ class TestUtils(APITestCase):
         url = reverse('talos-rest-sessions')
 
         response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+
+    def assertResponseStatus(self, response, status = status.HTTP_200_OK):
+        self.assertEquals(response.status_code, status)
+        self.assertEquals(response.data['status'], status)
 
 class TestRegistration(TestUtils):
     url = reverse('basic-registration')
 
     def test_registration_correct_input(self):
+
         from talos.models import PhoneSMSValidationToken
         from talos.models import Principal
         from talos.models import BasicIdentity
@@ -237,8 +243,8 @@ class TestSessions(TestUtils):
         response = self.client.post(self.url, data, format='json')
         response_data = response.data
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response_data['status'], status.HTTP_200_OK)
+        self.assertResponseStatus(response, status.HTTP_200_OK)
+
         self.assertEqual(response_data['result']['email'], self.email)
 
     def test_user_login_incorrect_credentials(self):
@@ -252,8 +258,8 @@ class TestSessions(TestUtils):
         response = self.client.post(self.url, data, format='json')
         response_data = response.data
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response_data['status'], status.HTTP_400_BAD_REQUEST)
+        self.assertResponseStatus(response, status.HTTP_400_BAD_REQUEST)
+
         self.assertEqual(response_data['error']['email'][0], 'username_invalid')
 
     def test_user_login_invalid_credentials(self):
@@ -264,8 +270,8 @@ class TestSessions(TestUtils):
         response = self.client.post(self.url, data, format='json')
         response_data = response.data
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response_data['status'], status.HTTP_400_BAD_REQUEST)
+        self.assertResponseStatus(response, status.HTTP_400_BAD_REQUEST)
+
         self.assertEqual(response_data['error']['email'][0], 'required')
         self.assertEqual(response_data['error']['password'][0], 'required')
         self.assertTrue(response_data.get('details'), False)
@@ -281,21 +287,17 @@ class TestSessions(TestUtils):
         response = self.client.get(self.url)
         response_data = response.data
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response_data['status'], status.HTTP_200_OK)
+        self.assertResponseStatus(response, status.HTTP_200_OK)
         self.assertEqual(session.uuid, response_data['result']['session_id'])
 
     def test_get_session_when_no_login(self):
         response = self.client.get(self.url)
 
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertEqual(response.data['status'], status.HTTP_404_NOT_FOUND)
-
+        self.assertResponseStatus(response, status.HTTP_404_NOT_FOUND)
     def test_logout_when_user_isnot_log_in(self):
         response = self.client.delete(self.url)
 
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertEqual(response.data['status'], status.HTTP_404_NOT_FOUND)
+        self.assertResponseStatus(response, status.HTTP_404_NOT_FOUND)
 
     def test_logout_when_user_is_log_in(self):
         self.create_user()
@@ -303,9 +305,32 @@ class TestSessions(TestUtils):
 
         response = self.client.delete(self.url)
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['status'], status.HTTP_200_OK)
+        self.assertResponseStatus(response, status.HTTP_200_OK)
 
+
+class TestPermissionDeniedPermission(TestUtils):
+    url = reverse("email-change-request")
+
+    def test_permission_error_message_when_user_non_secure(self):
+        self.create_user()
+        self.login()
+        response = self.client.post(self.url)
+
+        self.assertResponseStatus(response, status.HTTP_403_FORBIDDEN)
+        self.assertListEqual(response.data.get('error'),  ['permission_denied', 'permission_denied', 'permission_denied'])
+        self.assertListEqual(response.data.get('details'), ['ownership_factor', 'ownership_factor_otp_token', 'ownership_factor_phone'])
+
+    def test_permission_error_message_when_user_secure(self):
+        self.create_user()
+        self.principal.profile.is_secure = True
+        self.principal.profile.save()
+        self.login()
+
+        response = self.client.post(self.url)
+
+        self.assertResponseStatus(response, status.HTTP_403_FORBIDDEN)
+        self.assertListEqual(response.data.get('error'),  ['permission_denied', 'permission_denied', 'permission_denied'])
+        self.assertListEqual(response.data.get('details'), ['ownership_factor', 'ownership_factor_otp_token', 'ownership_factor_google_authenticator'])
 
     def test_login_added_correct_evidences(self):
         self.create_user()
@@ -478,33 +503,125 @@ class TestVerifyPhoneCodeForUnAuthorizedUser(TestUtils):
 
 
 class TestEmailChange(TestUtils):
-    url  = reverse("email-change-request")
+    email_change_request_url  = reverse("email-change-request")
+
+
 
     def test_get_method_on_email_change(self):
 
-        response = self.client.get(self.url)
-        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
-        self.assertEqual(response.data['status'], status.HTTP_405_METHOD_NOT_ALLOWED)
+        response = self.client.get(self.email_change_request_url)
+        self.assertResponseStatus(response, status.HTTP_405_METHOD_NOT_ALLOWED)
         self.assertEquals(response.data.get('error'), 'method_not_allowed')
 
-    def test_email_change_when_not_session(self):
 
-        response = self.client.post(self.url)
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertEqual(response.data['status'], status.HTTP_403_FORBIDDEN)
-        self.assertListEqual(response.data.get('error'),
-                             ['permission_denied', 'permission_denied', 'permission_denied', 'permission_denied', 'permission_denied'])
-        self.assertListEqual(response.data.get('details'),
-                             ['authenticated', 'knowledge_factor', 'knowledge_factor_password', 'ownership_factor', 'ownership_factor_otp_token'])
-
-    def test_email_change_when_not_enought_permissions(self):
+    def test_email_change_request_when_no_data(self):
         self.create_user()
         self.login()
-        response = self.client.post(self.url)
-        print (response.data)
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertEqual(response.data['status'], status.HTTP_403_FORBIDDEN)
-        # self.assertListEqual(response.data.get('error'),['permission_denied', 'permission_denied'])
-        # self.assertListEqual(response.data.get('details'),
+        # TODO login with sms
+
+        data = {}
+        response = self.client.post(self.email_change_request_url,data)
+        self.assertResponseStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertListEqual(response.data.get('error').get('new_email'),['required'])
+
+    def test_email_change_request_when_invalid_email(self):
+        self.create_user()
+        self.login()
+        # TODO login with sms
+
+        data = {'new_email' : 'asd'}
+        response = self.client.post(self.email_change_request_url, data)
+        self.assertResponseStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertListEqual(response.data.get('error').get('new_email'), ['email_invalid'])
+
+    def test_email_change_request_when_passed_used_email(self):
+        self.create_user()
+        self.login()
+        # TODO login with sms
+
+        data = {'new_email' : self.email}
+        response = self.client.post(self.email_change_request_url, data)
+        self.assertResponseStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertListEqual(response.data.get('error').get('new_email'), ['email_used'])
+
+    def test_email_change_request_when_success(self):
+        from talos.models import ValidationToken
+        from django.utils import timezone
+        now = timezone.now()
+        self.create_user()
+        self.login()
+        # TODO login with sms
+
+        data = {'new_email' : 'correct@bixtrim.ge'}
+        response = self.client.post(self.email_change_request_url, data)
+
+        self.assertResponseStatus(response)
+        self.assertEquals(response.data.get('result').get('new_email'),data['new_email'])
+        self.assertEquals(ValidationToken.objects.count(),1)
+        validation_token = ValidationToken.objects.last()
+        self.assertEquals(validation_token.type,'email_change')
+        self.assertEquals(validation_token.is_active,True)
+        self.assertEquals(validation_token.principal_id, 1)
+        self.assertEquals(validation_token.identifier,'email')
+        self.assertGreaterEqual(validation_token.expires_at, now)
+
+    def test_email_change_token_validation_when_invalid_token(self):
+        url = reverse("email-change-token-validation", kwargs={'secret': '1234'})
+        self.create_user()
+        self.login()
+
+        response = self.client.get(url)
+
+        self.assertResponseStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertListEqual(response.data.get('error').get('secret'),['token_invalid'])
+
+    def test_email_change_token_validation_when_success(self):
+        self.create_user()
+        self.login()
+        validation_token = ValidationToken.objects.create(identifier = 'email',
+                                                          identifier_value=self.email,
+                                                          principal=self.principal,
+                                                          type='email_change',
+                                                          )
+        url = reverse("email-change-token-validation", kwargs={'secret': validation_token.secret})
+        response = self.client.get(url)
+
+        self.assertResponseStatus(response)
+        self.assertEqual(response.data.get('result').get('secret'), None)
+
+    def test_email_change_token_validation_when_not_active_token(self):
+        self.create_user()
+        self.login()
+        validation_token = ValidationToken.objects.create(identifier = 'email',
+                                                          identifier_value=self.email,
+                                                          principal=self.principal,
+                                                          type='email_change',
+                                                          )
+        validation_token.is_active = False
+        validation_token.save()
+
+        url = reverse("email-change-token-validation", kwargs={'secret': validation_token.secret})
+        response = self.client.get(url)
+
+        self.assertResponseStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertListEqual(response.data.get('error').get('secret'),['token_invalid'])
+
+    def test_email_change_token_validation_when_different_token_type(self):
+        self.create_user()
+        self.login()
+        validation_token = ValidationToken.objects.create(identifier = 'email',
+                                                          identifier_value=self.email,
+                                                          principal=self.principal,
+                                                          type='email_change',
+                                                          )
+        validation_token.type = 'different'
+        validation_token.save()
+
+        url = reverse("email-change-token-validation", kwargs={'secret': validation_token.secret})
+        response = self.client.get(url)
+
+        self.assertResponseStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertListEqual(response.data.get('error').get('secret'),['token_invalid'])
+
 
 
