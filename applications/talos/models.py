@@ -842,7 +842,6 @@ class OneTimePasswordCredential(AbstractCredential):
     directory = models.ForeignKey(OneTimePasswordCredentialDirectory, related_name='credentials',
                                   on_delete=models.CASCADE)
     salt = models.BinaryField()
-    is_activated = models.BooleanField(default=False)
 
     class Meta:
         unique_together = [
