@@ -12,7 +12,7 @@ class TestUtils(APITestCase):
     full_name = 'bixtrim'
     email = 'at@bixtrim.com'
     password = 'bixtrim_password'
-    phone = '+995555555555'
+    phone = 'phone'
 
     def __init__(self, *args, **kwargs):
         self.set_values()
@@ -66,6 +66,7 @@ class TestUtils(APITestCase):
         from talos.models import OneTimePasswordCredentialDirectory
         from talos.models import OneTimePasswordCredential
         from talos.models import Principal
+        import pyotp
 
         add_evidence_sms_url = reverse('add-evidence-sms')
 
@@ -79,8 +80,10 @@ class TestUtils(APITestCase):
 
         self.assertIsNotNone(otp_credential)
 
+        totp = pyotp.TOTP(otp_credential.salt.decode())
+
         data = {
-            'sms_code' : otp_credential.salt
+            'sms_code' : totp.now()
         }
 
         response = self.client.post(add_evidence_sms_url, data, format='json')
@@ -92,7 +95,7 @@ class TestUtils(APITestCase):
 
         sms_otp_directory = OneTimePasswordCredentialDirectory.objects.get(
             code=PHONE_SMS_CREDENTIAL_DIRECTORY_CODE)
-        sms_otp_directory.create_credentials(principal, {})
+        sms_otp_directory.generate_credentials(principal, {})
 
     def add_evidence_google(self):
         from talos.models import OneTimePasswordCredentialDirectory
@@ -207,7 +210,7 @@ class TestRegistration(TestUtils):
         data = {
             'full_name': self.full_name,
             'email': self.email,
-            'phone': '+995555555551',
+            'phone': 'phone',
             'password': self.password
         }
 
@@ -280,7 +283,7 @@ class TestRegistration(TestUtils):
             'password': self.password,
             'token': phone_sms_token.secret,
             'code': phone_sms_token.salt,
-            'phone': '+995555555551'
+            'phone': 'phone'
         }
 
         response = self.client.post(self.url, data, format='json')
@@ -486,7 +489,7 @@ class GeneratePhoneCodeForUnAuthorizedUser(TestUtils):
 
     def test_generate_invalid_phone(self):
         data = {
-            'phone' : '+511123123'
+            'phone' : 'phone'
         }
 
         response = self.client.post(self.url, data, format='json')
@@ -561,7 +564,7 @@ class TestVerifyPhoneCodeForUnAuthorizedUser(TestUtils):
         self.assertEqual(response.data.get('error').get('code')[0], constants.SMS_OTP_INVALID_CODE)
 
         data = {
-            'phone' : '+8855555555',
+            'phone' : 'phone_valid',
             'code' : phone_sms_token.salt
         }
 
@@ -799,6 +802,7 @@ class TestEmailChange(TestUtils):
         self.assertListEqual(response.data.get('details').get('sms_code'), ['OTP code is incorrect'])
 
     def test_change_email_when_wrong_password(self):
+        import pyotp
         self.create_user()
         self.login()
         self.add_evidence_sms()
@@ -809,14 +813,21 @@ class TestEmailChange(TestUtils):
                                                           principal=self.principal,
                                                           type='email_change',)
         code = (OneTimePasswordCredential.objects.last())
-        response = self.client.put(self.email_change_insecure_url, data= {'sms_code': code.salt.decode(),
-                                                                          'password': '1234',
-                                                                          'secret': validation_token.secret})
+
+        totp = pyotp.TOTP(code.salt.decode())
+
+        data = {'sms_code': totp.now(),
+                'password': '1234',
+                 'secret': validation_token.secret}
+
+        response = self.client.put(self.email_change_insecure_url, data=data)
+
         self.assertResponseStatus(response, status.HTTP_400_BAD_REQUEST)
         self.assertListEqual(response.data.get('error').get('password'),['password_invalid'])
         self.assertListEqual(response.data.get('details').get('password'), ['Password is incorrect'])
 
     def test_change_email_when_success(self):
+        import pyotp
         self.create_user()
         self.login()
         self.add_evidence_sms()
@@ -829,9 +840,15 @@ class TestEmailChange(TestUtils):
                                                           type='email_change',)
         code = (OneTimePasswordCredential.objects.last())
 
-        response = self.client.put(self.email_change_insecure_url, data= {'sms_code': code.salt.decode(),
-                                                                          'password': self.password,
-                                                                          'secret': validation_token.secret})
+        totp = pyotp.TOTP(code.salt.decode())
+
+        data = {
+            'sms_code': totp.now(),
+            'password': self.password,
+            'secret': validation_token.secret
+        }
+
+        response = self.client.put(self.email_change_insecure_url, data=data)
 
         changed_pricipal = Principal.objects.last()
 
@@ -845,6 +862,7 @@ class TestAddSMSEvidence(TestUtils):
         from talos.models import OneTimePasswordCredentialDirectory
         from talos.models import OneTimePasswordCredential
         from talos.models import Principal
+        import pyotp
 
         self.create_user()
         self.login()
@@ -858,8 +876,10 @@ class TestAddSMSEvidence(TestUtils):
 
         otp_credential = OneTimePasswordCredential.objects.last()
 
+        totp = pyotp.TOTP(otp_credential.salt.decode())
+
         data = {
-            'sms_code' : otp_credential.salt
+            'sms_code' : totp.now()
         }
 
         response = self.client.post(self.url, data, format='json')
@@ -908,7 +928,10 @@ class TestAddSMSEvidence(TestUtils):
 
 
         response = self.client.get(provided_evidences_url, {}, format='json')
-        self.assertListEqual(response.data.get('result').get('provided-evidences'),expected_provided_evidences)
+
+        response_list = list(response.data.get('result').get('provided-evidences'))
+
+        self.assertListEqual(sorted(response_list),sorted(expected_provided_evidences))
 
 
 class TestAddGoogleEvidence(TestUtils):
@@ -986,7 +1009,9 @@ class TestAddGoogleEvidence(TestUtils):
         self.add_evidence_google()
 
         response = self.client.get(provided_evidences_url, {}, format='json')
-        self.assertListEqual(response.data.get('result').get('provided-evidences'), expected_provided_evidences)
+
+        response_list = response.data.get('result').get('provided-evidences')
+        self.assertListEqual(sorted(response_list), sorted(expected_provided_evidences))
 
 
 class TestPasswordChangeInsecure(TestUtils):
@@ -995,6 +1020,7 @@ class TestPasswordChangeInsecure(TestUtils):
     def test_password_change_insecure(self):
         from talos.models import OneTimePasswordCredential
         from talos.models import Principal
+        import pyotp
 
         self.create_user()
         self.login()
@@ -1003,7 +1029,8 @@ class TestPasswordChangeInsecure(TestUtils):
         self.assertEqual(OneTimePasswordCredential.objects.all().count(), 1)
         sms_otp_credential = OneTimePasswordCredential.objects.last()
 
-        sms_code = sms_otp_credential.salt.decode()
+        totp = pyotp.TOTP(sms_otp_credential.salt.decode())
+        sms_code = totp.now()
 
         data = {
             'password' : self.password,
@@ -1025,7 +1052,7 @@ class TestPasswordChangeInsecure(TestUtils):
         from talos.models import Principal
         from talos.models import Session
         from django.db.models import Q
-
+        import pyotp
 
         self.create_user()
         self.login()
@@ -1034,7 +1061,8 @@ class TestPasswordChangeInsecure(TestUtils):
         self.assertEqual(OneTimePasswordCredential.objects.all().count(), 1)
         sms_otp_credential = OneTimePasswordCredential.objects.last()
 
-        sms_code = sms_otp_credential.salt.decode()
+        totp = pyotp.TOTP(sms_otp_credential.salt.decode())
+        sms_code = totp.now()
 
         data = {
             'password' : self.password,
@@ -1183,8 +1211,8 @@ class TestGoogleAuthenticatorDelete(TestUtils):
         google_otp_credential = OneTimePasswordCredential.objects.get(principal=self.principal,
                                                                       directory=google_otp_directory)
 
-
-        sms_code = sms_otp_credential.salt
+        totp = pyotp.TOTP(sms_otp_credential.salt.decode())
+        sms_code = totp.now()
         totp = pyotp.TOTP(google_otp_credential.salt)
         google_code = totp.now()
 
