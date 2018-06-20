@@ -4,15 +4,24 @@ from rest_framework import status
 from talos_rest import constants
 
 from talos.models import ValidationToken, OneTimePasswordCredential, Principal, BasicIdentity, \
-    PrincipalProfile, BasicIdentityDirectory, BasicIdentityDirectoryOption
+    PrincipalProfile, BasicIdentityDirectory
 from talos_rest.serializers import PHONE_SMS_CREDENTIAL_DIRECTORY_CODE
+
+
+from talos.contrib import sms_sender
+
+def mock_send_message(self, a, b):
+    return True
+
+sms_sender.SMSSender.send_message = mock_send_message
+
 
 
 class TestUtils(APITestCase):
     full_name = 'bixtrim'
     email = 'at@bixtrim.com'
     password = 'bixtrim_password'
-    phone = 'phone'
+    phone = '+995599439670'
 
     def __init__(self, *args, **kwargs):
         self.set_values()
@@ -58,7 +67,7 @@ class TestUtils(APITestCase):
             'email': self.email,
             'password': self.password
         }
-        url = reverse('talos-rest-sessions')
+        url = reverse('talos-rest-sessions', kwargs={"identity_directory_code": 'basic_internal'})
 
         response = self.client.post(url, data, format='json')
 
@@ -178,13 +187,13 @@ class TestRegistration(TestUtils):
             'password': '123456',
             'token': 'incorrect_token',
             'code': '12345',
-            'phone': '12345',
+            'phone': '+995g599739670',
         }
 
         response = self.client.post(self.url, data, format='json')
+
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertTrue(response.data.get('error', False))
-        self.assertTrue(response.data.get('error').get('phone', False))
         self.assertTrue(response.data.get('error').get('token', False))
 
     def test_registration_using_same_phone(self):
@@ -296,8 +305,8 @@ class TestRegistration(TestUtils):
 
 
 class TestSessions(TestUtils):
-    basic_internal_url = reverse('talos-rest-sessions')
-    ldap_url = reverse('talos-rest-ldap-sessions')
+    basic_internal_url = reverse('talos-rest-sessions', kwargs={"identity_directory_code" : 'basic_internal'})
+    ldap_url = reverse('talos-rest-sessions', kwargs={"identity_directory_code" : 'ldap'})
 
 
     def test_user_login(self):
@@ -375,37 +384,30 @@ class TestSessions(TestUtils):
 
         self.assertResponseStatus(response, status.HTTP_200_OK)
 
-    # def test_login_with_ldap(self):
-    #     # Create user
-    #     self.principal = Principal.objects.create(full_name=self.full_name,
-    #                                          phone=self.phone,
-    #                                          email=self.email)
-    #
-    #     self.principal.set_password(self.password)
-    #     self.principal.save()
-    #
-    #     basic_identity = BasicIdentity()
-    #     basic_identity.principal = self.principal
-    #     basic_identity.username = self.email
-    #     basic_identity.directory = BasicIdentityDirectory.objects.get(code='ldap')
-    #     basic_identity.save()
-    #
-    #     principal_profile  = PrincipalProfile()
-    #     principal_profile.principal = self.principal
-    #     principal_profile.is_secure = False
-    #     principal_profile.save()
-    #     values = {'host': 'bixtrim.com', 'username': 'test', 'password': 'test', 'port': '123',
-    #               'search_base': 'test'}
-    #
-    #     for key,value in values.items():
-    #         basic_identity_directory_option = BasicIdentityDirectoryOption()
-    #         setattr(basic_identity_directory_option,'directory_id', '2')
-    #         setattr(basic_identity_directory_option, 'name', key)
-    #         setattr(basic_identity_directory_option, 'value', value)
-    #         basic_identity_directory_option.save()
-    #     response = self.client.post(self.ldap_url, data={'email' : self.email, 'password': self.password})
-    #     self.assertResponseStatus(response, status.HTTP_400_BAD_REQUEST)
-    #     self.assertEquals(response.data.get('error').get('email'),['username_invalid'])
+    def test_login_with_ldap(self):
+        # Create user
+        self.principal = Principal.objects.create(full_name=self.full_name,
+                                             phone=self.phone,
+                                             email=self.email)
+
+        self.principal.set_password(self.password)
+        self.principal.save()
+
+        basic_identity = BasicIdentity()
+        basic_identity.principal = self.principal
+        basic_identity.username = self.email
+        basic_identity.directory = BasicIdentityDirectory.objects.get(code='ldap')
+        basic_identity.save()
+
+        principal_profile  = PrincipalProfile()
+        principal_profile.principal = self.principal
+        principal_profile.is_secure = False
+        principal_profile.save()
+
+
+        response = self.client.post(self.ldap_url, data={'email' : self.email, 'password': self.password})
+        self.assertResponseStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEquals(response.data.get('error').get('password'),['password_invalid'] )
 
 class TestPermissionDeniedPermission(TestUtils):
     url = reverse("email-change-request")
@@ -464,6 +466,8 @@ class GeneratePhoneCodeForUnAuthorizedUser(TestUtils):
 
         response = self.client.post(self.url, data, format='json')
 
+
+
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['status'], status.HTTP_200_OK)
 
@@ -493,7 +497,6 @@ class GeneratePhoneCodeForUnAuthorizedUser(TestUtils):
         }
 
         response = self.client.post(self.url, data, format='json')
-
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data['status'], status.HTTP_400_BAD_REQUEST)

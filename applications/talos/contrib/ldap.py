@@ -1,5 +1,4 @@
-from ldap3 import Server, Connection, ALL, SUBTREE, ALL_ATTRIBUTES, ALL_OPERATIONAL_ATTRIBUTES, \
-    BASE, LEVEL, DEREF_NEVER, DEREF_SEARCH, DEREF_BASE, DEREF_ALWAYS
+from ldap3 import Server, Connection, ALL, SUBTREE, ALL_ATTRIBUTES, ALL_OPERATIONAL_ATTRIBUTES
 from ldap3.core.exceptions import *
 from talos.models import BasicIdentityDirectoryOption
 
@@ -10,7 +9,7 @@ basic_identity_directory_option = BasicIdentityDirectoryOption.objects.filter(
 class LdapConnection():
 
     def __init__(self):
-        needful_items = ['host', 'username', 'password', 'port', 'user_search_base','cn_search_base']
+        needful_items = ['host', 'username', 'password', 'port', 'search_base']
         values = {}
 
         for item in needful_items:
@@ -25,8 +24,7 @@ class LdapConnection():
         self.port = int(values['port'])
         self.username = values['username']
         self.password = values['password']
-        self.user_search_base = values['user_search_base']
-        self.cn_search_base = values['cn_search_base']
+        self.search_base = values['search_base']
 
         self.server = self.server_connect()
         self.connection = self.create_connection()
@@ -41,73 +39,42 @@ class LdapConnection():
         if not self.server:
             raise Exception("Please run connect()")
         connection = Connection(self.server, user=self.username, password=self.password,
-                                raise_exceptions=True)
+                                check_names=True,
+                                lazy=False, raise_exceptions=True)
         connection.open()
 
         try:
             connection.bind()
-
         except LDAPInvalidCredentialsResult:
-
-            raise LDAPAttributeError("Invalid LDAP Credentials")
+            raise LDAPInvalidCredentialsResult("Invalid LDAP Credentials")
 
         return connection
 
     def check_credentials(self, username, password):
-        # If user principal name is entered (example@server.com)
         if '@' in username:
             search_filter = "userPrincipalName"
-            search_value = username
-
-        # If user NetBios\sAMAccountName is entered
         elif "\\" in username:
-            net_bios_name = username.split('\\')[0]
+            search_filter = "sAMAccountName"
             username = username.split('\\')[1]
-
-            self.connection.search(search_base=self.cn_search_base,
-                                   search_filter='(netbiosname=*)',
-                                   attributes=['*']
-                                   )
-            net_bios_name_entries = self.connection.entries
-
-            if len(net_bios_name_entries) == 0:
-                raise LDAPAttributeError("NetBos name not found")
-
-            # If user input netbios name match netbios name searched in LDAP
-            elif net_bios_name != self.connection.entries[0]['nETBIOSName']:
-                raise LDAPInvalidCredentialsResult("Invalid NetBios name")
-
-            # If dc=server, dc=com is matched to read domain controller
-            elif self.user_search_base != self.connection.entries[0]['nCName']:
-                raise LDAPInvalidCredentialsResult("Invalid NetBios name")
-
-            search_value = username
-            search_filter = "sAMAccountName"
-
         else:
-            search_value = username
             search_filter = "sAMAccountName"
 
-        self.connection.search(search_base=self.user_search_base,
-                               search_filter='({search_filter}={search_value})'.format(
+        self.connection.search(search_base=self.search_base,
+                               search_filter='({search_filter}={username})'.format(
                                    search_filter=search_filter,
-                                   search_value=search_value),
-                               attributes='userPrincipalName'
+                                   username=username),
+                               attributes=['*'], get_operational_attributes = True
                                )
-        # If no user found
-        if len(self.connection.entries) != 1:
-            raise LDAPInvalidCredentialsResult('Username not found in LDAP')
-
+        print(self.connection.entries)
         userPrincipalName = str(self.connection.entries[0]['userPrincipalName'])
+        print(userPrincipalName)
 
         self.connection = Connection(self.server, user=userPrincipalName, password=password,
                                      check_names=True,
                                      lazy=False, raise_exceptions=True, auto_bind=True)
         self.connection.open()
-
         try:
             self.connection.bind()
         except LDAPInvalidCredentialsResult:
             raise LDAPInvalidCredentialsResult("Invalid credentials")
-
         return True

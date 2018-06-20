@@ -99,11 +99,12 @@ class SecureTemplateViewBaseView(TranslationContextMixin, GenericAPIView):
 
 
 class SessionAPIView(SecureAPIViewBaseView):
-    identity_directory_code = 'basic_internal'
+    # identity_directory_code = 'basic_internal'
 
     serializer_class = SessionSerializer
 
     def get(self, request, *args, **kwargs):
+        self.identity_directory_code = kwargs['identity_directory_code']
 
         if str(self.request.user) == 'Anonymous':
 
@@ -116,6 +117,7 @@ class SessionAPIView(SecureAPIViewBaseView):
                         status=response.status)
 
     def post(self, request, *args, **kwargs):
+        self.identity_directory_code = kwargs['identity_directory_code']
 
         kwargs = super(SessionAPIView, self).get_serializer_context()
         data = request.data
@@ -128,46 +130,7 @@ class SessionAPIView(SecureAPIViewBaseView):
             raise APIValidationError(detail=serializer.errors)
 
     def delete(self, reqest, *args, **kwargs):
-
-        if str(self.request.user) == 'Anonymous':
-            reseponse = ErrorResponse(status=status.HTTP_404_NOT_FOUND)
-        else:
-            self.request.session.flush()
-            reseponse = SuccessResponse()
-        return Response(data=reseponse.data,
-                        status=reseponse.status)
-
-
-class LdapSessionAPIView(SecureAPIViewBaseView):
-    identity_directory_code = 'ldap'
-
-    serializer_class = LdapLoginSerializer
-
-    def get(self, request, *args, **kwargs):
-
-        if str(self.request.user) == 'Anonymous':
-
-            response = ErrorResponse(status=status.HTTP_404_NOT_FOUND)
-        else:
-            response = SuccessResponse()
-            response.set_result_pairs('session_id', request.session._session.uuid)
-
-        return Response(data=response.data,
-                        status=response.status)
-
-    def post(self, request, *args, **kwargs):
-
-        kwargs = super(LdapSessionAPIView, self).get_serializer_context()
-        data = request.data
-        serializer = LdapLoginSerializer(data=data, context=kwargs)
-
-        if serializer.is_valid(raise_exception=False):
-            serializer.save()
-            return Response(serializer.data)
-        else:
-            raise APIValidationError(detail=serializer.errors)
-
-    def delete(self, reqest, *args, **kwargs):
+        self.identity_directory_code = kwargs['identity_directory_code']
 
         if str(self.request.user) == 'Anonymous':
             reseponse = ErrorResponse(status=status.HTTP_404_NOT_FOUND)

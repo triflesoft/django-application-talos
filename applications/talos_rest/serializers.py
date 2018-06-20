@@ -1543,9 +1543,9 @@ class LdapLoginSerializer(BasicSerializer):
 
     def validate_email(self, value):
 
-        self.email = value
+        email = value
 
-        self.principal = self.identity_directory.get_principal({'username': self.email})
+        self.principal = self.identity_directory.get_principal({'username': email})
 
         if not self.principal:
             raise serializers.ValidationError(
@@ -1557,12 +1557,12 @@ class LdapLoginSerializer(BasicSerializer):
                 'Username is valid, but account is disabled.',
                 code=constants.ACCOUNT_INACTIVE_CODE)
 
-        return self.email
+        return email
 
     def validate_password(self, value):
         password = value
         if self.principal and (
-                not self.credential_directory.verify_credentials(self.email,
+                not self.credential_directory.verify_credentials(self.principal,
                                                                  {'password': password})):
             raise serializers.ValidationError(
                 'Password is not valid. Note that password is case-sensitive.',
