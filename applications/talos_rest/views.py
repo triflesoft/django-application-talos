@@ -467,7 +467,6 @@ class AuthorizationUsingGoogleAuthenticatorView(SecureAPIViewBaseView):
 class GeneratePhoneCodeForUnAuthorizedUserView(SecureAPIViewBaseView):
     serializer_class = GeneratePhoneCodeForUnAuthorizedUserSerializer
 
-
     def post(self, request, *args, **kwargs):
         kwargs = super(GeneratePhoneCodeForUnAuthorizedUserView, self).__init__(*args, **kwargs)
         serializer = GeneratePhoneCodeForUnAuthorizedUserSerializer(data=request.data, context=kwargs)
@@ -490,8 +489,10 @@ class VerifyPhoneCodeForUnAuthorizedUserView(SecureAPIViewBaseView):
         kwargs = super(VerifyPhoneCodeForUnAuthorizedUserView, self).get_serializer_context()
         serializer = VerifyPhoneCodeForUnAuthorizedUserSerializer(data=request.data, context=kwargs)
 
-        if serializer.is_valid(raise_exception=True):
-            return Response({"token" : serializer.secret})
+        if serializer.is_valid(raise_exception=False):
+            return Response(serializer.data)
+        else:
+            raise APIValidationError(serializer.erros)
 
 
 class BasicRegistrationView(SecureAPIViewBaseView):

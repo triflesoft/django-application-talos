@@ -775,7 +775,7 @@ class GeneratePhoneCodeForUnAuthorizedUserSerializer(BasicSerializer):
         phone_validation_token.save()
 
 
-class VerifyPhoneCodeForUnAuthorizedUserSerializer(serializers.Serializer):
+class VerifyPhoneCodeForUnAuthorizedUserSerializer(BasicSerializer):
     phone = serializers.CharField()
     code = serializers.CharField()
 
