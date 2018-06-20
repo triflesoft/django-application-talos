@@ -257,3 +257,21 @@ class GoogleAuthenticatorDeleteView(SecureAPIViewBaseView):
             return Response({"text" : "Your credential has been deleted"})
         return Response({"text" : "Delete credential post"})
 
+
+
+class PrincipalSecurityLevelView(SecureAPIViewBaseView):
+
+    def get(self, request, *args, **kwargs):
+        if request.principal.profile.is_secure:
+            content = {
+                'code'      :   '200',
+                'secure'    :   'True',
+                'text'      :    'Your account is secured using OTP token'
+            }
+        else:
+            content = {
+                'code': '200',
+                'secure': 'False',
+                'text': 'Your account is not secure'
+            }
+        return Response(content)

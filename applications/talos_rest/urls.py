@@ -22,7 +22,8 @@ from .views import (SessionAPIView, PrincipalRegistrationRequestEditAPIView,
                     EmailChangeConfirmEditAPIView,
                     GoogleAuthenticationActivateView,
                     GoogleAuthenticatorVerifyView,
-                    GoogleAuthenticatorDeleteView)
+                    GoogleAuthenticatorDeleteView,
+                    PrincipalSecurityLevelView)
 
 
 from rest_framework.documentation import include_docs_urls
@@ -49,4 +50,6 @@ urlpatterns = [
     path('google-authenticator/', GoogleAuthenticationActivateView.as_view(), name='google-authenticator-activate'),
     path('google-authenticator/verify', GoogleAuthenticatorVerifyView.as_view(), name='google-authenticator-verify'),
     path('google-authenticator/delete', GoogleAuthenticatorDeleteView.as_view(), name='google-authenticator-delete'),
+
+    path('principal/security-level', PrincipalSecurityLevelView.as_view(), name='principal-security-level'),
 ]
