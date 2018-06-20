@@ -61,10 +61,3 @@ class IsAuthenticated(permissions.BasePermission):
             return False
         return True
 
-
-class IsSecureLevelOn(permissions.BasePermission):
-    message = 'you do not have a permission, please turn Google OTP'
-
-    def has_permission(self, request, view):
-        is_secure = request.principal.profile.is_secure
-        return is_secure

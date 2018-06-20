@@ -32,7 +32,7 @@ from talos_rest.serializers import SessionSerializer, \
     PhoneResetSecureSerializer, PasswordChangeInsecureSerializer, PasswordChangeSecureSerializer
 
 
-from talos_rest.permissions import IsAuthenticated, IsBasicAuthenticated, IsSecureLevelOn
+from talos_rest.permissions import IsAuthenticated, IsBasicAuthenticated
 
 
 class TranslationContextMixin(object):
@@ -509,7 +509,7 @@ class EmailChangeInsecureAPIView(SecureAPIViewBaseView):
 
 
 class EmailChangeSecureAPIView(SecureAPIViewBaseView):
-    permission_classes = (IsAuthenticated, IsSecureLevelOn,)
+    permission_classes = (IsAuthenticated,)
     serializer_class = EmailChangeSecureSerializer
 
     identity_directory_code = 'basic_internal'
@@ -751,30 +751,34 @@ class TestView(SecureAPIViewBaseView):
 
 
 class PasswordChangeInsecureView(SecureAPIViewBaseView):
+    permission_classes = (IsAuthenticated, )
     serializer_class = PasswordChangeInsecureSerializer
     identity_directory_code = 'basic_internal'
 
-    def post(self, request, *args, **kwargs):
+    def put(self, request, *args, **kwargs):
         kwargs = super(PasswordChangeInsecureView, self).get_serializer_context()
         serializer = PasswordChangeInsecureSerializer(data=request.data, context=kwargs)
         if serializer.is_valid(raise_exception=False):
             if serializer.save():
-                return Response({'text': 'Your password has been changed succesfully'})
+                success_response = SuccessResponse()
+                return Response(success_response.data, success_response.status)
             else:
-                return Response({'text' : 'Your password has not been changed'})
-
+                error_response = ErrorResponse()
+                return Response(error_response.data, error_response.status)
         else:
             raise APIValidationError(detail=serializer.errors)
 
 class PasswordChangeSecureView(SecureAPIViewBaseView):
+    permission_classes = (IsAuthenticated, )
     serializer_class = PasswordChangeSecureSerializer
     identity_directory_code = 'basic_internal'
 
-    def post(self, request, *args, **kwargs):
+    def put(self, request, *args, **kwargs):
         kwargs = super(PasswordChangeSecureView, self).get_serializer_context()
         serializer = PasswordChangeSecureSerializer(data=request.data, context=kwargs)
-        if serializer.is_valid(raise_exception=True):
+        if serializer.is_valid(raise_exception=False):
             if serializer.save():
-                return Response({'text' : 'Your password has been changed'})
-
-        return Response({'text' : 'Your password has not been changed'})
+                success_response = SuccessResponse()
+                return Response(success_response.data, success_response.status)
+        else:
+            raise APIValidationError(serializer.errors)
