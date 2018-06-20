@@ -105,6 +105,9 @@ class TestUtils(APITestCase):
         otp_directory = OneTimePasswordCredentialDirectory.objects.get(code='onetimepassword_internal_google_authenticator')
         otp_directory.create_credentials(self.principal, {})
 
+        self.principal.profile.is_secure = True
+        self.principal.profile.save()
+
         otp_credential = OneTimePasswordCredential.objects.last()
 
         self.assertIsNotNone(otp_credential)
@@ -1008,6 +1011,50 @@ class TestPasswordChangeInsecure(TestUtils):
         self.assertFalse(principal.check_password(self.password))
         self.assertTrue(principal.check_password('1234567'))
 
+    def test_clear_evidences_for_other_users(self):
+        from datetime import datetime, timedelta
+        from talos.models import OneTimePasswordCredential
+        from talos.models import Principal
+        from talos.models import Session
+        from django.db.models import Q
+
+
+        self.create_user()
+        self.login()
+        self.add_evidence_sms()
+
+        self.assertEqual(OneTimePasswordCredential.objects.all().count(), 1)
+        sms_otp_credential = OneTimePasswordCredential.objects.last()
+
+        sms_code = sms_otp_credential.salt.decode()
+
+        data = {
+            'password' : self.password,
+            'new_password' : '1234567',
+            'sms_code' : sms_code
+        }
+
+        Session.objects.create(principal=self.principal, evidences='evidences')
+        Session.objects.create(principal=self.principal, evidences='evidences')
+
+        # Add another Session where valid_till is invalid (less than current time)
+        Session.objects.create(principal=self.principal, evidences='evidences',
+                               valid_till=datetime.now() - timedelta(hours=24))
+
+        self.assertEqual(4, Session.objects.all().count())
+
+        response = self.client.put(self.url, data, format='json')
+
+        self.assertResponseStatus(response, status.HTTP_200_OK)
+
+        principal = Principal.objects.last()
+        self.assertFalse(principal.check_password(self.password))
+        self.assertTrue(principal.check_password('1234567'))
+
+        # Two row has been updated correctly (principal, valid_till)
+        self.assertEqual(2, Session.objects.filter(principal=self.principal, evidences=None).count())
+        self.assertEqual(2, Session.objects.filter(Q(principal=self.principal), ~Q(evidences=None)).count())
+
 
 class TestPasswordChangeSecure(TestUtils):
     url = reverse('password-change-secure')
@@ -1075,7 +1122,7 @@ class TestAddGoogleAuthenticator(TestUtils):
         }
 
         self.assertFalse(self.principal.profile.is_secure)
-        
+
         response = self.client.post(self.confirm_url, data, format='json')
 
         self.assertResponseStatus(response, status.HTTP_201_CREATED)
@@ -1089,4 +1136,61 @@ class TestAddGoogleAuthenticator(TestUtils):
 
         principal = Principal.objects.get(pk=self.principal.pk)
         self.assertTrue(principal.profile.is_secure)
+
+class TestGoogleAuthenticatorDelete(TestUtils):
+    request_url = reverse('google-authenticator-delete-request')
+    confirm_url = reverse('google-authenticator-delete-confirm')
+
+    def test_google_authenticator_delete(self):
+        from talos.models import ValidationToken
+        from talos.models import OneTimePasswordCredentialDirectory
+        from talos.models import OneTimePasswordCredential
+        import pyotp
+
+        self.create_user()
+        self.login()
+        self.add_evidence_sms()
+
+        response = self.client.post(self.request_url, {}, format='json')
+
+        self.assertResponseStatus(response, status.HTTP_403_FORBIDDEN)
+
+        self.add_evidence_google()
+
+        response = self.client.post(self.request_url, {}, format='json')
+
+        self.assertResponseStatus(response, status.HTTP_200_OK)
+
+        validation_token = ValidationToken.objects.last()
+        self.assertEqual(validation_token.principal, self.principal)
+        self.assertEqual(validation_token.type, 'otp_delete')
+
+
+        sms_otp_directory = OneTimePasswordCredentialDirectory.objects.get(code='onetimepassword_internal_phone_sms_authenticator')
+        google_otp_directory = OneTimePasswordCredentialDirectory.objects.get(code='onetimepassword_internal_google_authenticator')
+
+
+        sms_otp_credential = OneTimePasswordCredential.objects.get(principal=self.principal,
+                                                                   directory=sms_otp_directory)
+        google_otp_credential = OneTimePasswordCredential.objects.get(principal=self.principal,
+                                                                      directory=google_otp_directory)
+
+
+        sms_code = sms_otp_credential.salt
+        totp = pyotp.TOTP(google_otp_credential.salt)
+        google_code = totp.now()
+
+        data = {
+            'sms_code' : sms_code,
+            'google_otp_code' : google_code,
+            'password' : self.password,
+            'token' : validation_token.secret
+        }
+
+        response = self.client.post(self.confirm_url, data, format='json')
+
+        self.assertResponseStatus(response, status.HTTP_200_OK)
+        self.assertEqual(OneTimePasswordCredential.objects.filter(directory=google_otp_directory).count(), 0)
+
+
 
