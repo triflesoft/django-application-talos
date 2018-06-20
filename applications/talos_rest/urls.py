@@ -17,7 +17,7 @@ Including another URLconf
 from django.urls import path
 
 from .views import SessionAPIView, EmailChangeRequestAPIView, \
-    GoogleAuthenticationActivateRequestView,  \
+    GoogleAuthenticationActivateRequestView, GoogleAuthenticatorVerifyView, \
     GoogleAuthenticatorDeleteView, PrincipalSecurityLevelView, \
     GeneratePhoneCodeForAuthorizedUserView, VerifyPhoneCodeForAuthorizedUserView, \
     ChangePasswordInsecureView, ChangePasswordSecureView, AddSMSEvidenceView, \
@@ -30,8 +30,10 @@ from .views import SessionAPIView, EmailChangeRequestAPIView, \
     GoogleAuthenticatorChangeDoneView, EmailChangeInsecureAPIView, EmailChangeSecureAPIView, \
     PhoneChangeValidationTokenCheckerAPIView, PhoneChangeRequestAPIView, PhoneChangeSecureAPIView, \
     PhoneChangeInsecureAPIView, PhoneResetRequestAPIView, PhoneResetValidationTokenCheckerAPIView, \
-    PhoneResetInsecureAPIView, PhoneResetSecureAPIView, PrincipalSecurityLevelByTokenView, EmailResetInsecureAPIView, \
-    EmailResetSecureAPIView, ProvidedEvidencesView, TestView, PasswordChangeInsecureView, PasswordChangeSecureView
+    PhoneResetInsecureAPIView, PhoneResetSecureAPIView, PrincipalSecurityLevelByTokenView, \
+    EmailResetInsecureAPIView, \
+    EmailResetSecureAPIView, ProvidedEvidencesView, TestView, PasswordChangeInsecureView, \
+    PasswordChangeSecureView, LdapLoginAPIView
 
 from rest_framework.documentation import include_docs_urls
 
@@ -43,16 +45,17 @@ urlpatterns = [
     path('docs/', include_docs_urls(title='My API title', public=False,
                                     description='Talos Rest API overview')),
 
-    path('session', SessionAPIView.as_view(), name='talos-rest-sessions'),
+    path('<slug:identity_directory_code>/session', SessionAPIView.as_view(), name='talos-rest-sessions'),
+    path('ldap/session', LdapLoginAPIView.as_view(), name = 'talos-rest-ldap-login'),
 
     # Email Change
     path('principal/email/change-request', EmailChangeRequestAPIView.as_view(),
          name='email-change-request'),
     path('email/email-change-token/<slug:secret>',
          EmailChangeValidationTokenCheckerAPIView.as_view(), name='email-change-token-validation'),
-    path('principal/email/insecure', EmailChangeInsecureAPIView.as_view(),
+    path('principal/change-email-insecure', EmailChangeInsecureAPIView.as_view(),
          name='email-change-insecure'),
-    path('principal/email/secure', EmailChangeSecureAPIView.as_view(),
+    path('principal/change-email-secure', EmailChangeSecureAPIView.as_view(),
          name='email-change-secure'),
 
     # Email Reset
@@ -69,9 +72,9 @@ urlpatterns = [
     path('principal/phone/change-request', PhoneChangeRequestAPIView.as_view(), name='phone-change-request'),
     path('phone/phone_change_token/<slug:secret>', PhoneChangeValidationTokenCheckerAPIView.as_view(),
          name='phone-change-token-validation'),
-    path('principal/phone/insecure', PhoneChangeInsecureAPIView.as_view(),
+    path('principal/change-phone-insecure', PhoneChangeInsecureAPIView.as_view(),
          name='phone-change-insecure'),
-    path('principal/phone/secure', PhoneChangeSecureAPIView.as_view(),
+    path('principal/change-phone-secure', PhoneChangeSecureAPIView.as_view(),
          name='phone-change-secure'),
 
     # Phone reset
@@ -92,7 +95,8 @@ urlpatterns = [
          name='google-authenticator-activate-request'),
     path('google-authenticator/activate/confirm', GoogleAuthenticatorActivateConfirmView.as_view(),
          name='google-authenticator-activate-confirm'),
-
+    path('google-authenticator/verify', GoogleAuthenticatorVerifyView.as_view(),
+         name='google-authenticator-verify'),
     path('google-authenticator/delete/request', GoogleAuthenticatorDeleteRequestView.as_view(),
          name='google-authenticator-delete-request'),
     path('google-authenticator/delete/confirm', GoogleAuthenticatorDeleteView.as_view(),
@@ -142,8 +146,8 @@ urlpatterns = [
 
     path('test', TestView.as_view(), name='test'),
 
-    path('principal/password/insecure', PasswordChangeInsecureView.as_view(), name='password-change-insecure'),
+    path('password-change-insecure', PasswordChangeInsecureView.as_view(), name='password-change-insecure'),
 
-    path('principal/password/secure', PasswordChangeSecureView.as_view(), name='password-change-secure'),
+    path('password-change-secure', PasswordChangeSecureView.as_view(), name='password-change-secure'),
 
 ]
