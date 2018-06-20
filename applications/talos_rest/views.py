@@ -385,7 +385,7 @@ class AddSMSEvidenceView(SecureAPIViewBaseView):
 
 
 class AddGoogleEvidenceView(SecureAPIViewBaseView):
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsBasicAuthenticated,)
     serializer_class = AddGoogleEvidenceSerializer
 
     def post(self, request, *args, **kwargs):

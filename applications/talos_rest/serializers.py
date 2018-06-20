@@ -32,7 +32,7 @@ class SMSOtpSerializerMixin():
 
 class GoogleOtpSerializerMixin():
     def __init__(self, *args, **kwargs):
-        self.fields['otp_code'] = serializers.CharField(label='Google OTP Code', max_length=255)
+        self.fields['google_otp_code'] = serializers.CharField(label='Google OTP Code', max_length=255)
         super(GoogleOtpSerializerMixin, self).__init__(*args, **kwargs)
 
     def validate_google_otp_code(self, google_otp_code):
@@ -647,8 +647,7 @@ class AddGoogleEvidenceSerializer(GoogleOtpSerializerMixin, serializers.Serializ
         super(AddGoogleEvidenceSerializer, self).__init__(*args, **kwargs)
 
     def save(self):
-        for otp_evidence in self.otp_evidences:
-            self.principal._evidences_effective[otp_evidence.code] = otp_evidence
+        self.principal.update_evidences(self.otp_evidences)
 
 
 class GeneratePhoneCodeForUnAuthorizedUserSerializer(BasicSerializer):
