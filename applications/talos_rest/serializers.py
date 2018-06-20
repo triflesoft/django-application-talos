@@ -416,3 +416,23 @@ class GoogleAuthenticatorDeleteSerializer(serializers.Serializer):
             self.otp_credential_directory.reset_credentials(self.principal,
                                                             self.principal,
                                                             {})
+
+
+class GeneratePhoneCodeForAuthorizedUserSerializer(serializers.Serializer):
+
+    def __init__(self, *args, **kwargs):
+        from talos.models import OneTimePasswordCredentialDirectory
+        passed_kwargs_from_view = kwargs.get('context')
+        self.request = passed_kwargs_from_view['request']
+        self.principal = self.request.principal
+        self.sms_otp_directory = OneTimePasswordCredentialDirectory.objects.get(pk=2)
+        super(GeneratePhoneCodeForAuthorizedUserSerializer, self).__init__(*args, **kwargs)
+
+    def validate(self, attrs):
+
+        return attrs
+
+    def save(self):
+        if self.sms_otp_directory:
+            self.sms_otp_directory.create_credentials(self.principal, {})
+

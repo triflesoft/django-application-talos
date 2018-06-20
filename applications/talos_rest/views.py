@@ -19,7 +19,8 @@ from talos_test_app.serializers import (SessionSerializer,
                                         EmailChangeConfirmSerializer,
                                         GoogleAuthenticatorActivateSerializer,
                                         GoogleAuthenticatorVerifySerializer,
-                                        GoogleAuthenticatorDeleteSerializer)
+                                        GoogleAuthenticatorDeleteSerializer,
+                                        GeneratePhoneCodeForAuthorizedUserSerializer)
 
 
 class TranslationContextMixin(object):
@@ -274,3 +275,19 @@ class PrincipalSecurityLevelView(SecureAPIViewBaseView):
                 'text': 'Your account is not secure'
             }
         return Response(content)
+
+
+class GeneratePhoneCodeForAuthorizedUserView(SecureAPIViewBaseView):
+
+    permission_classes = (IsAuthenticated,)
+    serializer_class = GeneratePhoneCodeForAuthorizedUserSerializer
+
+    def get(self, request, *args, **kwargs):
+        return Response({"text" : "Generate SMS Code"})
+
+    def post(self, request, *args, **kwargs):
+        kwargs = super(GeneratePhoneCodeForAuthorizedUserView, self).get_serializer_context()
+        serializer = GeneratePhoneCodeForAuthorizedUserSerializer(data=request.data, context=kwargs)
+        if serializer.is_valid():
+            serializer.save()
+        return Response({"text" : "giorgi"})

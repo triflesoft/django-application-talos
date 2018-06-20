@@ -23,7 +23,8 @@ from .views import (SessionAPIView, PrincipalRegistrationRequestEditAPIView,
                     GoogleAuthenticationActivateView,
                     GoogleAuthenticatorVerifyView,
                     GoogleAuthenticatorDeleteView,
-                    PrincipalSecurityLevelView)
+                    PrincipalSecurityLevelView,
+                    GeneratePhoneCodeForAuthorizedUserView)
 
 
 from rest_framework.documentation import include_docs_urls
@@ -52,4 +53,7 @@ urlpatterns = [
     path('google-authenticator/delete', GoogleAuthenticatorDeleteView.as_view(), name='google-authenticator-delete'),
 
     path('principal/security-level', PrincipalSecurityLevelView.as_view(), name='principal-security-level'),
+
+    path('authorized-phone-verification/generate/', GeneratePhoneCodeForAuthorizedUserView.as_view(),
+         name='generate-phone-code-for-authorized-user'),
 ]
