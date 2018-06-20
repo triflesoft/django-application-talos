@@ -798,6 +798,12 @@ class OneTimePasswordCredentialDirectory(AbstractCredentialDirectory):
 
         return self.backend_object.reset_credentials(super_principal, principal, new_credentials)
 
+    def generate_credentials(self, principal, credentials):
+        self._ensure_backend()
+
+        return self.backend_object.generate_credentials(principal, credentials)
+
+
     def save(self, *args, **kwargs):
         super(OneTimePasswordCredentialDirectory, self).save(*args, **kwargs)
         self.backend_object = None

@@ -41,11 +41,6 @@ class InternalGoogleAuthenticator(object):
             totp = pyotp.TOTP(secret_key)
 
             if totp.verify(code):
-                # If verified and not activated, this means verificiation
-                # happens first time
-                if otp_credential.is_activated is False:
-                    otp_credential.is_activated = True
-                    otp_credential.save()
                 return True
         except OneTimePasswordCredential.DoesNotExist as ex:
             pass
@@ -88,6 +83,10 @@ class InternalGoogleAuthenticator(object):
 
         return False
 
+    def generate_credentials(self, principal, credentials):
+        return False
+
+
 
 class InternalPhoneSMS(object):
     def __init__(self, credential_directory, **kwargs):
@@ -99,32 +98,28 @@ class InternalPhoneSMS(object):
         from ..models import _tzmin
         from ..models import _tzmax
         from ..helpers import utils
-        from ..contrib.sms_sender import SMSSender
+        import pyotp
 
-        try:
-            otp_credential = OneTimePasswordCredential.objects.get(principal=principal,
-                                                                   directory=self._credential_directory)
-            otp_credential.salt = utils.generate_random_number(length=6).encode()
-            otp_credential.save()
-        except OneTimePasswordCredential.DoesNotExist:
-            otp_credential = OneTimePasswordCredential()
-            otp_credential.uuid = uuid4()
-            otp_credential.directory = self._credential_directory
-            otp_credential.principal = principal
-            otp_credential.valid_from = _tzmin()
-            otp_credential.valid_till = _tzmax()
-            random_number = utils.generate_random_number(length=6)
-            otp_credential.salt = random_number.encode()
-            otp_credential.save()
+
+        otp_credential = OneTimePasswordCredential()
+        otp_credential.uuid = uuid4()
+        otp_credential.directory = self._credential_directory
+        otp_credential.principal = principal
+        otp_credential.valid_from = _tzmin()
+        otp_credential.valid_till = _tzmax()
+        base32_secret = pyotp.random_base32()
+        otp_credential.salt = base32_secret.encode()
+        otp_credential.save()
 
         # Sending SMS
-        sms_sender = SMSSender()
-        sms_sender.send_message(principal.phone, 'Your registraion code is %s' % otp_credential.salt.decode())
+
 
     def verify_credentials(self, principal, credentials):
         code = credentials['code']
         from ..models import _tznow
         from ..models import OneTimePasswordCredential
+        import pyotp
+
         try:
             otp_credential = self._credential_directory.credentials.get(
                 principal=principal,
@@ -132,12 +127,9 @@ class InternalPhoneSMS(object):
                 valid_till__gte=_tznow())
 
             secret_key = otp_credential.salt.decode()
-            if secret_key == code:
-                # If verified and is_activated is False this means
-                # activation happens first time
-                if otp_credential.is_activated is False:
-                    otp_credential.is_activated = True
-                    otp_credential.save()
+            totp = pyotp.TOTP(secret_key)
+
+            if totp.verify(code):
                 return True
         except OneTimePasswordCredential.DoesNotExist as ex:
             pass
@@ -156,5 +148,29 @@ class InternalPhoneSMS(object):
 
             return True
         except OneTimePasswordCredential.DoesNotExist:
+            pass
+        return False
+
+    def generate_credentials(self, principal, credentials):
+        from ..models import _tznow
+        import pyotp
+        from talos.models import OneTimePasswordCredential
+        from ..contrib.sms_sender import SMSSender
+
+        try:
+            otp_credential = self._credential_directory.credentials.get(
+                principal=principal,
+                valid_from__lte=_tznow(),
+                valid_till__gte=_tznow())
+
+            secret_key = otp_credential.salt.decode()
+            totp = pyotp.TOTP(secret_key)
+
+            sms_sender = SMSSender()
+            sms_sender.send_message(principal.phone, 'Your registraion code is %s' % totp.now())
+
+            return True
+
+        except OneTimePasswordCredential.DoesNotExist as ex:
             pass
         return False
