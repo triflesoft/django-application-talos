@@ -5,17 +5,16 @@ from django.utils.text import slugify
 from socket import gethostname
 from uuid import uuid4
 
-
 models.options.DEFAULT_NAMES = \
     models.options.DEFAULT_NAMES + \
     ('object_permissions', 'model_permissions', 'related_securables')
-
 
 VALIDATION_TOKEN_TYPE_CHOICES = [
     ('principal_registration', 'Principal registration'),
     ('password_reset', 'Password reset'),
     ('email_change', 'E-mail change'),
-    ]
+]
+
 
 def _tznow():
     from datetime import datetime
@@ -61,8 +60,10 @@ class AbstractReplicatableModel(models.Model):
     uuid = models.UUIDField(unique=True, default=uuid4, editable=False)
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     modified_at = models.DateTimeField(auto_now=True, editable=False)
-    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, related_name='+', on_delete=models.CASCADE, editable=False)
-    modified_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, related_name='+', on_delete=models.CASCADE, editable=False)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, related_name='+',
+                                   on_delete=models.CASCADE, editable=False)
+    modified_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, related_name='+',
+                                    on_delete=models.CASCADE, editable=False)
     created_on = models.CharField(max_length=255, default=_default_hostname)
     modified_on = models.CharField(max_length=255, default=_default_hostname)
 
@@ -74,7 +75,7 @@ class AbstractObjectPermission(models.Model):
     id = models.AutoField(unique=True, primary_key=True)
     role = models.ForeignKey('talos.Role', related_name='+', on_delete=models.CASCADE)
     action = models.ForeignKey('talos.ObjectAction', related_name='+', on_delete=models.CASCADE)
-    #target = models.ForeignKey(SECURABLE_MODEL, related_name='permissions', on_delete=models.CASCADE)
+    # target = models.ForeignKey(SECURABLE_MODEL, related_name='permissions', on_delete=models.CASCADE)
     _talos_object_permission = True
 
     class Meta:
@@ -135,7 +136,7 @@ class AbstractDirectory(AbstractReplicatableModel):
 
 
 class AbstractRoleDirectory(AbstractDirectory):
-    #required_evidence = models.ManyToManyField(Evidence, related_name='+')
+    # required_evidence = models.ManyToManyField(Evidence, related_name='+')
 
     class Meta:
         abstract = True
@@ -147,7 +148,7 @@ class AbstractIdentityDirectory(AbstractDirectory):
 
 
 class AbstractCredentialDirectory(AbstractDirectory):
-    #provided_evidences = models.ManyToManyField(Evidence, related_name='+')
+    # provided_evidences = models.ManyToManyField(Evidence, related_name='+')
 
     class Meta:
         abstract = True
@@ -285,12 +286,18 @@ class Role(AbstractReplicatableModel):
     code = models.SlugField(unique=True, max_length=255, allow_unicode=True)
     name = models.CharField(unique=True, max_length=255)
     parent = models.ForeignKey('self', blank=True, null=True, related_name='children', on_delete=models.CASCADE)
-    privilege_permissions_granted   = models.ManyToManyField(Privilege, related_name='+', through='RolePrivilegePermissionGranted')
-    privilege_permissions_revoked   = models.ManyToManyField(Privilege, related_name='+', through='RolePrivilegePermissionRevoked')
-    privilege_permissions_effective = models.ManyToManyField(Privilege, related_name='+', through='RolePrivilegePermissionEffective')
-    model_action_permissions_granted   = models.ManyToManyField(ModelAction, related_name='+', through='RoleModelActionPermissionGranted')
-    model_action_permissions_revoked   = models.ManyToManyField(ModelAction, related_name='+', through='RoleModelActionPermissionRevoked')
-    model_action_permissions_effective = models.ManyToManyField(ModelAction, related_name='+', through='RoleModelActionPermissionEffective')
+    privilege_permissions_granted = models.ManyToManyField(Privilege, related_name='+',
+                                                           through='RolePrivilegePermissionGranted')
+    privilege_permissions_revoked = models.ManyToManyField(Privilege, related_name='+',
+                                                           through='RolePrivilegePermissionRevoked')
+    privilege_permissions_effective = models.ManyToManyField(Privilege, related_name='+',
+                                                             through='RolePrivilegePermissionEffective')
+    model_action_permissions_granted = models.ManyToManyField(ModelAction, related_name='+',
+                                                              through='RoleModelActionPermissionGranted')
+    model_action_permissions_revoked = models.ManyToManyField(ModelAction, related_name='+',
+                                                              through='RoleModelActionPermissionRevoked')
+    model_action_permissions_effective = models.ManyToManyField(ModelAction, related_name='+',
+                                                                through='RoleModelActionPermissionEffective')
 
     class Meta:
         unique_together = [
@@ -298,21 +305,24 @@ class Role(AbstractReplicatableModel):
             ('directory', 'name')]
         model_permissions = '__all__'
         object_permissions = '__all__'
-        related_securables = ('directory', )
+        related_securables = ('directory',)
         verbose_name = 'Role'
         verbose_name_plural = 'Roles'
 
     def _update_effective_permission_sets(self, all_privileges, all_model_actions):
         if self.parent is None:
-            parent_privilege_effective_ids    = set()
+            parent_privilege_effective_ids = set()
             parent_model_action_effective_ids = set()
         else:
-            parent_privilege_effective_ids    = set(id for id in self.parent.privilege_permissions_effective.all().values_list('id', flat=True))
-            parent_model_action_effective_ids = set(id for id in self.parent.model_action_permissions_effective.all().values_list('id', flat=True))
+            parent_privilege_effective_ids = set(
+                id for id in self.parent.privilege_permissions_effective.all().values_list('id', flat=True))
+            parent_model_action_effective_ids = set(
+                id for id in self.parent.model_action_permissions_effective.all().values_list('id', flat=True))
 
-        granted_privilege_ids       = set(id for id in self.privilege_permissions_granted.all().values_list('id', flat=True))
-        revoked_privilege_ids       = set(id for id in self.privilege_permissions_revoked.all().values_list('id', flat=True))
-        old_effective_privilege_ids = set(id for id in self.privilege_permissions_effective.all().values_list('id', flat=True))
+        granted_privilege_ids = set(id for id in self.privilege_permissions_granted.all().values_list('id', flat=True))
+        revoked_privilege_ids = set(id for id in self.privilege_permissions_revoked.all().values_list('id', flat=True))
+        old_effective_privilege_ids = set(
+            id for id in self.privilege_permissions_effective.all().values_list('id', flat=True))
 
         new_effective_privilege_ids = set()
         new_effective_privilege_ids |= parent_privilege_effective_ids
@@ -328,9 +338,12 @@ class Role(AbstractReplicatableModel):
                 privilege=all_privileges[id]) for id in create_effective_privilege_ids
         ])
 
-        granted_model_action_ids       = set(id for id in self.model_action_permissions_granted.all().values_list('id', flat=True))
-        revoked_model_action_ids       = set(id for id in self.model_action_permissions_revoked.all().values_list('id', flat=True))
-        old_effective_model_action_ids = set(id for id in self.model_action_permissions_effective.all().values_list('id', flat=True))
+        granted_model_action_ids = set(
+            id for id in self.model_action_permissions_granted.all().values_list('id', flat=True))
+        revoked_model_action_ids = set(
+            id for id in self.model_action_permissions_revoked.all().values_list('id', flat=True))
+        old_effective_model_action_ids = set(
+            id for id in self.model_action_permissions_effective.all().values_list('id', flat=True))
         new_effective_model_action_ids = set()
         new_effective_model_action_ids |= parent_model_action_effective_ids
         new_effective_model_action_ids |= granted_model_action_ids
@@ -338,7 +351,8 @@ class Role(AbstractReplicatableModel):
         create_effective_model_action_ids = new_effective_model_action_ids - old_effective_model_action_ids
         delete_effective_model_action_ids = old_effective_model_action_ids - new_effective_model_action_ids
 
-        RoleModelActionPermissionEffective.objects.filter(model_action__id__in=delete_effective_model_action_ids).delete()
+        RoleModelActionPermissionEffective.objects.filter(
+            model_action__id__in=delete_effective_model_action_ids).delete()
         RoleModelActionPermissionEffective.objects.bulk_create([
             RoleModelActionPermissionEffective(
                 role=self,
@@ -464,7 +478,7 @@ class PrincipalRoleMembership(AbstractReplicatableModel):
         verbose_name = 'Principal Membership'
         verbose_name_plural = 'Principal Membership'
         model_permissions = ()
-        related_securables = ('principal', 'role', )
+        related_securables = ('principal', 'role',)
 
     def __str__(self):
         return '"{0}"-"{1}"'.format(self.principal, self.role)
@@ -486,8 +500,8 @@ class Realm(AbstractReplicatableModel):
 
 class BasicIdentityDirectory(AbstractIdentityDirectory):
     realm = models.ForeignKey(Realm, null=True, blank=True, related_name='+', on_delete=models.CASCADE)
-    credential_directory = models.ForeignKey('BasicCredentialDirectory', null=True, blank=True, related_name='identity_directories', on_delete=models.CASCADE)
-
+    credential_directory = models.ForeignKey('BasicCredentialDirectory', null=True, blank=True,
+                                             related_name='identity_directories', on_delete=models.CASCADE)
 
     class Meta:
         model_permissions = '__all__'
@@ -497,7 +511,8 @@ class BasicIdentityDirectory(AbstractIdentityDirectory):
 
     @staticmethod
     def get_auth_directory():
-        return BasicIdentityDirectory.objects.get(code=getattr(settings, 'TALOS_AUTH_DEFAULT_IDENTITY_DIRECTORY', 'basic_internal'))
+        return BasicIdentityDirectory.objects.get(
+            code=getattr(settings, 'TALOS_AUTH_DEFAULT_IDENTITY_DIRECTORY', 'basic_internal'))
 
     def __init__(self, *args, **kwargs):
         super(BasicIdentityDirectory, self).__init__(*args, **kwargs)
@@ -561,7 +576,8 @@ class BasicCredentialDirectory(AbstractCredentialDirectory):
 
     @staticmethod
     def get_auth_directory():
-        return BasicCredentialDirectory.objects.get(code=getattr(settings, 'TALOS_AUTH_DEFAULT_CREDENTIAL_DIRECTORY', 'basic_internal'))
+        return BasicCredentialDirectory.objects.get(
+            code=getattr(settings, 'TALOS_AUTH_DEFAULT_CREDENTIAL_DIRECTORY', 'basic_internal'))
 
     def __init__(self, *args, **kwargs):
         super(BasicCredentialDirectory, self).__init__(*args, **kwargs)
@@ -595,7 +611,8 @@ class BasicCredentialDirectory(AbstractCredentialDirectory):
         super(BasicCredentialDirectory, self).save(*args, **kwargs)
         self.backend_object = None
 
-    provided_evidences = models.ManyToManyField(Evidence, related_name='+', through='BasicCredentialDirectoryProvidedEvidence')
+    provided_evidences = models.ManyToManyField(Evidence, related_name='+',
+                                                through='BasicCredentialDirectoryProvidedEvidence')
 
 
 class BasicCredentialDirectoryObjectPermission(AbstractObjectPermission):
@@ -671,7 +688,8 @@ class BasicCredential(AbstractCredential):
 
 
 class SubnetCredentialDirectory(AbstractCredentialDirectory):
-    provided_evidences = models.ManyToManyField(Evidence, related_name='+', through='SubnetCredentialDirectoryProvidedEvidence')
+    provided_evidences = models.ManyToManyField(Evidence, related_name='+',
+                                                through='SubnetCredentialDirectoryProvidedEvidence')
 
     class Meta:
         model_permissions = '__all__'
@@ -731,7 +749,8 @@ class SubnetCredential(AbstractCredential):
 
 
 class OneTimePasswordCredentialDirectory(AbstractCredentialDirectory):
-    provided_evidences = models.ManyToManyField(Evidence, related_name='+', through='OneTimePasswordCredentialDirectoryProvidedEvidence')
+    provided_evidences = models.ManyToManyField(Evidence, related_name='+',
+                                                through='OneTimePasswordCredentialDirectoryProvidedEvidence')
 
     class Meta:
         model_permissions = '__all__'
@@ -741,7 +760,8 @@ class OneTimePasswordCredentialDirectory(AbstractCredentialDirectory):
 
     @staticmethod
     def get_auth_directory():
-        return BasicCredentialDirectory.objects.get(code=getattr(settings, 'TALOS_AUTH_DEFAULT_CREDENTIAL_DIRECTORY', 'basic_internal'))
+        return BasicCredentialDirectory.objects.get(
+            code=getattr(settings, 'TALOS_AUTH_DEFAULT_CREDENTIAL_DIRECTORY', 'basic_internal'))
 
     def __init__(self, *args, **kwargs):
         super(OneTimePasswordCredentialDirectory, self).__init__(*args, **kwargs)
@@ -775,6 +795,7 @@ class OneTimePasswordCredentialDirectory(AbstractCredentialDirectory):
         super(OneTimePasswordCredentialDirectory, self).save(*args, **kwargs)
         self.backend_object = None
 
+
 class OneTimePasswordCredentialDirectoryObjectPermission(AbstractObjectPermission):
     target = models.ForeignKey(OneTimePasswordCredentialDirectory, related_name='permissions', on_delete=models.CASCADE)
 
@@ -805,7 +826,8 @@ class OneTimePasswordCredentialDirectoryOption(AbstractReplicatableModel):
 
 
 class OneTimePasswordCredential(AbstractCredential):
-    directory = models.ForeignKey(OneTimePasswordCredentialDirectory, related_name='credentials', on_delete=models.CASCADE)
+    directory = models.ForeignKey(OneTimePasswordCredentialDirectory, related_name='credentials',
+                                  on_delete=models.CASCADE)
     salt = models.BinaryField()
     is_activated = models.BooleanField(default=False)
 
@@ -822,7 +844,8 @@ class OneTimePasswordCredential(AbstractCredential):
 
 
 class TokenCredentialDirectory(AbstractCredentialDirectory):
-    provided_evidences = models.ManyToManyField(Evidence, related_name='+', through='TokenCredentialDirectoryProvidedEvidence')
+    provided_evidences = models.ManyToManyField(Evidence, related_name='+',
+                                                through='TokenCredentialDirectoryProvidedEvidence')
 
     class Meta:
         model_permissions = '__all__'
@@ -865,7 +888,6 @@ class TokenCredential(AbstractCredential):
     public_value = models.CharField(max_length=255)
     secret_value = models.CharField(max_length=255)
 
-
     class Meta:
         unique_together = [
             ('directory', 'principal'),
@@ -881,7 +903,8 @@ class TokenCredential(AbstractCredential):
 
 class Session(AbstractReplicatableModel):
     previous_session = models.ForeignKey('self', null=True, blank=True, on_delete=models.CASCADE)
-    principal = models.ForeignKey('talos.Principal', null=True, blank=True, related_name='sessions', on_delete=models.CASCADE)
+    principal = models.ForeignKey('talos.Principal', null=True, blank=True, related_name='sessions',
+                                  on_delete=models.CASCADE)
     valid_from = models.DateTimeField(default=_tznow)
     valid_till = models.DateTimeField(default=_tzmax)
     external_id = models.TextField(null=True, blank=True)
@@ -901,7 +924,7 @@ class Session(AbstractReplicatableModel):
 
     class Meta:
         model_permissions = ('select', 'delete')
-        related_securables = ('principal', )
+        related_securables = ('principal',)
         verbose_name = 'Session'
         verbose_name_plural = 'Sessions'
 
@@ -988,7 +1011,8 @@ class Principal(AbstractReplicatableModel):
 
         return evidences, roles, privileges, model_actions
 
-    def _inject_authentication_context(self, evidences_json=None, roles_json=None, privileges_json=None, model_actions_json=None):
+    def _inject_authentication_context(self, evidences_json=None, roles_json=None, privileges_json=None,
+                                       model_actions_json=None):
         from collections import OrderedDict
         from django.core import serializers
 
@@ -1021,12 +1045,12 @@ class Principal(AbstractReplicatableModel):
         provided_evidence_ids = set(provided_evidence.id for provided_evidence in provided_evidences)
         possible_roles = list(
             membership.role for membership in PrincipalRoleMembership
-            .objects
-            .filter(principal=self)
-            .select_related(
+                .objects
+                .filter(principal=self)
+                .select_related(
                 'role',
                 'role__directory')
-            .prefetch_related(
+                .prefetch_related(
                 'role__privilege_permissions_effective',
                 'role__model_action_permissions_effective',
                 'role__directory__required_evidences'))
@@ -1042,7 +1066,8 @@ class Principal(AbstractReplicatableModel):
         for possible_role in possible_roles:
             possible_role_directory = possible_role.directory
             possible_role_required_evidences = possible_role_directory.required_evidences.all()
-            possible_role_required_evidence_ids = set(required_evidence.id for required_evidence in possible_role_required_evidences)
+            possible_role_required_evidence_ids = set(
+                required_evidence.id for required_evidence in possible_role_required_evidences)
 
             if possible_role_required_evidence_ids.issubset(provided_evidence_ids):
                 self._roles_effective[possible_role.code] = possible_role
@@ -1211,7 +1236,8 @@ class PrincipalObjectPermission(AbstractObjectPermission):
 
 
 class ValidationToken(AbstractReplicatableModel):
-    principal = models.ForeignKey(Principal, null=True, blank=True, related_name='+', on_delete=models.CASCADE, editable=False)
+    principal = models.ForeignKey(Principal, null=True, blank=True, related_name='+', on_delete=models.CASCADE,
+                                  editable=False)
     email = models.EmailField(max_length=255, editable=False)
     type = models.CharField(max_length=255, choices=VALIDATION_TOKEN_TYPE_CHOICES, editable=False)
     secret = models.CharField(max_length=64, unique=True, editable=False)
@@ -1239,3 +1265,11 @@ class ValidationToken(AbstractReplicatableModel):
 
     def __str__(self):
         return self.secret
+
+
+class PrincipalProfile(models.Model):
+    principal = models.OneToOneField(Principal, related_name='profile', on_delete=models.CASCADE)
+    is_secure = models.BooleanField(default=False)
+
+    def __str__(self):
+        return str(self.principal) + " is secure" if self.is_secure else "is not secure"
