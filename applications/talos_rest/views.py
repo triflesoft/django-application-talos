@@ -492,7 +492,7 @@ class VerifyPhoneCodeForUnAuthorizedUserView(SecureAPIViewBaseView):
         if serializer.is_valid(raise_exception=False):
             return Response(serializer.data)
         else:
-            raise APIValidationError(serializer.erros)
+            raise APIValidationError(serializer.errors)
 
 
 class BasicRegistrationView(SecureAPIViewBaseView):
