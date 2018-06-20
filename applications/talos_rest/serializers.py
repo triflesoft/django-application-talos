@@ -781,6 +781,7 @@ class VerifyPhoneCodeForUnAuthorizedUserSerializer(BasicSerializer):
 
     def __init__(self, *args, **kwargs):
         self.phone = None
+        self.token = None
         super(VerifyPhoneCodeForUnAuthorizedUserSerializer, self).__init__(*args, **kwargs)
 
     def validate_phone(self, phone):
@@ -810,7 +811,7 @@ class VerifyPhoneCodeForUnAuthorizedUserSerializer(BasicSerializer):
             phone_validation_token = PhoneSMSValidationToken.objects.get(phone=phone,
                                                                          is_active=True,
                                                                          salt=code.encode())
-            self.secret = phone_validation_token.secret
+            self.token = phone_validation_token.secret
         except PhoneSMSValidationToken.DoesNotExist:
             raise serializers.ValidationError('Your code is incorrect')
         return attrs

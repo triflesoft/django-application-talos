@@ -490,7 +490,9 @@ class VerifyPhoneCodeForUnAuthorizedUserView(SecureAPIViewBaseView):
         serializer = VerifyPhoneCodeForUnAuthorizedUserSerializer(data=request.data, context=kwargs)
 
         if serializer.is_valid(raise_exception=False):
-            return Response(serializer.data)
+            data = {'token' : serializer.token}
+            data.update(serializer.data)
+            return Response(data)
         else:
             raise APIValidationError(serializer.errors)
 
