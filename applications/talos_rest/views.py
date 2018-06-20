@@ -6,7 +6,7 @@ from django.views.decorators.debug import sensitive_post_parameters
 
 from rest_framework.response import Response
 from .utils import SuccessResponse
-
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.generics import GenericAPIView
 from rest_framework import status
 # Serializer classes
@@ -99,7 +99,8 @@ class SessionAPIView(SecureAPIViewBaseView):
             success_response = SuccessResponse()
             success_response.set_result_pairs('session_id', request.session._session.uuid)
 
-        return Response(success_response.data,success_response.status)
+        return Response(data = success_response.data,
+                        status = success_response.status)
 
     def post(self, request, *args, **kwargs):
         kwargs = super(SessionAPIView, self).get_serializer_context()
@@ -114,11 +115,12 @@ class SessionAPIView(SecureAPIViewBaseView):
 
     def delete(self, reqest, *args, **kwargs):
         if str(self.request.user) == 'Anonymous':
-            data = SuccessResponse(code=status.HTTP_404_NOT_FOUND)
+            success_response = SuccessResponse(code=status.HTTP_404_NOT_FOUND)
         else:
             self.request.session.flush()
-            data = SuccessResponse()
-        return Response(data.response)
+            success_response = SuccessResponse()
+        return Response(data = success_response.data,
+                        status = success_response.status)
 
 
 class PrincipalRegistrationRequestEditAPIView(SecureAPIViewBaseView):
@@ -132,7 +134,10 @@ class PrincipalRegistrationRequestEditAPIView(SecureAPIViewBaseView):
 
         if serializer.is_valid(raise_exception=False):
             serializer.save()
-            return Response(serializer.data)
+            token = serializer.validation_token
+            data = {'token' : str(token)}
+            data.update(serializer.data)
+            return Response(data)
         else:
             raise APIValidationError(detail=serializer.errors)
 
@@ -171,7 +176,7 @@ class PrincipalRegistrationConfirmationAPIView(SecureAPIViewBaseView):
 
 class EmailChangeRequestAPIView(SecureAPIViewBaseView):
     serializer_class = EmailChangeRequestSerializer
-
+    permission_classes = (IsAuthenticated,)
     def post(self, request, *args, **kwargs):
         kwargs = super(EmailChangeRequestAPIView, self).get_serializer_context()
         data = request.data

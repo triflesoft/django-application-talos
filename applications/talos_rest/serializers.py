@@ -108,24 +108,24 @@ class PrincipalRegistrationRequestSerializer(BasicSerializer):
         validation_token.email = email
         validation_token.type = 'principal_registration'
         validation_token.save()
-
-        context = {
-            'url': '{0}://{1}{2}'.format(
-                self.request.scheme,
-                self.request.META['HTTP_HOST'],
-                reverse('talos-principal-registration-confirm-edit',
-                        args=[validation_token.secret])),
-            'email': email}
+        self.validation_token = validation_token
+        # context = {
+        #     'url': '{0}://{1}{2}'.format(
+        #         self.request.scheme,
+        #         self.request.META['HTTP_HOST'],
+        #         reverse('talos-principal-registration-confirm-edit',
+        #                 args=[validation_token.secret])),
+        #     'email': email}
         # mail_subject = render_to_string('talos/basic_password_reset/request_email_subject.txt', context)
         # mail_body_text = render_to_string('talos/basic_password_reset/request_email_body.txt', context)
         # mail_body_html = render_to_string('talos/basic_password_reset/request_email_body.html', context)
-        #
+        # email = self.validated_data['email']
         # send_mail(
         #     subject=mail_subject,
         #     message=mail_body_text,
         #     html_message=mail_body_html,
         #     from_email=None,
-        #     recipient_list=[self.principal.email],
+        #     recipient_list=[email],
         #     fail_silently=True)
 
 
@@ -252,7 +252,6 @@ class EmailChangeRequestSerializer(BasicSerializer):
     def __init__(self, *args, **kwargs):
         self.request = kwargs['context'].get('request')
         del kwargs['context']
-
         super(EmailChangeRequestSerializer, self).__init__(*args, **kwargs)
 
     def validate_new_email(self, value):

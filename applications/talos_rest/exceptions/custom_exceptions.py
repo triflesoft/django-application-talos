@@ -1,5 +1,5 @@
 from django.core.handlers.exception import response_for_exception
-from rest_framework.exceptions import APIException, _get_error_details, MethodNotAllowed
+from rest_framework.exceptions import APIException, _get_error_details, MethodNotAllowed ,PermissionDenied
 from rest_framework.views import exception_handler
 from rest_framework import serializers, status
 from django.core.validators import ValidationError as django_validation_error
@@ -56,6 +56,24 @@ def custom_exception_handler(exc, context):
         response.data = custom_response_data
 
     elif isinstance(exc, ValidationError):
+        custom_response_data = {
+            'status': exc.status_code,
+            "error": exc.get_codes(),
+            'details': exc.detail,
+            'docs': generate_docs_url(context)
+        }
+        response.data = custom_response_data
+
+    elif isinstance(exc, MethodNotAllowed):
+        custom_response_data = {
+            'status': exc.status_code,
+            "error": exc.get_codes(),
+            'details': exc.detail,
+            'docs': generate_docs_url(context)
+        }
+        response.data = custom_response_data
+
+    elif isinstance(exc, PermissionDenied):
         custom_response_data = {
             'status': exc.status_code,
             "error": exc.get_codes(),
