@@ -29,7 +29,9 @@ from .views import (SessionAPIView, PrincipalRegistrationRequestEditAPIView,
                     ChangePasswordInsecureView,
                     ChangePasswordSecureView,
                     AuthorizationUsingSMSView,
-                    AuthorizationUsingGoogleAuthenticatorView)
+                    AuthorizationUsingGoogleAuthenticatorView,
+                    GeneratePhoneCodeForUnAuthorizedUserView,
+                    VerifyPhoneCodeForUnAuthorizedUserView)
 
 
 from rest_framework.documentation import include_docs_urls
@@ -72,5 +74,11 @@ urlpatterns = [
     path('auth/login-phone', AuthorizationUsingSMSView.as_view(), name='authorization-using-sms'),
     path('auth/login-otp', AuthorizationUsingGoogleAuthenticatorView.as_view(),
          name='authorization-using-google-authenticator'),
+
+    path('phone-verification/generate', GeneratePhoneCodeForUnAuthorizedUserView.as_view(),
+         name='generate-phone-code-for-unauthorized-user'),
+
+    path('phone-verification/verify', VerifyPhoneCodeForUnAuthorizedUserView.as_view(),
+         name='verify-phone-code-for-unauthorized-user'),
 
 ]

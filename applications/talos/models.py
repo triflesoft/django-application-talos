@@ -1275,17 +1275,25 @@ class PhoneSMSValidationToken(models.Model):
     phone = models.CharField(max_length=255)
     expires_at = models.DateTimeField(editable=False)
     is_active = models.BooleanField(default=True)
+    salt = models.CharField(max_length=64, default='')
 
     def save(self, *args, **kwargs):
         from binascii import hexlify
         from datetime import timedelta
         from os import urandom
+        from .helpers import utils
+        from .contrib import twilio
 
         if not self.secret:
             self.secret = hexlify(urandom(32)).decode('ascii').upper()
 
         if not self.expires_at:
             self.expires_at = _tznow() + timedelta(minutes=5)
+
+        self.salt = utils.generate_random_number(length=6).encode()
+
+        twilio.send_message(self.phone, '+19144494290',
+                            body='Your registraion code is %s' % self.salt.decode())
 
         super(PhoneSMSValidationToken, self).save(*args, **kwargs)
 

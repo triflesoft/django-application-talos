@@ -591,3 +591,50 @@ class AuthorizationUsingGoogleAuthenticatorSerializer(serializers.Serializer):
     def save(self):
         for otp_evidence in self.otp_evidences:
             self.principal._evidences_effective[otp_evidence.code] = otp_evidence
+
+
+class GeneratePhoneCodeForUnAuthorizedUserSerializer(serializers.Serializer):
+    phone = serializers.CharField()
+
+    def __init__(self, *args, **kwargs):
+        super(GeneratePhoneCodeForUnAuthorizedUserSerializer, self).__init__(*args, **kwargs)
+
+    def validate_phone(self, phone):
+        if Principal.objects.filter(phone=phone).count() > 0:
+            raise serializers.ValidationError('This mobile phone is already user')
+        return phone
+
+    def save(self):
+        from talos.models import PhoneSMSValidationToken
+
+        phone = self.validated_data['phone']
+
+        phone_validation_token = PhoneSMSValidationToken()
+        phone_validation_token.phone = phone
+        phone_validation_token.save()
+
+
+class VerifyPhoneCodeForUnAuthorizedUserSerializer(serializers.Serializer):
+    phone = serializers.CharField()
+    code = serializers.CharField()
+
+    def __init__(self, *args, **kwargs):
+        super(VerifyPhoneCodeForUnAuthorizedUserSerializer, self).__init__(*args, **kwargs)
+
+    def validate(self, attrs):
+
+        from talos.models import PhoneSMSValidationToken
+        phone = attrs['phone']
+        code = attrs['code']
+
+        try:
+            phone_validation_token = PhoneSMSValidationToken.objects.get(phone=phone,
+                                                   is_active=True,
+                                                   salt=code.encode())
+            self.secret = phone_validation_token.secret
+        except PhoneSMSValidationToken.DoesNotExist:
+            raise serializers.ValidationError('Your code is incorrect')
+        return attrs
+
+    def save(self):
+        pass

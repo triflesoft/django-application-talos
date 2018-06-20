@@ -25,7 +25,9 @@ from talos_test_app.serializers import (SessionSerializer,
                                         ChangePasswordInsecureSerializer,
                                         ChangePasswordSecureSerializer,
                                         AuthorizationUsingSMSSerializer,
-                                        AuthorizationUsingGoogleAuthenticatorSerializer)
+                                        AuthorizationUsingGoogleAuthenticatorSerializer,
+                                        GeneratePhoneCodeForUnAuthorizedUserSerializer,
+                                        VerifyPhoneCodeForUnAuthorizedUserSerializer)
 
 
 class TranslationContextMixin(object):
@@ -385,3 +387,33 @@ class AuthorizationUsingGoogleAuthenticatorView(SecureAPIViewBaseView):
         if serializer.is_valid(raise_exception=True):
             serializer.save()
             return Response({"text" : "You have logged in succesfully using Google Authenticatr"})
+
+
+class GeneratePhoneCodeForUnAuthorizedUserView(SecureAPIViewBaseView):
+    serializer_class = GeneratePhoneCodeForUnAuthorizedUserSerializer
+
+    def get(self, request, *args, **kwargs):
+        return Response({"text" : "Generate Phone Code for UnAuthorized user"})
+
+    def post(self, request, *args, **kwargs):
+        kwargs = super(GeneratePhoneCodeForUnAuthorizedUserView, self).__init__(*args, **kwargs)
+        serializer = GeneratePhoneCodeForUnAuthorizedUserSerializer(data=request.data, context=kwargs)
+
+        if serializer.is_valid(raise_exception=True):
+            serializer.save()
+            return Response({"text" : "SMS code has been sent on you phone"})
+
+
+
+class VerifyPhoneCodeForUnAuthorizedUserView(SecureAPIViewBaseView):
+    serializer_class = VerifyPhoneCodeForUnAuthorizedUserSerializer
+
+    def get(self, request, *args, **kwargs):
+        return Response({"text" : "Verify Phone Code For UnAuthorized user"})
+
+    def post(self, request, *args, **kwargs):
+        kwargs = super(VerifyPhoneCodeForUnAuthorizedUserView, self).__init__(*args, **kwargs)
+        serializer = VerifyPhoneCodeForUnAuthorizedUserSerializer(data=request.data, context=kwargs)
+
+        if serializer.is_valid(raise_exception=True):
+            return Response({"token" : serializer.secret})
