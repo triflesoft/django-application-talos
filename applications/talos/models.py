@@ -15,6 +15,12 @@ VALIDATION_TOKEN_TYPE_CHOICES = [
     ('email_change', 'E-mail change'),
 ]
 
+VALIDATION_TOKEN_IDENTIFIER_CHOICES = [
+    ('email', 'Email'),
+    ('phone', 'Phone'),
+    ('undefined', 'Undefined')
+]
+
 
 def _tznow():
     from datetime import datetime
@@ -1239,7 +1245,9 @@ class PrincipalObjectPermission(AbstractObjectPermission):
 class ValidationToken(AbstractReplicatableModel):
     principal = models.ForeignKey(Principal, null=True, blank=True, related_name='+', on_delete=models.CASCADE,
                                   editable=False)
-    email = models.EmailField(max_length=255, editable=False)
+    # email = models.EmailField(max_length=255, editable=False)
+    identifier = models.CharField(max_length= 255, choices= VALIDATION_TOKEN_IDENTIFIER_CHOICES, editable=False, default='undefined')
+    identifier_value = models.CharField(max_length=255, null=True)
     type = models.CharField(max_length=255, choices=VALIDATION_TOKEN_TYPE_CHOICES, editable=False)
     secret = models.CharField(max_length=64, unique=True, editable=False)
     expires_at = models.DateTimeField(editable=False)
