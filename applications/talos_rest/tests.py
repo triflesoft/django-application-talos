@@ -25,6 +25,7 @@ class TestUtils(APITestCase):
         self.email = email
         self.password = password
         self.phone = phone
+        self.principal = None
 
     def create_user(self):
         from talos.models import Principal
@@ -59,6 +60,30 @@ class TestUtils(APITestCase):
 
         response = self.client.post(url, data, format='json')
 
+    def add_evidence_sms(self):
+        from talos.models import OneTimePasswordCredentialDirectory
+        from talos.models import OneTimePasswordCredential
+        from talos.models import Principal
+
+        add_evidence_sms_url = reverse('add-evidence-sms')
+
+        if self.principal is None:
+            raise Exception('Please run create_user() login() before this function')
+
+        otp_directory = OneTimePasswordCredentialDirectory.objects.get(code='onetimepassword_internal_phone_sms_authenticator')
+        otp_directory.create_credentials(self.principal, {})
+
+        otp_credential = OneTimePasswordCredential.objects.last()
+
+        self.assertIsNotNone(otp_credential)
+
+        data = {
+            'sms_code' : otp_credential.salt
+        }
+
+        response = self.client.post(add_evidence_sms_url, data, format='json')
+
+        print(response.data)
 
     def assertResponseStatus(self, response, status = status.HTTP_200_OK):
         self.assertEquals(response.status_code, status)
@@ -623,5 +648,58 @@ class TestEmailChange(TestUtils):
         self.assertResponseStatus(response, status.HTTP_400_BAD_REQUEST)
         self.assertListEqual(response.data.get('error').get('secret'),['token_invalid'])
 
+
+class TestAddSMSEvidence(TestUtils):
+    url = reverse('add-evidence-sms')
+
+    def test_add_sms_evidence(self):
+        from talos.models import OneTimePasswordCredentialDirectory
+        from talos.models import OneTimePasswordCredential
+        from talos.models import Principal
+
+        self.create_user()
+        self.login()
+
+        principal = Principal.objects.last()
+        otp_diretory = OneTimePasswordCredentialDirectory.objects.get(code='onetimepassword_internal_phone_sms_authenticator')
+
+        otp_diretory.create_credentials(principal, {})
+
+        self.assertEqual(OneTimePasswordCredential.objects.all().count(), 1)
+
+        otp_credential = OneTimePasswordCredential.objects.last()
+
+        data = {
+            'sms_code' : otp_credential.salt
+        }
+
+        response = self.client.post(self.url, data, format='json')
+
+
+        self.assertResponseStatus(response, status.HTTP_200_OK)
+
+        # Test on incorrect input
+
+        data = {
+            'sms_code' : 'aaaa'
+        }
+
+        response = self.client.post(self.url, data, format='json')
+
+        self.assertResponseStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertTrue(response.data.get('error').get('sms_code', False))
+        self.assertEqual(response.data.get('error').get('sms_code')[0], constants.SMS_OTP_INVALID_CODE)
+
+
+    def test_something(self):
+        self.create_user()
+        self.login()
+        self.add_evidence_sms()
+
+        provided_evidences_url = reverse('provided-evidences')
+
+        response = self.client.get(provided_evidences_url, {}, format='json')
+
+        print(response.data)
 
 

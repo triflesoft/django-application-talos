@@ -1,5 +1,29 @@
 from rest_framework import permissions
 
+class IsBasicAuthenticated(permissions.BasePermission):
+    message = 'you do not have a permission'
+
+    def has_permission(self, request, view):
+        if request.method not in list(view.allowed_methods):
+            return True
+
+        authentication_evidences = ('authenticated',
+                                   'knowledge_factor',
+                                   'knowledge_factor_password',
+                                   )
+
+        provided_evidence = request.principal._evidences_effective
+
+        result = []
+        for evidence in authentication_evidences:
+            if evidence not in provided_evidence:
+                result.append(evidence)
+        if len(result) > 0:
+            self.message = result
+            return False
+        return True
+
+
 class IsAuthenticated(permissions.BasePermission):
     message = 'you do not have a permission'
 
