@@ -457,7 +457,8 @@ class TestPermissionDeniedPermission(TestUtils):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['status'], status.HTTP_200_OK)
 
-        self.assertListEqual(expected_provided_evidences, response.data.get('result').get('provided-evidences', []))
+        self.assertListEqual(sorted(expected_provided_evidences),
+                             sorted(response.data.get('result').get('provided-evidences', [])))
 
 
 
@@ -924,7 +925,8 @@ class TestAddSMSEvidence(TestUtils):
                                        'knowledge_factor_password_confirmation']
 
         self.assertResponseStatus(response, status.HTTP_200_OK)
-        self.assertListEqual(response.data.get('result').get('provided-evidences'), expected_provided_evidences)
+        self.assertListEqual(sorted(response.data.get('result').get('provided-evidences')),
+                             sorted(expected_provided_evidences))
 
 
         expected_provided_evidences = ['authenticated',
@@ -1006,8 +1008,11 @@ class TestAddGoogleEvidence(TestUtils):
                                        'knowledge_factor_password',
                                        'knowledge_factor_password_confirmation']
 
+
+
         self.assertResponseStatus(response, status.HTTP_200_OK)
-        self.assertListEqual(response.data.get('result').get('provided-evidences'), expected_provided_evidences)
+        self.assertListEqual(sorted(response.data.get('result').get('provided-evidences')),
+                             sorted(expected_provided_evidences))
 
         expected_provided_evidences = ['authenticated',
                                        'knowledge_factor',
