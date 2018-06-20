@@ -98,7 +98,7 @@ urlpatterns = [
     path('google-authenticator/delete/request', GoogleAuthenticatorDeleteRequestView.as_view(),
          name='google-authenticator-delete-request'),
     path('google-authenticator/delete/confirm', GoogleAuthenticatorDeleteView.as_view(),
-         name='google-authenticator-delete'),
+         name='google-authenticator-delete-confirm'),
     path('google-authenticator/change/request', GoogleAuthenticatorChangeRequestView.as_view(),
          name='google-authenticator-change-request'),
     path('google-authenticator/change/confirm', GoogleAuthenticatorChangeConfirmView.as_view(),
