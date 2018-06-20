@@ -20,7 +20,7 @@ from talos.forms import PrincipalRegistrationRequestForm
 from rest_framework.generics import GenericAPIView
 from rest_framework.views import  APIView
 
-from braces.views import CsrfExemptMixin
+
 
 from talos_test_app.authentication import CsrfExemptSessionAuthentication
 
@@ -89,16 +89,9 @@ class SecureFormViewBaseView(TranslationContextMixin, GenericAPIView):
         return super(SecureFormViewBaseView, self).dispatch(request, *args, **kwargs)
 
 
-class BasicLoginAPIView(SecureFormViewBaseView):
-    # process = 'Basic Login'
-    # step_header = 'Login'
-    # step_summary = 'Please, provide your username and password'
-    # submit = 'Log in'
-    #authentication_classes = (CsrfExemptSessionAuthentication,)
+class BasicLoginAPIView(SecureFormViewBaseView):   
     identity_directory_code = 'basic_internal'
 
-    # form_class = BasicLoginForm
-    # template_name = 'talos/basic_login/index.html'
     serializer_class = BasicLoginSerializer
     #
     def get(self, request, *args, **kwargs):
