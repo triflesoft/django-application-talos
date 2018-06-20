@@ -767,6 +767,7 @@ class ValidateSecretWhenLogedInMixin():
                 'Token is not valid.',
                 code='invalid_secret')
 
+        return self.token
 
 class ValidateSecretWhenLoggedOutMixin():
     def __init__(self, *args, **kwargs):
@@ -832,8 +833,7 @@ class EmailChangeRequestSerializer(BasicSerializer):
         new_email = self.validated_data['new_email']
 
         validation_token = ValidationToken()
-        validation_token.identifier = 'email'
-        validation_token.identifier_value = new_email
+        validation_token.email = new_email
         validation_token.principal = self.request.principal
         validation_token.type = self.token_type
         validation_token.save()
@@ -866,7 +866,7 @@ class EmailChangeInsecureSerializer(SMSOtpSerializerMixin, ValidatePasswordMixin
 
     def save(self, **kwargs):
         from talos.models import BasicIdentity
-        self.token.principal.email = self.token.identifier_value
+        self.token.principal.email = self.token.email
         self.token.principal.save()
         self.token.is_active = False
         self.token.save()
@@ -874,17 +874,14 @@ class EmailChangeInsecureSerializer(SMSOtpSerializerMixin, ValidatePasswordMixin
         basic_credential = BasicIdentity.objects.get(
             principal=self.principal
         )
-        basic_credential.email = self.token.identifier_value
+        basic_credential.email = self.token.email
         basic_credential.save()
-        # Remove session to logout
-        self.request.session.flush()
-
         # TODO Send link to new email
         # TODO Send sms to old phone
         # TODO Send mail to old email for 5 days
 
 
-class EmailChangeSecureSerializer(GoogleOtpSerializerMixin, ValidateSecretWhenLogedInMixin, ValidatePasswordMixin, BasicSerializer):
+class EmailChangeSecureSerializer(SMSOtpSerializerMixin, GoogleOtpSerializerMixin, ValidateSecretWhenLogedInMixin, ValidatePasswordMixin, BasicSerializer):
     token_type = 'email_change'
 
     def __init__(self, *args, **kwargs):
@@ -895,7 +892,7 @@ class EmailChangeSecureSerializer(GoogleOtpSerializerMixin, ValidateSecretWhenLo
 
     def save(self, **kwargs):
         from talos.models import BasicIdentity
-        self.token.principal.email = self.token.identifier_value
+        self.token.principal.email = self.token.email
         self.token.principal.save()
         self.token.is_active = False
         self.token.save()
@@ -903,9 +900,8 @@ class EmailChangeSecureSerializer(GoogleOtpSerializerMixin, ValidateSecretWhenLo
         basic_credential = BasicIdentity.objects.get(
             principal=self.principal
         )
-        basic_credential.email = self.token.identifier_value
+        basic_credential.email = self.token.email
         basic_credential.save()
-        self.request.session.flush()
         # TODO Send link to new email
         # TODO Send sms to old phone
         # TODO Send mail to old email for 5 days
@@ -969,8 +965,7 @@ class EmailResetRequestSerializer(BasicSerializer):
         old_email = self.validated_data['old_email']
 
         validation_token = ValidationToken()
-        validation_token.identifier = 'email'
-        validation_token.identifier_value = new_email
+        validation_token.email = new_email
         principal  = Principal.objects.get(email=old_email)
         validation_token.principal = principal
         validation_token.type = self.token_type
@@ -1024,7 +1019,7 @@ class EmailResetInsecureSerializer(SMSOtpSerializerMixin, ValidatePasswordMixin,
 
     def save(self, **kwargs):
         from talos.models import BasicIdentity
-        self.token.principal.email = self.token.identifier_value
+        self.token.principal.email = self.token.email
         self.token.principal.save()
         self.token.is_active = False
         self.token.save()
@@ -1032,7 +1027,7 @@ class EmailResetInsecureSerializer(SMSOtpSerializerMixin, ValidatePasswordMixin,
         basic_credential = BasicIdentity.objects.get(
             principal=self.principal
         )
-        basic_credential.email = self.token.identifier_value
+        basic_credential.email = self.token.email
         basic_credential.save()
         # TODO Send link to new email
         # TODO Send sms to old phone
@@ -1071,9 +1066,10 @@ class EmailResetSecureSerializer(SMSOtpSerializerMixin, GoogleOtpSerializerMixin
             self.principal = self.token.principal
 
 
+
     def save(self, **kwargs):
         from talos.models import BasicIdentity
-        self.token.principal.email = self.token.identifier_value
+        self.token.principal.email = self.token.email
         self.token.principal.save()
         self.token.is_active = False
         self.token.save()
@@ -1081,7 +1077,7 @@ class EmailResetSecureSerializer(SMSOtpSerializerMixin, GoogleOtpSerializerMixin
         basic_credential = BasicIdentity.objects.get(
             principal=self.principal
         )
-        basic_credential.email = self.token.identifier_value
+        basic_credential.email = self.token.email
         basic_credential.save()
         # TODO Send link to new email
         # TODO Send sms to old phone
@@ -1091,146 +1087,41 @@ class EmailResetSecureSerializer(SMSOtpSerializerMixin, GoogleOtpSerializerMixin
 class PhoneChangeRequestSerializer(BasicSerializer):
     token_type = 'phone_change'
 
-    new_phone = serializers.CharField(label='New Phone')
+    new_email = serializers.CharField(label='New E-mail')
 
     def __init__(self, *args, **kwargs):
         self.request = kwargs['context'].get('request')
         del kwargs['context']
         super(PhoneChangeRequestSerializer, self).__init__(*args, **kwargs)
 
-    def validate_new_phone(self, new_phone):
+    def validate_new_email(self, value):
         from talos.models import Principal
 
+        new_email = value
 
-        try:
-            principal = Principal.objects.get(phone=new_phone)
-
-            raise serializers.ValidationError(
-                'Principal with provided phone is already registered.',
-                code='phone_already_exists')
-        except Principal.DoesNotExist:
-            pass
-
-        return new_phone
-
-    def save(self):
-
-        new_phone = self.validated_data['new_phone']
-
-        validation_token = ValidationToken()
-        validation_token.identifier = 'phone'
-        validation_token.identifier_value = new_phone
-        validation_token.principal = self.request.principal
-        validation_token.type = self.token_type
-        validation_token.save()
-
-
-        # TODO SEND MAIL with link to continue phone change
-
-
-class PhoneChangeValidationTokenCheckerSerializer(ValidateSecretWhenLogedInMixin,BasicSerializer):
-    """
-    Validate token from Phone Change
-    if token is valid it means that email is validated successfully
-    """
-    token_type = 'phone_change'
-
-    def __init__(self, *args, **kwargs):
-        passed_kwargs_from_view = kwargs.get('context')
-        self.request = passed_kwargs_from_view
-        super(PhoneChangeValidationTokenCheckerSerializer, self).__init__(*args, **kwargs)
-
-
-class PhoneChangeSecureSerializer(GoogleOtpSerializerMixin, ValidateSecretWhenLogedInMixin, ValidatePasswordMixin, BasicSerializer):
-    token_type = 'phone_change'
-
-    def __init__(self, *args, **kwargs):
-        passed_kwargs_from_view = kwargs.get('context')
-        self.request = passed_kwargs_from_view['request']
-        self.principal = self.request.principal
-        super(PhoneChangeSecureSerializer, self).__init__(*args, **kwargs)
-
-    def save(self, **kwargs):
-        self.token.principal.phone = self.token.identifier_value
-        self.token.principal.save()
-        self.token.is_active = False
-        self.token.save()
-
-        # TODO Send sms to new phone
-
-class PhoneChangeInsecureSerializer(SMSOtpSerializerMixin, ValidateSecretWhenLogedInMixin, ValidatePasswordMixin, BasicSerializer):
-    token_type = 'phone_change'
-
-    def __init__(self, *args, **kwargs):
-        passed_kwargs_from_view = kwargs.get('context')
-        self.request = passed_kwargs_from_view['request']
-        self.principal = self.request.principal
-        super(PhoneChangeInsecureSerializer, self).__init__(*args, **kwargs)
-
-    def save(self, **kwargs):
-        self.token.principal.phone = self.token.identifier_value
-        self.token.principal.save()
-        self.token.is_active = False
-        self.token.save()
-
-        # TODO Send sms to new phone
-
-class PhoneResetRequestSerializer(BasicSerializer):
-    token_type = 'phone_reset'
-
-    email = serializers.CharField(label='Email' , max_length=255)
-    new_phone = serializers.CharField(label='New Phone', max_length=255)
-
-    def __init__(self, *args, **kwargs):
-        self.request = kwargs['context'].get('request')
-        del kwargs['context']
-        super(PhoneResetRequestSerializer, self).__init__(*args, **kwargs)
-
-
-    def validate_new_phone(self, new_phone):
-        from talos.models import Principal
-
-
-        try:
-            principal = Principal.objects.get(phone=new_phone)
-
-            raise serializers.ValidationError(
-                'Principal with provided phone is already registered.',
-                code='phone_already_exists')
-        except Principal.DoesNotExist:
-            pass
-
-        return new_phone
-
-
-    def validate_email(self, email):
-        from talos.models import Principal
-
-
-        if not email_regex.match(email):
+        if not email_regex.match(new_email):
             raise serializers.ValidationError(
                 'E-mail address is ill-formed.',
                 code='invalid_email')
 
         try:
-            principal = Principal.objects.get(email=email)
-        except Principal.DoesNotExist:
-            raise serializers.ValidationError(
-                'Principal with provided email not exists',
-                code='email_not_exists')
+            principal = Principal.objects.get(email=new_email)
 
-        return email
+            raise serializers.ValidationError(
+                'Principal with provided e-mail is already registered.',
+                code='email_already_exists')
+        except Principal.DoesNotExist:
+            pass
+
+        return new_email
 
     def save(self):
-        from talos.models import Principal
-        new_phone = self.validated_data['new_phone']
-        email = self.validated_data['email']
+
+        new_email = self.validated_data['new_email']
 
         validation_token = ValidationToken()
-        validation_token.identifier = 'phone'
-        validation_token.identifier_value = new_phone
-        principal  = Principal.objects.get(email=email)
-        validation_token.principal = principal
+        validation_token.email = new_email
+        validation_token.principal = self.request.principal
         validation_token.type = self.token_type
         validation_token.save()
 
@@ -1238,86 +1129,7 @@ class PhoneResetRequestSerializer(BasicSerializer):
         # TODO SEND MAIL with link
 
 
-class PhoneResetValidationTokenCheckerSerializer(ValidateSecretWhenLoggedOutMixin,BasicSerializer):
-    token_type = 'phone_reset'
 
-
-    def __init__(self, *args, **kwargs):
-        passed_kwargs_from_view = kwargs.get('context')
-        self.request = passed_kwargs_from_view
-        super(PhoneResetValidationTokenCheckerSerializer, self).__init__(*args, **kwargs)
-
-
-class PhoneResetInsecureSerializer(SMSOtpSerializerMixin, ValidatePasswordMixin, BasicSerializer):
-    token_type = 'phone_reset'
-    token = serializers.CharField(label='Token')
-
-    def __init__(self, *args, **kwargs):
-        super(PhoneResetInsecureSerializer, self).__init__(*args, **kwargs)
-
-    def validate_token(self, token):
-        """ Validate token"""
-        try:
-            self.token = ValidationToken.objects.get(
-                secret=token,
-                type=self.token_type,
-                expires_at__gt=_tznow(),
-                is_active=True
-            )
-
-        except ValidationToken.DoesNotExist:
-            self.token = None
-
-        if not self.token:
-            raise serializers.ValidationError(
-                'Token is not valid.',
-                code='invalid_secret')
-        else:
-            self.principal = self.token.principal
-
-    def save(self, **kwargs):
-        self.token.principal.phone = self.token.identifier_value
-        self.token.principal.save()
-        self.token.is_active = False
-        self.token.save()
-
-        # TODO Send sms to new phone
-
-
-class PhoneResetSecureSerializer(GoogleOtpSerializerMixin, ValidatePasswordMixin, BasicSerializer):
-    token_type = 'phone_reset'
-    token = serializers.CharField(label='Token')
-
-    def __init__(self, *args, **kwargs):
-        super(PhoneResetSecureSerializer, self).__init__(*args, **kwargs)
-
-    def validate_token(self, token):
-        """ Validate token"""
-        try:
-            self.token = ValidationToken.objects.get(
-                secret=token,
-                type=self.token_type,
-                expires_at__gt=_tznow(),
-                is_active=True
-            )
-
-        except ValidationToken.DoesNotExist:
-            self.token = None
-
-        if not self.token:
-            raise serializers.ValidationError(
-                'Token is not valid.',
-                code='invalid_secret')
-        else:
-            self.principal = self.token.principal
-
-    def save(self, **kwargs):
-        self.token.principal.phone = self.token.identifier_value
-        self.token.principal.save()
-        self.token.is_active = False
-        self.token.save()
-
-        # TODO Send sms to new phone
 
 
 class PasswordResetRequestSerializer(serializers.Serializer):

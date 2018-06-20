@@ -349,7 +349,7 @@ class AppMigrationHelper(object):
                 defaults={
                     'backend_class': 'talos.directory.onetimepassword_credential.InternalPhoneSMS',
                     'is_active': True,
-                    'name': 'SSL Certificate Internal Credential Directory'})
+                    'name': 'Phone SMS Internal Credential Directory'})
 
             for evidence in (
                     evidence_authenticated,
