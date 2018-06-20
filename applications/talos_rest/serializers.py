@@ -856,15 +856,15 @@ class BasicRegistrationSerializer(BasicSerializer):
             raise serializers.ValidationError("Phone is already used")
         except Principal.DoesNotExist:
             pass
-        return None
+        return phone
 
     def validate_token(self, token):
         from talos.models import PhoneSMSValidationToken
         try:
             PhoneSMSValidationToken.objects.get(secret=token)
         except PhoneSMSValidationToken.DoesNotExist:
-            raise serializers.ValidationError("Token doesn't exists")
-        return None
+            raise serializers.ValidationError('Token does not exists')
+        return token
 
     def validate(self, attrs):
         from talos.models import PhoneSMSValidationToken
@@ -873,11 +873,12 @@ class BasicRegistrationSerializer(BasicSerializer):
         phone = attrs['phone']
 
         try:
-            self.token = PhoneSMSValidationToken.objects.get(phone=phone,
+            phone_sms_validation_token = PhoneSMSValidationToken.objects.get(phone=phone,
                                                              secret=token,
                                                              is_active=True)
+            self.token = phone_sms_validation_token
         except PhoneSMSValidationToken.DoesNotExist:
-            raise serializers.ValidationError("Token and phone is invalid")
+            raise serializers.ValidationError('Token and phone is invalid')
         return attrs
 
     def save(self):
