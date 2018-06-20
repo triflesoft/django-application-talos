@@ -714,3 +714,120 @@ class BasicRegistrationSerializer(serializers.Serializer):
             self.token.principal = self.principal
             self.token.is_active = False
             self.token.save()
+
+
+class PasswordResetRequestSerializer(serializers.Serializer):
+    email = serializers.CharField()
+
+    def __init__(self, *args, **kwargs):
+        from talos.models import OneTimePasswordCredentialDirectory
+        passed_kwargs_from_view = kwargs.get('context')
+        self.request = passed_kwargs_from_view['request']
+        self.sms_otp_directory = OneTimePasswordCredentialDirectory.objects.get(pk=2)
+        self.principal = None
+        super(PasswordResetRequestSerializer, self).__init__(*args, **kwargs)
+
+    def validate_email(self, email):
+        try:
+            principal = Principal.objects.get(email=email)
+            self.principal = principal
+        except Principal.DoesNotExist:
+            raise serializers.ValidationError("Email doesn't exists")
+        return email
+
+    def validate(self, attrs):
+        return attrs
+
+    def save(self):
+        from django.core.mail import send_mail
+        from django.template.loader import render_to_string
+        from django.urls import reverse
+        from talos.models import ValidationToken
+
+        validation_token = ValidationToken()
+        validation_token.email = self.validated_data['email']
+        validation_token.principal = self.principal
+        validation_token.type = 'password_reset'
+        validation_token.save()
+
+        # Send SMS Verification code to user
+        if self.principal and self.principal.profile.is_secure is False:
+            self.sms_otp_directory.create_credentials(self.principal, {})
+
+        # context = {
+        #     'url': '{0}://{1}{2}'.format(
+        #         self.request.scheme,
+        #         self.request.META['HTTP_HOST'],
+        #         reverse('talos-email-change-confirm-edit', args=[validation_token.secret])),
+        #     'principal': validation_token.principal,
+        #     'new_email': new_email}
+        #
+        # mail_subject = render_to_string('talos/email_change/request_email_subject.txt', context)
+        # mail_body_text = render_to_string('talos/email_change/request_email_body.txt', context)
+        # mail_body_html = render_to_string('talos/email_change/request_email_body.html', context)
+        #
+        # send_mail(
+        #     subject=mail_subject,
+        #     message=mail_body_text,
+        #     html_message=mail_body_html,
+        #     from_email=None,
+        #     recipient_list=[new_email],
+        #     fail_silently=True)
+
+
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    email = serializers.CharField()
+    password = serializers.CharField()
+    token = serializers.CharField()
+    code = serializers.CharField()
+
+    def __init__(self, *args, **kwargs):
+        from talos.models import OneTimePasswordCredentialDirectory
+        from talos.models import BasicIdentityDirectory
+        passed_kwargs_from_view = kwargs.get('context')
+
+        self.sms_otp_directory = OneTimePasswordCredentialDirectory.objects.get(pk=2)
+        self.basic_identity_directory = BasicIdentityDirectory.objects.get(
+            code=passed_kwargs_from_view['identity_directory_code'])
+        self.basic_credential_directory = self.basic_identity_directory.credential_directory
+        self.principal = None
+        self.validation_token = None
+        super(PasswordResetConfirmSerializer, self).__init__(*args, **kwargs)
+
+    def validate_email(self, email):
+        try:
+            principal = Principal.objects.get(email=email)
+            self.principal = principal
+        except Principal.DoesNotExist:
+            raise serializers.ValidationError("Email doesn't exists")
+        return email
+
+    def validate_password(self, password):
+        return password
+
+    def validate_token(self, token):
+        try:
+            validation_token = ValidationToken.objects.get(secret=token, principal=self.principal)
+            self.validation_token = validation_token
+        except ValidationToken.DoesNotExist:
+            raise serializers.ValidationError("Token doesn't exits")
+        return token
+
+    def validate_code(self, code):
+        if self.principal and not self.sms_otp_directory.verify_credentials(self.principal, {'code' : code}):
+            raise serializers.ValidationError("Code is incorrect")
+        return code
+
+    def validate(self, attrs):
+        return attrs
+
+    def save(self):
+        password = self.validated_data['password']
+
+        if self.principal and self.basic_credential_directory:
+            self.basic_credential_directory.reset_credentials(self.principal, self.principal, {'password' : password})
+
+        if self.validation_token:
+            self.validation_token.is_active = False
+            self.validation_token.save()

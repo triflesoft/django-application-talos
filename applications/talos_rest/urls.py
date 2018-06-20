@@ -32,7 +32,8 @@ from .views import (SessionAPIView, PrincipalRegistrationRequestEditAPIView,
                     AuthorizationUsingGoogleAuthenticatorView,
                     GeneratePhoneCodeForUnAuthorizedUserView,
                     VerifyPhoneCodeForUnAuthorizedUserView,
-                    BasicRegistrationView)
+                    BasicRegistrationView,
+                    PasswordResetRequestView, PasswordResetConfirmView)
 
 
 from rest_framework.documentation import include_docs_urls
@@ -62,7 +63,7 @@ urlpatterns = [
 
     path('principal/security-level', PrincipalSecurityLevelView.as_view(), name='principal-security-level'),
 
-    path('authorized-phone-verification/generate/', GeneratePhoneCodeForAuthorizedUserView.as_view(),
+    path('authorized-phone-verification/generate', GeneratePhoneCodeForAuthorizedUserView.as_view(),
          name='generate-phone-code-for-authorized-user'),
 
     path('authorized-phone-verification/verify', VerifyPhoneCodeForAuthorizedUserView.as_view(),
@@ -83,5 +84,9 @@ urlpatterns = [
          name='verify-phone-code-for-unauthorized-user'),
 
     path('basic-registration', BasicRegistrationView.as_view(), name='basic-registration'),
+
+    path('password-reset-request', PasswordResetRequestView.as_view(), name='password-reset-request'),
+
+    path('password-reset-confirm', PasswordResetConfirmView.as_view(), name='password-reset-confirm'),
 
 ]
