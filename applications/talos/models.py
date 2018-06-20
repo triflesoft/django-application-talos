@@ -1292,7 +1292,7 @@ class PhoneSMSValidationToken(models.Model):
         from .helpers import utils
         from .contrib import twilio
         from rest_framework.serializers import ValidationError
-        from talos_rest import constants
+        from talos_test_app import constants
 
         if not self.secret:
             self.secret = hexlify(urandom(32)).decode('ascii').upper()

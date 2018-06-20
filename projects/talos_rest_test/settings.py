@@ -40,7 +40,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'rest_framework',
     'talos',
-    'talos_rest',
+    'talos_test_app',
 ]
 
 AUTH_USER_MODEL = 'talos.Principal'
@@ -51,11 +51,11 @@ AUTHENTICATION_BACKENDS = (
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'talos_rest.authentication.CsrfExemptSessionAuthentication',
+        'talos_test_app.authentication.CsrfExemptSessionAuthentication',
     ),
     # TODO VERSIONING
     # 'DEFAULT_VERSIONING_CLASS': 'rest_framework.versioning.URLPathVersioning'
-    'EXCEPTION_HANDLER': 'talos_rest.exceptions.custom_exceptions.custom_exception_handler'
+    'EXCEPTION_HANDLER': 'talos_test_app.exceptions.custom_exceptions.custom_exception_handler'
 
 }
 
@@ -80,7 +80,7 @@ MIDDLEWARE = [
     # 'django.middleware.security.SecurityMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'talos.middleware.SessionMiddleware',
-    #'talos_rest.middleware.Middleware',
+    #'talos_test_app.middleware.Middleware',
     # 'django.middleware.common.CommonMiddleware',
     #'django.middleware.csrf.CsrfViewMiddleware',
     #'django.contrib.auth.middleware.AuthenticationMiddleware',

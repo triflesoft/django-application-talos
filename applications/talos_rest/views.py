@@ -6,14 +6,14 @@ from django.views.decorators.debug import sensitive_post_parameters
 
 from rest_framework.response import Response
 
-from talos_rest import permissions
+from talos_test_app import permissions
 from .utils import SuccessResponse, ErrorResponse
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.generics import GenericAPIView
 from rest_framework import status
 # Serializer classes
 from .exceptions.custom_exceptions import APIValidationError
-from talos_rest.serializers import SessionSerializer, \
+from talos_test_app.serializers import SessionSerializer, \
     GoogleAuthenticatorActivateRequestSerializer, GoogleAuthenticatorVerifySerializer, \
     GoogleAuthenticatorDeleteSerializer, GeneratePhoneCodeForAuthorizedUserSerializer, \
     VerifyPhoneCodeForAuthorizedUserSerializer, ChangePasswordInsecureSerializer, \

@@ -2,4 +2,4 @@ from django.apps import AppConfig
 
 
 class TalosTestAppConfig(AppConfig):
-    name = 'talos_rest'
+    name = 'talos_test_app'

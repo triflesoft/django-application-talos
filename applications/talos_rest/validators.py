@@ -2,7 +2,7 @@
 # using Django's built in RegexpValidator
 # And raises serializers.ValidationError if some
 # error occurs
-from talos_rest import constants
+from talos_test_app import constants
 def validate_phone(phone):
     from django.core.validators import RegexValidator
     from django.core.exceptions import ValidationError

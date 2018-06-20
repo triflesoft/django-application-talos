@@ -16,7 +16,7 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from talos.urls import auth_url_patterns
-from talos_rest.urls import urlpatterns as talos_test_app_urlpatterns
+from talos_test_app.urls import urlpatterns as talos_test_app_urlpatterns
 
 urlpatterns = [
     path('admin/', admin.site.urls),
