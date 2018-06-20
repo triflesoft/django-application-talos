@@ -476,7 +476,8 @@ class GeneratePhoneCodeForUnAuthorizedUserView(SecureAPIViewBaseView):
 
         if serializer.is_valid(raise_exception=True):
             serializer.save()
-            return Response({"text" : "SMS code has been sent on you phone"})
+            return Response({"code" : "200",
+                             "text" : "SMS code has been sent on you phone"})
 
 
 
