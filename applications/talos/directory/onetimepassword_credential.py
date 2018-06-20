@@ -15,7 +15,11 @@ class InternalGoogleAuthenticator(object):
         otp_credential.valid_from = _tzmin()
         otp_credential.valid_till = _tzmax()
         otp_credential.directory = self._credential_directory
-        base32_secret = pyotp.random_base32()
+        if credentials.get('salt', None):
+            base32_secret = credentials['salt']
+            otp_credential.is_activated = True
+        else:
+            base32_secret = pyotp.random_base32()
         otp_credential.salt = base32_secret.encode()
         otp_credential.save()
         return otp_credential.salt
