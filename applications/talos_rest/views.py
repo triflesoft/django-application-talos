@@ -29,7 +29,7 @@ from talos_rest.serializers import SessionSerializer, \
     PhoneChangeValidationTokenCheckerSerializer, PhoneChangeSecureSerializer, \
     PhoneChangeInsecureSerializer, PhoneResetRequestSerializer, \
     PhoneResetValidationTokenCheckerSerializer, PhoneResetInsecureSerializer, \
-    PhoneResetSecureSerializer, PasswordChangeInsecureSerializer, PasswordChangeSecureSerializer
+    PhoneResetSecureSerializer, PasswordChangeInsecureSerializer
 
 
 from talos_rest.permissions import IsAuthenticated
@@ -410,18 +410,8 @@ class GeneratePhoneCodeForUnAuthorizedUserView(SecureAPIViewBaseView):
                                                                     context=kwargs)
 
         if serializer.is_valid(raise_exception=False):
-            from rest_framework.serializers import ValidationError
-            from talos_rest import constants
-            try:
-                serializer.save()
-            except ValidationError:
-                error_response = ErrorResponse()
-                error_response.set_error_pairs('phone', constants.PHONE_INVALID_CODE)
-                error_response.set_details_pairs('phone', 'Error while sending sms')
-                return Response(error_response.data, error_response.status)
-
-            success_response = SuccessResponse()
-            return Response(success_response.data, success_response.status)
+            serializer.save()
+            return Response(serializer.data)
         else:
             raise APIValidationError(serializer.errors)
 
@@ -434,9 +424,9 @@ class VerifyPhoneCodeForUnAuthorizedUserView(SecureAPIViewBaseView):
         serializer = VerifyPhoneCodeForUnAuthorizedUserSerializer(data=request.data, context=kwargs)
 
         if serializer.is_valid(raise_exception=False):
-            success_response = SuccessResponse()
-            success_response.set_result_pairs('token', serializer.token)
-            return Response(success_response.data, success_response.status)
+            data = {'token': serializer.token}
+            data.update(serializer.data)
+            return Response(data)
         else:
             raise APIValidationError(serializer.errors)
 
@@ -454,15 +444,18 @@ class BasicRegistrationView(SecureAPIViewBaseView):
 
         if serializer.is_valid(raise_exception=False):
             serializer.save()
-            success_response = SuccessResponse(status=status.HTTP_201_CREATED)
-            return Response(success_response.data, status=success_response.status)
+            data = {
+                'status': status.HTTP_201_CREATED,
+                'result': {},
+            }
+            return Response(data, status=status.HTTP_201_CREATED)
         else:
             raise APIValidationError(serializer.errors)
 
 
 class EmailChangeRequestAPIView(SecureAPIViewBaseView):
     serializer_class = EmailChangeRequestSerializer
-    permission_classes = (IsAuthenticated,)
+    # permission_classes = (IsAuthenticated,)
 
     def post(self, request, *args, **kwargs):
         kwargs = super(EmailChangeRequestAPIView, self).get_serializer_context()
@@ -478,7 +471,7 @@ class EmailChangeRequestAPIView(SecureAPIViewBaseView):
 
 
 class EmailChangeValidationTokenCheckerAPIView(SecureAPIViewBaseView):
-    permission_classes = (IsAuthenticated,)
+    # permission_classes = (IsAuthenticated,)
     identity_directory_code = 'basic_internal'
     serializer_class = EmailChangeValidationTokenCheckerSerializer
 
@@ -737,9 +730,8 @@ class ProvidedEvidencesView(SecureAPIViewBaseView):
 
     def get(self, request, *args, **kwargs):
         evidences = list(dict(self.request.principal._evidences_effective).keys())
-        success_response = SuccessResponse()
-        success_response.set_result_pairs('provided-evidences', evidences)
-        return Response(success_response.data)
+        data = {'provided-evidences' : evidences}
+        return Response(data)
 
 
 class TestView(SecureAPIViewBaseView):
@@ -765,16 +757,3 @@ class PasswordChangeInsecureView(SecureAPIViewBaseView):
 
         else:
             raise APIValidationError(detail=serializer.errors)
-
-class PasswordChangeSecureView(SecureAPIViewBaseView):
-    serializer_class = PasswordChangeSecureSerializer
-    identity_directory_code = 'basic_internal'
-
-    def post(self, request, *args, **kwargs):
-        kwargs = super(PasswordChangeSecureView, self).get_serializer_context()
-        serializer = PasswordChangeSecureSerializer(data=request.data, context=kwargs)
-        if serializer.is_valid(raise_exception=True):
-            if serializer.save():
-                return Response({'text' : 'Your password has been changed'})
-
-        return Response({'text' : 'Your password has not been changed'})
