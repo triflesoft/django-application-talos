@@ -12,6 +12,9 @@ class IsAuthenticated(permissions.BasePermission):
                                     )
         provided_evidences = request.principal._evidences_effective
 
+        print(authentication_evidences)
+        print(provided_evidences)
+
         result = []
         for evidence in authentication_evidences:
             if evidence not in provided_evidences:
@@ -21,4 +24,3 @@ class IsAuthenticated(permissions.BasePermission):
             self.message = result
             return False
         return True
-
