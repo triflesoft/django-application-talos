@@ -30,10 +30,8 @@ from .views import SessionAPIView, EmailChangeRequestAPIView, \
     GoogleAuthenticatorChangeDoneView, EmailChangeInsecureAPIView, EmailChangeSecureAPIView, \
     PhoneChangeValidationTokenCheckerAPIView, PhoneChangeRequestAPIView, PhoneChangeSecureAPIView, \
     PhoneChangeInsecureAPIView, PhoneResetRequestAPIView, PhoneResetValidationTokenCheckerAPIView, \
-    PhoneResetInsecureAPIView, PhoneResetSecureAPIView, PrincipalSecurityLevelByTokenView, \
-    EmailResetInsecureAPIView, \
-    EmailResetSecureAPIView, ProvidedEvidencesView, TestView, PasswordChangeInsecureView, \
-    PasswordChangeSecureView, LdapLoginAPIView
+    PhoneResetInsecureAPIView, PhoneResetSecureAPIView, PrincipalSecurityLevelByTokenView, EmailResetInsecureAPIView, \
+    EmailResetSecureAPIView, ProvidedEvidencesView, TestView, PasswordChangeInsecureView, PasswordChangeSecureView
 
 from rest_framework.documentation import include_docs_urls
 
@@ -45,8 +43,7 @@ urlpatterns = [
     path('docs/', include_docs_urls(title='My API title', public=False,
                                     description='Talos Rest API overview')),
 
-    path('<slug:identity_directory_code>/session', SessionAPIView.as_view(), name='talos-rest-sessions'),
-    path('ldap/session', LdapLoginAPIView.as_view(), name = 'talos-rest-ldap-login'),
+    path('session', SessionAPIView.as_view(), name='talos-rest-sessions'),
 
     # Email Change
     path('principal/email/change-request', EmailChangeRequestAPIView.as_view(),
@@ -99,7 +96,7 @@ urlpatterns = [
     path('google-authenticator/delete/request', GoogleAuthenticatorDeleteRequestView.as_view(),
          name='google-authenticator-delete-request'),
     path('google-authenticator/delete/confirm', GoogleAuthenticatorDeleteView.as_view(),
-         name='google-authenticator-delete'),
+         name='google-authenticator-delete-confirm'),
     path('google-authenticator/change/request', GoogleAuthenticatorChangeRequestView.as_view(),
          name='google-authenticator-change-request'),
     path('google-authenticator/change/confirm', GoogleAuthenticatorChangeConfirmView.as_view(),

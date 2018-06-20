@@ -95,24 +95,3 @@ class Internal(object):
         logger.debug('TALOS: Basic credential reset failed for "%s".', principal.email)
 
         return False
-
-class Ldap(object):
-    def __init__(self, credential_directory, **kwargs):
-        self._credential_directory = credential_directory
-
-    def verify_credentials(self, principal, credentials):
-        from talos.contrib.ldap import LdapConnection
-        password = credentials['password']
-
-        ldap_connection = LdapConnection('bixtrim.com')
-        ldap_connection.connect()
-
-        try:
-            ldap_connection.check_credentials(principal.email, password)
-            return True
-        except:
-            pass
-
-        logger.debug('TALOS: LDAP credential verification failed for "%s".', principal.email)
-
-        return False

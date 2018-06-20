@@ -125,7 +125,7 @@ class AppMigrationHelper(object):
         try:
             ObjectAction.objects.using(db_alias).bulk_create(missing_object_action_dict.values())
         except IntegrityError:
-            for object_action in missing_object_action_dict.values():
+            for object_action in missing_object_actionn_dict.values():
                 try:
                     object_action.save()
                 except IntegrityError:
@@ -173,10 +173,6 @@ class AppMigrationHelper(object):
             evidence_knowledge_factor_access_token, _ = Evidence.objects.get_or_create(
                 code='knowledge_factor_access_token',
                 defaults={'name': 'Authenticated by access token.'})
-
-            evidence_knowledge_factor_ldap_password , _ = Evidence.objects.get_or_create(
-                code='knowledge_factor_ldap_password',
-                defaults={'name': 'Authenticated by ldap password.'})
 
             evidence_ownership_factor, _ = Evidence.objects.get_or_create(
                 code='ownership_factor',
@@ -293,20 +289,6 @@ class AppMigrationHelper(object):
                     evidence_knowledge_factor_password_confirmation):
                 BasicCredentialDirectoryProvidedEvidence.objects.get_or_create(directory=basic_credential_directory, evidence=evidence)
 
-            basic_credential_directory_ldap, _ = BasicCredentialDirectory.objects.get_or_create(
-                code='ldap',
-                defaults={
-                    'backend_class': 'talos.directory.basic_credential.Ldap',
-                    'is_active': True,
-                    'name': 'Basic Ldap Credential Directory'})
-
-            for evidence in (
-                    evidence_authenticated,
-                    evidence_knowledge_factor,
-                    evidence_knowledge_factor_ldap_password):
-                BasicCredentialDirectoryProvidedEvidence.objects.get_or_create(directory=basic_credential_directory_ldap, evidence=evidence)
-
-
             basic_identity_directory, _ = BasicIdentityDirectory.objects.get_or_create(
                 code='basic_internal',
                 defaults={
@@ -314,14 +296,6 @@ class AppMigrationHelper(object):
                     'is_active': True,
                     'name': 'Basic Internal Identity Directory',
                     'credential_directory': basic_credential_directory})
-
-            basic_identity_directory_ldap, _ = BasicIdentityDirectory.objects.get_or_create(
-                code='ldap',
-                defaults={
-                    'backend_class': 'talos.directory.basic_identity.Ldap',
-                    'is_active': True,
-                    'name': 'Basic Ldap Identity Directory',
-                    'credential_directory': basic_credential_directory_ldap})
 
             subnet_credential_directory, _ = SubnetCredentialDirectory.objects.get_or_create(
                 code='subnet_internal',

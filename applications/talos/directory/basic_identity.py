@@ -29,21 +29,3 @@ class Internal(object):
             pass
 
         return None
-
-
-class Ldap(object):
-    def __init__(self, identity_directory, **kwargs):
-        self._identity_directory = identity_directory
-
-    def get_principal(self, credentials):
-        from ..models import BasicIdentity
-
-        email = credentials['email']
-
-        try:
-            basic_identity = self._identity_directory.identities.get(email=email)
-            return basic_identity.principal
-        except BasicIdentity.DoesNotExist:
-            pass
-
-        return None
