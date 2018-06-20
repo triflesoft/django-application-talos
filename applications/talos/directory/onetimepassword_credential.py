@@ -23,8 +23,9 @@ class InternalGoogleAuthenticator(object):
     def verify_credentials(self, principal, credentials):
         from ..models import _tznow
         from ..models import BasicCredential, OneTimePasswordCredential
-        code = credentials['code']
         import pyotp
+
+        code = credentials['code']
 
         try:
             otp_credential = self._credential_directory.credentials.get(

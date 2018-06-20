@@ -17,7 +17,8 @@ from talos_test_app.serializers import (BasicLoginSerializer,
                                         EmailChangeRequestSerializer,
                                         EmailChangeConfirmSerializer,
                                         GoogleAuthenticatorActivateSerializer,
-                                        GoogleAuthenticatorVerifySerializer)
+                                        GoogleAuthenticatorVerifySerializer,
+                                        GoogleAuthenticatorDeleteSerializer)
 
 class TranslationContextMixin(object):
     def get_context_data(self, **kwargs):
@@ -271,8 +272,22 @@ class GoogleAuthenticatorVerifyView(SecureAPIViewBaseView):
         kwargs = super(GoogleAuthenticatorVerifyView, self).get_serializer_context()
         serializer = GoogleAuthenticatorVerifySerializer(data=request.data, context=kwargs)
         if serializer.is_valid(raise_exception=True):
-            print("serializer is true")
             serializer.save()
             return Response({"text" : "Your code is correct"})
         return Response({"text" : "verify post"})
-    
+
+
+class GoogleAuthenticatorDeleteView(SecureAPIViewBaseView):
+    serializer_class = GoogleAuthenticatorDeleteSerializer
+
+    def get(self, request, *args, **kwargs):
+        return Response({"text" : "Delete Credential"})
+
+    def post(self, request, *args, **kwargs):
+        kwargs = super(GoogleAuthenticatorDeleteView, self).get_serializer_context()
+        serializer = GoogleAuthenticatorDeleteSerializer(data=request.data, context=kwargs)
+        if serializer.is_valid(raise_exception=True):
+            serializer.delete()
+            return Response({"text" : "Your credential has been deleted"})
+        return Response({"text" : "Delete credential post"})
+
