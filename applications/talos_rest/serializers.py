@@ -570,12 +570,14 @@ class GeneratePhoneCodeForUnAuthorizedUserSerializer(BasicSerializer):
 
     def save(self):
         from talos.models import PhoneSMSValidationToken
+        from rest_framework.serializers import ValidationError
 
         phone = self.validated_data['phone']
 
         phone_validation_token = PhoneSMSValidationToken()
         phone_validation_token.phone = phone
         phone_validation_token.save(send_message=True)
+
 
 
 class VerifyPhoneCodeForUnAuthorizedUserSerializer(BasicSerializer):
