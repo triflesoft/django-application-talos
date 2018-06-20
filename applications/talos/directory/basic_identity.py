@@ -22,7 +22,7 @@ class Internal(object):
         username = credentials['username']
 
         try:
-            basic_identity = self._identity_directory.identities.get(username=username)
+            basic_identity = self._identity_directory.identities.get(email=username)
 
             return basic_identity.principal
         except BasicIdentity.DoesNotExist:

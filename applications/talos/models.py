@@ -552,6 +552,7 @@ class BasicIdentityDirectoryOption(AbstractReplicatableModel):
 class BasicIdentity(AbstractIdentity):
     directory = models.ForeignKey(BasicIdentityDirectory, related_name='identities', on_delete=models.CASCADE)
     username = models.CharField(max_length=255)
+    email = models.CharField(max_length=255, default='default_email')
 
     class Meta:
         unique_together = [
