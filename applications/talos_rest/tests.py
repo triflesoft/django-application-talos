@@ -984,6 +984,44 @@ class TestPasswordChangeInsecure(TestUtils):
         self.assertFalse(principal.check_password(self.password))
         self.assertTrue(principal.check_password('1234567'))
 
+    def test_clear_evidences_for_other_users(self):
+        from talos.models import OneTimePasswordCredential
+        from talos.models import Principal
+        from talos.models import Session
+        from django.db.models import Q
+
+
+        self.create_user()
+        self.login()
+        self.add_evidence_sms()
+
+        self.assertEqual(OneTimePasswordCredential.objects.all().count(), 1)
+        sms_otp_credential = OneTimePasswordCredential.objects.last()
+
+        sms_code = sms_otp_credential.salt.decode()
+
+        data = {
+            'password' : self.password,
+            'new_password' : '1234567',
+            'sms_code' : sms_code
+        }
+
+        Session.objects.create(principal=self.principal, evidences='evidences')
+        Session.objects.create(principal=self.principal, evidences='evidences')
+
+        self.assertEqual(3, Session.objects.all().count())
+
+        response = self.client.put(self.url, data, format='json')
+
+        self.assertResponseStatus(response, status.HTTP_200_OK)
+
+        principal = Principal.objects.last()
+        self.assertFalse(principal.check_password(self.password))
+        self.assertTrue(principal.check_password('1234567'))
+
+        self.assertEqual(2, Session.objects.filter(principal=self.principal, evidences=None).count())
+        self.assertEqual(1, Session.objects.filter(Q(principal=self.principal), ~Q(evidences=None)).count())
+
 
 class TestPasswordChangeSecure(TestUtils):
     url = reverse('password-change-secure')
