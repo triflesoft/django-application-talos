@@ -99,7 +99,7 @@ class InternalPhoneSMS(object):
         from ..models import _tzmin
         from ..models import _tzmax
         from ..helpers import utils
-        from ..contrib import twilio
+        from ..contrib.sms_sender import SMSSender
 
         try:
             otp_credential = OneTimePasswordCredential.objects.get(principal=principal,
@@ -117,8 +117,9 @@ class InternalPhoneSMS(object):
             otp_credential.salt = random_number.encode()
             otp_credential.save()
 
-        # Sending SMS using TWILIO
-        twilio.send_message(principal.phone, '+19144494290', body='Your registraion code is %s' % otp_credential.salt.decode())
+        # Sending SMS
+        sms_sender = SMSSender()
+        sms_sender.send_message(principal.phone, 'Your registraion code is %s' % otp_credential.salt.decode())
 
     def verify_credentials(self, principal, credentials):
         code = credentials['code']

@@ -484,6 +484,7 @@ class GeneratePhoneCodeForUnAuthorizedUser(TestUtils):
 
         response = self.client.post(self.url, data, format='json')
 
+
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data['status'], status.HTTP_400_BAD_REQUEST)
 
@@ -1194,3 +1195,8 @@ class TestGoogleAuthenticatorDelete(TestUtils):
 
 
 
+class TestSendSms(TestUtils):
+    def test_send_sms(self):
+        from talos.contrib.sms_sender import SMSSender
+        sms_sender = SMSSender()
+        #sms_sender.send_message('+995599439670', 'Message')

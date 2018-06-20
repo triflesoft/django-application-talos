@@ -611,7 +611,9 @@ class GeneratePhoneCodeForUnAuthorizedUserSerializer(BasicSerializer):
 
         phone_validation_token = PhoneSMSValidationToken()
         phone_validation_token.phone = phone
-        phone_validation_token.save(send_message=True)
+        if not phone_validation_token.save(send_message=True):
+            raise serializers.ValidationError('This mobile phonve is invalid',
+                                              code=constants.PHONE_INVALID_CODE)
 
 
 class VerifyPhoneCodeForUnAuthorizedUserSerializer(BasicSerializer):
