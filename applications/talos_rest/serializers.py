@@ -1464,9 +1464,12 @@ class PasswordChangeInsecureSerializer(SMSOtpSerializerMixin, ValidatePasswordMi
     def save(self):
         from talos.models import Session
         from django.db.models import Q
+        from django.utils import timezone
 
         #Delete every other active session user has
-        Session.objects.filter(Q(principal=self.request.principal), ~Q(uuid=self.request.session._session.uuid)).update(evidences=None)
+        Session.objects.filter(Q(principal=self.request.principal),
+                               ~Q(uuid=self.request.session._session.uuid),
+                               Q(valid_till__gt=timezone.now())).update(evidences=None)
 
         return self.basic_credential_directory.update_credentials(self.principal,
                                                                   {'password': self.password},
@@ -1492,6 +1495,14 @@ class PasswordChangeSecureSerializer(GoogleOtpSerializerMixin, ValidatePasswordM
         return new_password
 
     def save(self):
+        from talos.models import Session
+        from django.db.models import Q
+        from django.utils import timezone
+
+        # Delete every other active session user has
+        Session.objects.filter(Q(principal=self.request.principal),
+                               ~Q(uuid=self.request.session._session.uuid),
+                               Q(valid_till__gt=timezone.now())).update(evidences=None)
         return self.basic_credential_directory.update_credentials(self.principal,
                                                                   {'password': self.password},
                                                                   {'password': self.validated_data['new_password']})
