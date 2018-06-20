@@ -38,8 +38,10 @@ from .views import (SessionAPIView, PrincipalRegistrationRequestEditAPIView,
                     EmailChangeValidationTokenCheckerAPIView,
 
                     BasicRegistrationView,
-                    PasswordResetRequestView, PasswordResetConfirmView, GoogleAuthenticatorDeleteRequestView,
-                    GoogleAuthenticatorActivateConfirmView)
+                    PasswordResetRequestView, PasswordResetConfirmView,
+                    GoogleAuthenticatorDeleteRequestView,
+                    GoogleAuthenticatorActivateConfirmView, EmailResetRequestAPIView,
+                    EmailResetValidationTokenCheckerAPIView)
 
 
 
@@ -60,13 +62,20 @@ urlpatterns = [
     #      name='talos-rest-principal-registration-confirm'),
 
     # Email Change
-    path('principal/email/request', EmailChangeRequestAPIView.as_view(),
+    path('principal/email/change_request', EmailChangeRequestAPIView.as_view(),
          name='talos-email-change-request'),
-
     path('email/email_change_token/<slug:secret>',EmailChangeValidationTokenCheckerAPIView.as_view(),
          name='email-token-validation'),
-    path('principal/email/email_change_token/<slug:secret>', EmailChangeAPIView.as_view(), name='principal-email-change-confirm'),
+    path('principal/change_email', EmailChangeAPIView.as_view(), name='principal-email-change-confirm'),
 
+    # Email Reset
+    path('principal/email/reset_request', EmailResetRequestAPIView.as_view(),
+         name='talos-email-reset-request'),
+    path('email/email_reset_token/<slug:secret>',
+         EmailResetValidationTokenCheckerAPIView.as_view(),
+         name='email-token-validation'),
+    # path('principal/reset_email', EmailResetAPIView.as_view(),
+    #      name='principal-email-change-confirm'),
 
 
     # TODO VERSIONING

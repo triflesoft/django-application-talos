@@ -35,7 +35,9 @@ from talos_test_app.serializers import (SessionSerializer,
                                         PasswordResetConfirmSerializer,
                                         GoogleAuthenticatorDeleteRequestSerializer,
                                         GoogleAuthenticatorActivateConfirmSerializer,
-                                        VerifyPhoneCodeForUnAuthorizedUserSerializer)
+                                        VerifyPhoneCodeForUnAuthorizedUserSerializer,
+                                        EmailResetRequestSerializer,
+                                        EmailResetValidationTokenCheckerSerializer)
 
 
 
@@ -191,21 +193,6 @@ class PrincipalRegistrationConfirmationAPIView(SecureAPIViewBaseView):
                 detail=dict(serializer.errors.items()))
 
 
-class EmailChangeRequestAPIView(SecureAPIViewBaseView):
-    serializer_class = EmailChangeRequestSerializer
-    permission_classes = (IsAuthenticated,)
-
-    def post(self, request, *args, **kwargs):
-        kwargs = super(EmailChangeRequestAPIView, self).get_serializer_context()
-        data = request.data
-        serializer = EmailChangeRequestSerializer(data=data, context=kwargs)
-
-        if serializer.is_valid(raise_exception=False):
-            serializer.save()
-            return Response(serializer.data)
-        else:
-            raise APIValidationError(
-                detail=dict(serializer.errors.items()))
 
 
 class EmailChangeConfirmEditAPIView(SecureAPIViewBaseView):
@@ -472,6 +459,23 @@ class BasicRegistrationView(SecureAPIViewBaseView):
             serializer.save()
             return Response({"text" : "You have registered succesfully"})
 
+
+class EmailChangeRequestAPIView(SecureAPIViewBaseView):
+    serializer_class = EmailChangeRequestSerializer
+    permission_classes = (IsAuthenticated,)
+
+    def post(self, request, *args, **kwargs):
+        kwargs = super(EmailChangeRequestAPIView, self).get_serializer_context()
+        data = request.data
+        serializer = EmailChangeRequestSerializer(data=data, context=kwargs)
+
+        if serializer.is_valid(raise_exception=False):
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            raise APIValidationError(
+                detail=dict(serializer.errors.items()))
+
 class EmailChangeValidationTokenCheckerAPIView(SecureAPIViewBaseView):
     identity_directory_code = 'basic_internal'
     serializer_class = EmailChangeValidationTokenCheckerSerializer
@@ -530,3 +534,29 @@ class PasswordResetConfirmView(SecureAPIViewBaseView):
             return Response({"text" : "Your password has been changed"})
         return Response({"text" : "password reset confirm view"})
 
+class EmailResetRequestAPIView(SecureAPIViewBaseView):
+    serializer_class = EmailResetRequestSerializer
+
+    def post(self, request, *args, **kwargs):
+        kwargs = super(EmailResetRequestAPIView, self).get_serializer_context()
+        data = request.data
+        serializer = EmailResetRequestSerializer(data=data, context=kwargs)
+
+        if serializer.is_valid(raise_exception=False):
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            raise APIValidationError(detail=serializer.errors)
+
+class EmailResetValidationTokenCheckerAPIView(SecureAPIViewBaseView):
+    identity_directory_code = 'basic_internal'
+    serializer_class = EmailResetValidationTokenCheckerSerializer
+
+    def get(self, request, *args, **kwargs):
+
+        serializer = EmailResetValidationTokenCheckerSerializer(data=kwargs)
+
+        if serializer.is_valid(raise_exception=False):
+            return Response(serializer.data)
+        else:
+            raise APIValidationError(detail=serializer.errors)
