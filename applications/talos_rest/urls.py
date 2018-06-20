@@ -28,7 +28,7 @@ from .views import SessionAPIView, EmailChangeRequestAPIView, \
     EmailResetRequestAPIView, EmailResetValidationTokenCheckerAPIView, \
     GoogleAuthenticatorChangeRequestView, GoogleAuthenticatorChangeConfirmView, \
     GoogleAuthenticatorChangeDoneView, EmailChangeInsecureAPIView, EmailChangeSecureAPIView, \
-    PrincipalSecurityLevelByTokenView, EmailResetInsecureAPIView, EmailResetSecureAPIView
+    PrincipalSecurityLevelByTokenView, EmailResetInsecureAPIView, EmailResetSecureAPIView, ProvidedEvidencesView
 
 from rest_framework.documentation import include_docs_urls
 
@@ -113,5 +113,7 @@ urlpatterns = [
 
     path('password-reset-confirm', PasswordResetConfirmView.as_view(),
          name='password-reset-confirm'),
+
+    path('provided-evidences', ProvidedEvidencesView.as_view(), name='provided-evidences'),
 
 ]
