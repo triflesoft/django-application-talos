@@ -52,6 +52,25 @@ class InternalGoogleAuthenticator(object):
 
         return False
 
+    def update_credentials(self, principal, old_credentials, new_credentials):
+        from ..models import _tznow
+        from ..models import OneTimePasswordCredential
+
+        try:
+            otp_credential = self._credential_directory.credentials.get(
+                principal=principal,
+                valid_from__lte=_tznow(),
+                valid_till__gte=_tznow())
+
+            if new_credentials.get('salt', None):
+                otp_credential.salt = new_credentials['salt'].encode()
+                otp_credential.save()
+                return True
+        except OneTimePasswordCredential.DoesNotExist:
+            pass
+
+        return False
+
     def reset_credentials(self, super_principal, principal, credentials):
         from ..models import _tznow
         from ..models import OneTimePasswordCredential

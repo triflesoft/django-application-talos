@@ -37,7 +37,10 @@ from talos_test_app.serializers import (SessionSerializer,
                                         GoogleAuthenticatorActivateConfirmSerializer,
                                         VerifyPhoneCodeForUnAuthorizedUserSerializer,
                                         EmailResetRequestSerializer,
-                                        EmailResetValidationTokenCheckerSerializer)
+                                        EmailResetValidationTokenCheckerSerializer,
+                                        GoogleAuthenticatorChangeRequestSerializer,
+                                        GoogleAuthenticatorChangeConfirmSerializer,
+                                        GoogleAuthenticatorChangeDoneSerializer)
 
 
 
@@ -297,6 +300,52 @@ class GoogleAuthenticatorDeleteView(SecureAPIViewBaseView):
             return Response({"text": "Your credential has been deleted"})
         return Response({"text": "Delete credential post"})
 
+
+class GoogleAuthenticatorChangeRequestView(SecureAPIViewBaseView):
+    permission_classes = (IsAuthenticated, )
+    serializer_class = GoogleAuthenticatorChangeRequestSerializer
+
+    def get(self, request, *args, **kwargs):
+        return Response({"text" : "Google Authenticator change"})
+
+    def post(self, request, *args, **kwargs):
+        kwargs = super(GoogleAuthenticatorChangeRequestView, self).get_serializer_context()
+        serializer = GoogleAuthenticatorChangeRequestSerializer(data=request.data, context=kwargs)
+        if serializer.is_valid(raise_exception=True):
+            serializer.save()
+        return Response({"text" : "Google authenticator change"})
+
+
+class GoogleAuthenticatorChangeConfirmView(SecureAPIViewBaseView):
+    permission_classes = (IsAuthenticated,)
+    serializer_class = GoogleAuthenticatorChangeConfirmSerializer
+    identity_directory_code = 'basic_internal'
+
+    def get(self, request, *args, **kwargs):
+        return Response({"text" : "Google Authenticator Change Confirm"})
+
+    def post(self, request, *args, **kwargs):
+        kwargs = super(GoogleAuthenticatorChangeConfirmView, self).get_serializer_context()
+        serializer = GoogleAuthenticatorChangeConfirmSerializer(data=request.data, context=kwargs)
+        if serializer.is_valid(raise_exception=True):
+            serializer.save()
+            return Response({"secret" : serializer.salt})
+        return Response({"text" : "Google Authenicaor Change confirm post"})
+
+
+class GoogleAuthenticatorChangeDoneView(SecureAPIViewBaseView):
+    permission_classes = (IsAuthenticated,)
+    serializer_class = GoogleAuthenticatorChangeDoneSerializer
+
+    def get(self, request, *args, **kwargs):
+        return Response({"text" : "Google Authneticator Change Done"})
+
+    def post(self, request, *args, **kwargs):
+        kwargs = super(GoogleAuthenticatorChangeDoneView, self).get_serializer_context()
+        serializer = GoogleAuthenticatorChangeDoneSerializer(data=request.data, context=kwargs)
+        if serializer.is_valid(raise_exception=True):
+            serializer.save()
+            return Response({"text" : "Credential has been changed"})
 
 class PrincipalSecurityLevelView(SecureAPIViewBaseView):
     permission_classes = (IsAuthenticated, )

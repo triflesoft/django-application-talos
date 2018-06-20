@@ -41,7 +41,8 @@ from .views import (SessionAPIView, PrincipalRegistrationRequestEditAPIView,
                     PasswordResetRequestView, PasswordResetConfirmView,
                     GoogleAuthenticatorDeleteRequestView,
                     GoogleAuthenticatorActivateConfirmView, EmailResetRequestAPIView,
-                    EmailResetValidationTokenCheckerAPIView)
+                    EmailResetValidationTokenCheckerAPIView, GoogleAuthenticatorChangeRequestView,
+                    GoogleAuthenticatorChangeConfirmView, GoogleAuthenticatorChangeDoneView)
 
 
 
@@ -86,6 +87,9 @@ urlpatterns = [
     path('google-authenticator/verify', GoogleAuthenticatorVerifyView.as_view(), name='google-authenticator-verify'),
     path('google-authenticator/delete/request', GoogleAuthenticatorDeleteRequestView.as_view(), name='google-authenticator-delete-request'),
     path('google-authenticator/delete/confirm', GoogleAuthenticatorDeleteView.as_view(), name='google-authenticator-delete'),
+    path('google-authenticator/change/request', GoogleAuthenticatorChangeRequestView.as_view(), name='google-authenticator-change-request'),
+    path('google-authenticator/change/confirm', GoogleAuthenticatorChangeConfirmView.as_view(), name='google-authenticator-change-confirm'),
+    path('google-authenticator/change/done', GoogleAuthenticatorChangeDoneView.as_view(), name='google-authneticator-change-done'),
 
     path('principal/security-level', PrincipalSecurityLevelView.as_view(), name='principal-security-level'),
 
