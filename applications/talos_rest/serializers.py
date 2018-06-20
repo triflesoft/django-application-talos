@@ -791,6 +791,7 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
         self.basic_identity_directory = BasicIdentityDirectory.objects.get(
             code=passed_kwargs_from_view['identity_directory_code'])
         self.basic_credential_directory = self.basic_identity_directory.credential_directory
+        self.google_authenticator_directory = OneTimePasswordCredentialDirectory.objects.get(pk=1)
         self.principal = None
         self.validation_token = None
         super(PasswordResetConfirmSerializer, self).__init__(*args, **kwargs)
@@ -808,15 +809,18 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
 
     def validate_token(self, token):
         try:
-            validation_token = ValidationToken.objects.get(secret=token, principal=self.principal)
+            validation_token = ValidationToken.objects.get(secret=token, principal=self.principal, is_active=True)
             self.validation_token = validation_token
         except ValidationToken.DoesNotExist:
             raise serializers.ValidationError("Token doesn't exits")
         return token
 
     def validate_code(self, code):
-        if self.principal and not self.sms_otp_directory.verify_credentials(self.principal, {'code' : code}):
-            raise serializers.ValidationError("Code is incorrect")
+        if self.principal:
+            if not self.principal.profile.is_secure and not self.sms_otp_directory.verify_credentials(self.principal, {'code' : code}):
+                raise serializers.ValidationError("Code is incorrect")
+            if self.principal.profile.is_secure and not self.google_authenticator_directory.verify_credentials(self.principal, {'code' : code}):
+                raise serializers.ValidationError("Code is incorrect")
         return code
 
     def validate(self, attrs):
