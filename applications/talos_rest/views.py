@@ -13,12 +13,12 @@ from rest_framework import status
 # Serializer classes
 from .exceptions.custom_exceptions import APIValidationError
 from talos_rest.serializers import SessionSerializer, \
-    GoogleAuthenticatorActivateRequestSerializer,  \
+    GoogleAuthenticatorActivateRequestSerializer, \
     GoogleAuthenticatorDeleteSerializer, GeneratePhoneCodeForAuthorizedUserSerializer, \
     VerifyPhoneCodeForAuthorizedUserSerializer, ChangePasswordInsecureSerializer, \
     ChangePasswordSecureSerializer, AddSMSEvidenceSerializer, \
     AddGoogleEvidenceSerializer, GeneratePhoneCodeForUnAuthorizedUserSerializer, \
-    BasicRegistrationSerializer, PasswordResetRequestSerializer, PasswordResetConfirmSerializer, \
+    BasicRegistrationSerializer, PasswordResetRequestSerializer,  \
     GoogleAuthenticatorDeleteRequestSerializer, GoogleAuthenticatorActivateConfirmSerializer, \
     VerifyPhoneCodeForUnAuthorizedUserSerializer, EmailResetRequestSerializer, \
     EmailResetValidationTokenCheckerSerializer, GoogleAuthenticatorChangeRequestSerializer, \
@@ -30,7 +30,7 @@ from talos_rest.serializers import SessionSerializer, \
     PhoneChangeInsecureSerializer, PhoneResetRequestSerializer, \
     PhoneResetValidationTokenCheckerSerializer, PhoneResetInsecureSerializer, \
     PhoneResetSecureSerializer, PasswordChangeInsecureSerializer, PasswordChangeSecureSerializer, \
-    LdapLoginSerializer
+    LdapLoginSerializer, PasswordResetInsecureSerializer, PasswordResetSecureSerializer
 
 from talos_rest.permissions import IsAuthenticated, IsBasicAuthenticated, IsSecureLevelOn
 
@@ -514,33 +514,45 @@ class EmailChangeSecureAPIView(SecureAPIViewBaseView):
 class PasswordResetRequestView(SecureAPIViewBaseView):
     serializer_class = PasswordResetRequestSerializer
 
-    def get(self, request, *args, **kwargs):
-        return Response({"text": "Password Reset View"})
-
     def post(self, request, *args, **kwargs):
         kwargs = super(PasswordResetRequestView, self).get_serializer_context()
         serializer = PasswordResetRequestSerializer(data=request.data, context=kwargs)
-        if serializer.is_valid(raise_exception=True):
+        if serializer.is_valid(raise_exception=False):
             serializer.save()
-            return Response({"text": "Email has been sent"})
-        return Response({"text": "Password Reset view"})
+            success_response = SuccessResponse()
+            return Response(success_response.data, success_response.status)
+        else:
+            raise APIValidationError(serializer.errors)
 
 
-class PasswordResetConfirmView(SecureAPIViewBaseView):
-    serializer_class = PasswordResetConfirmSerializer
+class PasswordResetInsecureView(SecureAPIViewBaseView):
     identity_directory_code = 'basic_internal'
+    serializer_class = PasswordResetInsecureSerializer
 
-    def get(self, request, *args, **kwargs):
-        return Response({"text": "PasswordResetConfirm View"})
-
-    def post(self, request, *args, **kwargs):
-        kwargs = super(PasswordResetConfirmView, self).get_serializer_context()
-        serializer = PasswordResetConfirmSerializer(data=request.data, context=kwargs)
-        if serializer.is_valid(raise_exception=True):
+    def put(self, request, *args, **kwargs):
+        kwargs = super(PasswordResetInsecureView, self).get_serializer_context()
+        serializer = PasswordResetInsecureSerializer(data=request.data, context=kwargs)
+        if serializer.is_valid(raise_exception=False):
             serializer.save()
-            return Response({"text": "Your password has been changed"})
-        return Response({"text": "password reset confirm view"})
+            success_response = SuccessResponse()
+            return Response(success_response.data, success_response.status)
+        else:
+            raise APIValidationError(serializer.errors)
 
+
+class PasswordResetSecureView(SecureAPIViewBaseView):
+    identity_directory_code = 'basic_internal'
+    serializer_class = PasswordResetSecureSerializer
+
+    def put(self, request, *args, **kwargs):
+        kwargs = super(PasswordResetSecureView, self).get_serializer_context()
+        serializer = PasswordResetSecureSerializer(data=request.data, context=kwargs)
+        if serializer.is_valid(raise_exception=False):
+            serializer.save()
+            success_response = SuccessResponse()
+            return Response(success_response.data, success_response.status)
+        else:
+            raise APIValidationError(serializer.errors)
 
 class EmailResetRequestAPIView(SecureAPIViewBaseView):
     serializer_class = EmailResetRequestSerializer
