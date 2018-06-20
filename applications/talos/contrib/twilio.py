@@ -1,17 +1,15 @@
-from twilio.rest import Client
 
-# Your Account SID from twilio.com/console
-account_sid = "AC705961ce26e39cba6946ddbdc52ccfe2"
-# Your Auth Token from twilio.com/console
-auth_token  = "811faf06afe584ed7220bb486e9ba1e4"
 
-client = Client(account_sid, auth_token)
+twilio_account_sid = 'AC9199f3572d9b0f0cf7709794e7221192'
+twilio_auth_token = '398580003bffe706cd9293c4931472ac'
 
 
 def send_message(to, _from, body):
+    from twilio.rest import Client
+    client = Client(twilio_account_sid, twilio_auth_token)
     message = client.messages.create(
         to=to,
-        from_='bixtrim',
+        from_=_from,
         body=body)
 
 

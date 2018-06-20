@@ -1,7 +1,7 @@
 from rest_framework import status
 
 class SuccessResponse(object):
-    def __init__(self, status=status.HTTP_200_OK, data=dict):
+    def __init__(self, status=status.HTTP_200_OK, data={}):
         self._status = status
         self._data = {"status": status,
                      'result': data,

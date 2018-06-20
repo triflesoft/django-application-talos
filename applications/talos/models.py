@@ -1277,13 +1277,12 @@ class PhoneSMSValidationToken(models.Model):
     is_active = models.BooleanField(default=True)
     salt = models.CharField(max_length=64, default='')
 
-    def save(self, send_message=False, *args, **kwargs):
+    def save(self, *args, **kwargs):
         from binascii import hexlify
         from datetime import timedelta
         from os import urandom
         from .helpers import utils
         from .contrib import twilio
-        from rest_framework.serializers import ValidationError
 
         if not self.secret:
             self.secret = hexlify(urandom(32)).decode('ascii').upper()
@@ -1293,13 +1292,9 @@ class PhoneSMSValidationToken(models.Model):
 
         self.salt = utils.generate_random_number(length=6).encode()
 
-        if send_message:
-            try:
-                twilio.send_message(self.phone, 'bixtrim',
-                                    body='Your registraion code is %s' % self.salt.decode())
-            except Exception as e:
-                print(e)
-                raise ValidationError('We could not send email to this phone')
+        twilio.send_message(self.phone, '+19144494290',
+                            body='Your registraion code is %s' % self.salt.decode())
+
         super(PhoneSMSValidationToken, self).save(*args, **kwargs)
 
 
