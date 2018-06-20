@@ -462,7 +462,7 @@ class BasicRegistrationView(SecureAPIViewBaseView):
 
 class EmailChangeRequestAPIView(SecureAPIViewBaseView):
     serializer_class = EmailChangeRequestSerializer
-    # permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated,)
 
     def post(self, request, *args, **kwargs):
         kwargs = super(EmailChangeRequestAPIView, self).get_serializer_context()
@@ -478,7 +478,7 @@ class EmailChangeRequestAPIView(SecureAPIViewBaseView):
 
 
 class EmailChangeValidationTokenCheckerAPIView(SecureAPIViewBaseView):
-    # permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated,)
     identity_directory_code = 'basic_internal'
     serializer_class = EmailChangeValidationTokenCheckerSerializer
 

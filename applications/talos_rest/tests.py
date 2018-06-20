@@ -83,6 +83,7 @@ class TestUtils(APITestCase):
 
         response = self.client.post(add_evidence_sms_url, data, format='json')
 
+
     def assertResponseStatus(self, response, status = status.HTTP_200_OK):
         self.assertEquals(response.status_code, status)
         self.assertEquals(response.data['status'], status)
@@ -527,7 +528,7 @@ class TestVerifyPhoneCodeForUnAuthorizedUser(TestUtils):
 
 class TestEmailChange(TestUtils):
     email_change_request_url  = reverse("email-change-request")
-
+    email_change_insecure_url = reverse("email-change-insecure")
 
 
     def test_get_method_on_email_change(self):
@@ -540,7 +541,7 @@ class TestEmailChange(TestUtils):
     def test_email_change_request_when_no_data(self):
         self.create_user()
         self.login()
-        # TODO login with sms
+        self.add_evidence_sms()
 
         data = {}
         response = self.client.post(self.email_change_request_url,data)
@@ -550,7 +551,7 @@ class TestEmailChange(TestUtils):
     def test_email_change_request_when_invalid_email(self):
         self.create_user()
         self.login()
-        # TODO login with sms
+        self.add_evidence_sms()
 
         data = {'new_email' : 'asd'}
         response = self.client.post(self.email_change_request_url, data)
@@ -560,7 +561,7 @@ class TestEmailChange(TestUtils):
     def test_email_change_request_when_passed_used_email(self):
         self.create_user()
         self.login()
-        # TODO login with sms
+        self.add_evidence_sms()
 
         data = {'new_email' : self.email}
         response = self.client.post(self.email_change_request_url, data)
@@ -573,7 +574,7 @@ class TestEmailChange(TestUtils):
         now = timezone.now()
         self.create_user()
         self.login()
-        # TODO login with sms
+        self.add_evidence_sms()
 
         data = {'new_email' : 'correct@bixtrim.ge'}
         response = self.client.post(self.email_change_request_url, data)
@@ -592,6 +593,7 @@ class TestEmailChange(TestUtils):
         url = reverse("email-change-token-validation", kwargs={'secret': '1234'})
         self.create_user()
         self.login()
+        self.add_evidence_sms()
 
         response = self.client.get(url)
 
@@ -601,6 +603,8 @@ class TestEmailChange(TestUtils):
     def test_email_change_token_validation_when_success(self):
         self.create_user()
         self.login()
+        self.add_evidence_sms()
+
         validation_token = ValidationToken.objects.create(identifier = 'email',
                                                           identifier_value=self.email,
                                                           principal=self.principal,
@@ -615,6 +619,8 @@ class TestEmailChange(TestUtils):
     def test_email_change_token_validation_when_not_active_token(self):
         self.create_user()
         self.login()
+        self.add_evidence_sms()
+
         validation_token = ValidationToken.objects.create(identifier = 'email',
                                                           identifier_value=self.email,
                                                           principal=self.principal,
@@ -632,6 +638,8 @@ class TestEmailChange(TestUtils):
     def test_email_change_token_validation_when_different_token_type(self):
         self.create_user()
         self.login()
+        self.add_evidence_sms()
+
         validation_token = ValidationToken.objects.create(identifier = 'email',
                                                           identifier_value=self.email,
                                                           principal=self.principal,
@@ -646,6 +654,9 @@ class TestEmailChange(TestUtils):
         self.assertResponseStatus(response, status.HTTP_400_BAD_REQUEST)
         self.assertListEqual(response.data.get('error').get('secret'),['token_invalid'])
 
+    def test_change_email_insecure(self):
+        response = self.client.put(self.email_change_insecure_url)
+        print (response.data)
 
 class TestAddSMSEvidence(TestUtils):
     url = reverse('add-evidence-sms')
@@ -704,6 +715,7 @@ class TestAddSMSEvidence(TestUtils):
 
         self.assertResponseStatus(response, status.HTTP_200_OK)
         self.assertListEqual(response.data.get('result').get('provided-evidences'), expected_provided_evidences)
+
 
         expected_provided_evidences = ['authenticated',
                                        'knowledge_factor',
