@@ -11,40 +11,20 @@ from rest_framework.generics import GenericAPIView
 from rest_framework import status
 # Serializer classes
 from .exceptions.custom_exceptions import APIValidationError
-from talos_test_app.serializers import (SessionSerializer,
-                                        PrincipalRegistrationRequestSerializer,
-                                        PrincipalRegistrationConfirmSerializer,
-                                        PrincipalRegistrationTokenValidationSerializer,
-                                        EmailChangeConfirmSerializer,
-                                        GoogleAuthenticatorActivateRequestSerializer,
-                                        GoogleAuthenticatorVerifySerializer,
-                                        GoogleAuthenticatorDeleteSerializer,
-                                        GeneratePhoneCodeForAuthorizedUserSerializer,
-                                        VerifyPhoneCodeForAuthorizedUserSerializer,
-                                        ChangePasswordInsecureSerializer,
-                                        ChangePasswordSecureSerializer,
-                                        AuthorizationUsingSMSSerializer,
-                                        AuthorizationUsingGoogleAuthenticatorSerializer,
-                                        GeneratePhoneCodeForUnAuthorizedUserSerializer,
-
-                                        BasicRegistrationSerializer, PasswordResetRequestSerializer,
-                                        PasswordResetConfirmSerializer,
-                                        GoogleAuthenticatorDeleteRequestSerializer,
-                                        GoogleAuthenticatorActivateConfirmSerializer,
-                                        VerifyPhoneCodeForUnAuthorizedUserSerializer,
-
-                                        EmailResetRequestSerializer,
-                                        EmailResetValidationTokenCheckerSerializer,
-                                        GoogleAuthenticatorChangeRequestSerializer,
-                                        GoogleAuthenticatorChangeConfirmSerializer,
-                                        GoogleAuthenticatorChangeDoneSerializer,
-                                        EmailChangeRequestSerializer,
-                                        EmailChangeValidationTokenCheckerSerializer,
-                                        EmailChangeInsecureSerializer,
-                                        EmailChangeSecureSerializer, EmailResetInsecureSerializer,
-                                        EmailResetSecureSerializer)
-
-
+from talos_test_app.serializers import SessionSerializer, \
+    GoogleAuthenticatorActivateRequestSerializer, GoogleAuthenticatorVerifySerializer, \
+    GoogleAuthenticatorDeleteSerializer, GeneratePhoneCodeForAuthorizedUserSerializer, \
+    VerifyPhoneCodeForAuthorizedUserSerializer, ChangePasswordInsecureSerializer, \
+    ChangePasswordSecureSerializer, AuthorizationUsingSMSSerializer, \
+    AuthorizationUsingGoogleAuthenticatorSerializer, GeneratePhoneCodeForUnAuthorizedUserSerializer, \
+    BasicRegistrationSerializer, PasswordResetRequestSerializer, PasswordResetConfirmSerializer, \
+    GoogleAuthenticatorDeleteRequestSerializer, GoogleAuthenticatorActivateConfirmSerializer, \
+    VerifyPhoneCodeForUnAuthorizedUserSerializer, EmailResetRequestSerializer, \
+    EmailResetValidationTokenCheckerSerializer, GoogleAuthenticatorChangeRequestSerializer, \
+    GoogleAuthenticatorChangeConfirmSerializer, GoogleAuthenticatorChangeDoneSerializer, \
+    EmailChangeRequestSerializer, EmailChangeValidationTokenCheckerSerializer, \
+    EmailChangeInsecureSerializer, EmailChangeSecureSerializer, EmailResetInsecureSerializer, \
+    EmailResetSecureSerializer
 
 
 class TranslationContextMixin(object):
@@ -147,79 +127,9 @@ class SessionAPIView(SecureAPIViewBaseView):
                         status=success_response.status)
 
 
-class PrincipalRegistrationRequestEditAPIView(SecureAPIViewBaseView):
-    identity_directory_code = 'basic_internal'
-    serializer_class = PrincipalRegistrationRequestSerializer
-
-    def post(self, request, *args, **kwargs):
-        kwargs = super(PrincipalRegistrationRequestEditAPIView, self).get_serializer_context()
-        data = request.data
-        serializer = PrincipalRegistrationRequestSerializer(data=data, context=kwargs)
-
-        if serializer.is_valid(raise_exception=False):
-            serializer.save()
-            token = serializer.validation_token
-            data = {'token': str(token)}
-            data.update(serializer.data)
-            return Response(data)
-        else:
-            raise APIValidationError(detail=serializer.errors)
-
-
-class PrincipalRegistrationTokenValidationAPIView(SecureAPIViewBaseView):
-    identity_directory_code = 'basic_internal'
-    serializer_class = PrincipalRegistrationTokenValidationSerializer
-
-    def get(self, request, *args, **kwargs):
-
-        serializer = PrincipalRegistrationTokenValidationSerializer(data=kwargs)
-
-        if serializer.is_valid(raise_exception=False):
-            return Response(serializer.data)
-        else:
-            raise APIValidationError(detail=serializer.errors)
-
-
-class PrincipalRegistrationConfirmationAPIView(SecureAPIViewBaseView):
-    identity_directory_code = 'basic_internal'
-    serializer_class = PrincipalRegistrationConfirmSerializer
-    token_type = 'principal_registration'
-
-    def post(self, request, *args, **kwargs):
-        kwargs = super(PrincipalRegistrationConfirmationAPIView, self).get_serializer_context()
-        data = request.data
-        serializer = PrincipalRegistrationConfirmSerializer(data=data, context=kwargs)
-
-        if serializer.is_valid(raise_exception=False):
-            serializer.save()
-            return Response(serializer.data)
-        else:
-            raise APIValidationError(
-                detail=dict(serializer.errors.items()))
-
-
-
-
-class EmailChangeConfirmEditAPIView(SecureAPIViewBaseView):
-    token_type = 'email_change'
-
-    serializer_class = EmailChangeConfirmSerializer
-
-    def PUT(self, request, *args, **kwargs):
-        kwargs = super(EmailChangeConfirmEditAPIView, self).get_serializer_context()
-        data = request.data
-        serializer = EmailChangeConfirmSerializer(data=data, context=kwargs)
-
-        if serializer.is_valid(raise_exception=False):
-            serializer.save()
-            return Response(serializer.data)
-        else:
-            raise APIValidationError(detail=dict(serializer.errors.items()))
-
-
 # Google Authentication
 class GoogleAuthenticationActivateRequestView(SecureAPIViewBaseView):
-    permission_classes = (IsAuthenticated, )
+    permission_classes = (IsAuthenticated,)
     serializer_class = GoogleAuthenticatorActivateRequestSerializer
     identity_directory_code = 'basic_internal'
 
@@ -233,7 +143,7 @@ class GoogleAuthenticationActivateRequestView(SecureAPIViewBaseView):
         serializer = GoogleAuthenticatorActivateRequestSerializer(data=request.data, context=kwargs)
         if serializer.is_valid(raise_exception=False):
             serializer.save()
-            return Response({"secret" : serializer.salt})
+            return Response({"secret": serializer.salt})
         else:
             return Response({"errors": serializer.errors.items()})
 
@@ -245,14 +155,14 @@ class GoogleAuthenticatorActivateConfirmView(SecureAPIViewBaseView):
     def get(self, request, *args, **kwargs):
         print("Activate Confirm")
         print(self.request.session.__dict__)
-        return Response({"text" : "Google Authenticator Confirm"})
+        return Response({"text": "Google Authenticator Confirm"})
 
     def post(self, request, *args, **kwargs):
         kwargs = super(GoogleAuthenticatorActivateConfirmView, self).get_serializer_context()
         serializer = GoogleAuthenticatorActivateConfirmSerializer(data=request.data, context=kwargs)
         if serializer.is_valid(raise_exception=True):
             serializer.save()
-            return Response({"text" : "Google Authenticator has been added"})
+            return Response({"text": "Google Authenticator has been added"})
 
 
 class GoogleAuthenticatorVerifyView(SecureAPIViewBaseView):
@@ -271,19 +181,18 @@ class GoogleAuthenticatorVerifyView(SecureAPIViewBaseView):
 
 
 class GoogleAuthenticatorDeleteRequestView(SecureAPIViewBaseView):
-
-    permission_classes = (IsAuthenticated, )
+    permission_classes = (IsAuthenticated,)
     serializer_class = GoogleAuthenticatorDeleteRequestSerializer
 
     def get(self, request, *args, **kwargs):
-        return Response({"text" : "Google Authenticator Delete"})
+        return Response({"text": "Google Authenticator Delete"})
 
     def post(self, request, *args, **kwargs):
         kwargs = super(GoogleAuthenticatorDeleteRequestView, self).get_serializer_context()
         serializer = GoogleAuthenticatorDeleteRequestSerializer(data=request.data, context=kwargs)
         if serializer.is_valid(raise_exception=True):
             serializer.save()
-            return Response({"text" : "Email has been sent"})
+            return Response({"text": "Email has been sent"})
 
 
 class GoogleAuthenticatorDeleteView(SecureAPIViewBaseView):
@@ -304,18 +213,18 @@ class GoogleAuthenticatorDeleteView(SecureAPIViewBaseView):
 
 
 class GoogleAuthenticatorChangeRequestView(SecureAPIViewBaseView):
-    permission_classes = (IsAuthenticated, )
+    permission_classes = (IsAuthenticated,)
     serializer_class = GoogleAuthenticatorChangeRequestSerializer
 
     def get(self, request, *args, **kwargs):
-        return Response({"text" : "Google Authenticator change"})
+        return Response({"text": "Google Authenticator change"})
 
     def post(self, request, *args, **kwargs):
         kwargs = super(GoogleAuthenticatorChangeRequestView, self).get_serializer_context()
         serializer = GoogleAuthenticatorChangeRequestSerializer(data=request.data, context=kwargs)
         if serializer.is_valid(raise_exception=True):
             serializer.save()
-        return Response({"text" : "Google authenticator change"})
+        return Response({"text": "Google authenticator change"})
 
 
 class GoogleAuthenticatorChangeConfirmView(SecureAPIViewBaseView):
@@ -324,15 +233,15 @@ class GoogleAuthenticatorChangeConfirmView(SecureAPIViewBaseView):
     identity_directory_code = 'basic_internal'
 
     def get(self, request, *args, **kwargs):
-        return Response({"text" : "Google Authenticator Change Confirm"})
+        return Response({"text": "Google Authenticator Change Confirm"})
 
     def post(self, request, *args, **kwargs):
         kwargs = super(GoogleAuthenticatorChangeConfirmView, self).get_serializer_context()
         serializer = GoogleAuthenticatorChangeConfirmSerializer(data=request.data, context=kwargs)
         if serializer.is_valid(raise_exception=True):
             serializer.save()
-            return Response({"secret" : serializer.salt})
-        return Response({"text" : "Google Authenicaor Change confirm post"})
+            return Response({"secret": serializer.salt})
+        return Response({"text": "Google Authenicaor Change confirm post"})
 
 
 class GoogleAuthenticatorChangeDoneView(SecureAPIViewBaseView):
@@ -340,17 +249,18 @@ class GoogleAuthenticatorChangeDoneView(SecureAPIViewBaseView):
     serializer_class = GoogleAuthenticatorChangeDoneSerializer
 
     def get(self, request, *args, **kwargs):
-        return Response({"text" : "Google Authneticator Change Done"})
+        return Response({"text": "Google Authneticator Change Done"})
 
     def post(self, request, *args, **kwargs):
         kwargs = super(GoogleAuthenticatorChangeDoneView, self).get_serializer_context()
         serializer = GoogleAuthenticatorChangeDoneSerializer(data=request.data, context=kwargs)
         if serializer.is_valid(raise_exception=True):
             serializer.save()
-            return Response({"text" : "Credential has been changed"})
+            return Response({"text": "Credential has been changed"})
+
 
 class PrincipalSecurityLevelView(SecureAPIViewBaseView):
-    permission_classes = (IsAuthenticated, )
+    permission_classes = (IsAuthenticated,)
 
     def get(self, request, *args, **kwargs):
         success_response = SuccessResponse()
@@ -369,21 +279,19 @@ class PrincipalSecurityLevelByTokenView(SecureAPIViewBaseView):
         from talos.models import PrincipalProfile
         success_response = SuccessResponse()
         try:
-            validation_token = ValidationToken.objects.get(secret= kwargs.get('secret'))
-            profile = PrincipalProfile.objects.get(principal= validation_token.principal)
+            validation_token = ValidationToken.objects.get(secret=kwargs.get('secret'))
+            profile = PrincipalProfile.objects.get(principal=validation_token.principal)
             if profile.is_secure:
                 success_response.set_result_pairs('secure', 'True')
             else:
                 success_response.set_result_pairs('secure', 'False')
         except ValidationToken.DoesNotExist:
             error_response = ErrorResponse()
-            return Response(data = error_response.data)
+            return Response(data=error_response.data)
         return Response(data=success_response.data)
 
 
-
 class GeneratePhoneCodeForAuthorizedUserView(SecureAPIViewBaseView):
-
     permission_classes = (IsAuthenticated,)
     serializer_class = GeneratePhoneCodeForAuthorizedUserSerializer
 
@@ -395,12 +303,13 @@ class GeneratePhoneCodeForAuthorizedUserView(SecureAPIViewBaseView):
         success_response = SuccessResponse()
         return Response(success_response.data)
 
+
 class VerifyPhoneCodeForAuthorizedUserView(SecureAPIViewBaseView):
     permission_classes = (IsAuthenticated,)
     serializer_class = VerifyPhoneCodeForAuthorizedUserSerializer
 
     def get(self, request, *args, **kwargs):
-        return Response({"text" : "Verify SMS Code"})
+        return Response({"text": "Verify SMS Code"})
 
     def post(self, request, *args, **kwargs):
         kwargs = super(VerifyPhoneCodeForAuthorizedUserView, self).get_serializer_context()
@@ -408,12 +317,11 @@ class VerifyPhoneCodeForAuthorizedUserView(SecureAPIViewBaseView):
         if serializer.is_valid(raise_exception=True):
             serializer.save()
             context = {
-                "code" : "200",
-                "text" : "Your code is correct"
+                "code": "200",
+                "text": "Your code is correct"
             }
             return Response(context)
-        return Response({"text" : "Giorgi"})
-
+        return Response({"text": "Giorgi"})
 
 
 class ChangePasswordInsecureView(SecureAPIViewBaseView):
@@ -423,15 +331,15 @@ class ChangePasswordInsecureView(SecureAPIViewBaseView):
     identity_directory_code = 'basic_internal'
 
     def get(self, request, *args, **kwargs):
-        return Response({"text" : "Change Password"})
+        return Response({"text": "Change Password"})
 
     def post(self, request, *args, **kwargs):
         kwargs = super(ChangePasswordInsecureView, self).get_serializer_context()
         serializer = ChangePasswordInsecureSerializer(data=request.data, context=kwargs)
         if serializer.is_valid(raise_exception=True):
             serializer.save()
-            return Response({"text" : "Your password has been changed"})
-        return Response({"text" : "Giorgi"})
+            return Response({"text": "Your password has been changed"})
+        return Response({"text": "Giorgi"})
 
 
 class ChangePasswordSecureView(SecureAPIViewBaseView):
@@ -441,16 +349,15 @@ class ChangePasswordSecureView(SecureAPIViewBaseView):
     identity_directory_code = 'basic_internal'
 
     def get(self, request, *args, **kwargs):
-        return Response({"text" : "Change Password Secure"})
+        return Response({"text": "Change Password Secure"})
 
     def post(self, request, *args, **kwargs):
         kwargs = super(ChangePasswordSecureView, self).get_serializer_context()
         serializer = ChangePasswordSecureSerializer(data=request.data, context=kwargs)
         if serializer.is_valid(raise_exception=True):
             serializer.save()
-            return Response({"text" : "Your password has been changed succesfully"})
-        return Response({"text" : "Change Password Secure POST Request"})
-
+            return Response({"text": "Your password has been changed succesfully"})
+        return Response({"text": "Change Password Secure POST Request"})
 
 
 class AuthorizationUsingSMSView(SecureAPIViewBaseView):
@@ -458,7 +365,7 @@ class AuthorizationUsingSMSView(SecureAPIViewBaseView):
     serializer_class = AuthorizationUsingSMSSerializer
 
     def get(self, request, *args, **kwargs):
-        return Response({"text" : "Authorization Using SMS Code"})
+        return Response({"text": "Authorization Using SMS Code"})
 
     def post(self, request, *args, **kwargs):
         kwargs = super(AuthorizationUsingSMSView, self).get_serializer_context()
@@ -466,7 +373,7 @@ class AuthorizationUsingSMSView(SecureAPIViewBaseView):
 
         if serializer.is_valid(raise_exception=True):
             serializer.save()
-            return Response({"text" : "You have logged in succesfully using SMS Code"})
+            return Response({"text": "You have logged in succesfully using SMS Code"})
 
 
 class AuthorizationUsingGoogleAuthenticatorView(SecureAPIViewBaseView):
@@ -474,15 +381,16 @@ class AuthorizationUsingGoogleAuthenticatorView(SecureAPIViewBaseView):
     serializer_class = AuthorizationUsingGoogleAuthenticatorSerializer
 
     def get(self, request, *args, **kwargs):
-        return Response({"text" : "Authorization using Google Authenticator"})
+        return Response({"text": "Authorization using Google Authenticator"})
 
     def post(self, request, *args, **kwargs):
         kwargs = super(AuthorizationUsingGoogleAuthenticatorView, self).get_serializer_context()
-        serializer = AuthorizationUsingGoogleAuthenticatorSerializer(data=request.data, context=kwargs)
+        serializer = AuthorizationUsingGoogleAuthenticatorSerializer(data=request.data,
+                                                                     context=kwargs)
 
         if serializer.is_valid(raise_exception=True):
             serializer.save()
-            return Response({"text" : "You have logged in succesfully using Google Authenticatr"})
+            return Response({"text": "You have logged in succesfully using Google Authenticatr"})
 
 
 class GeneratePhoneCodeForUnAuthorizedUserView(SecureAPIViewBaseView):
@@ -490,14 +398,14 @@ class GeneratePhoneCodeForUnAuthorizedUserView(SecureAPIViewBaseView):
 
     def post(self, request, *args, **kwargs):
         kwargs = super(GeneratePhoneCodeForUnAuthorizedUserView, self).__init__(*args, **kwargs)
-        serializer = GeneratePhoneCodeForUnAuthorizedUserSerializer(data=request.data, context=kwargs)
+        serializer = GeneratePhoneCodeForUnAuthorizedUserSerializer(data=request.data,
+                                                                    context=kwargs)
 
         if serializer.is_valid(raise_exception=False):
             serializer.save()
             return Response(serializer.data)
         else:
             raise APIValidationError(serializer.errors)
-
 
 
 class VerifyPhoneCodeForUnAuthorizedUserView(SecureAPIViewBaseView):
@@ -508,7 +416,7 @@ class VerifyPhoneCodeForUnAuthorizedUserView(SecureAPIViewBaseView):
         serializer = VerifyPhoneCodeForUnAuthorizedUserSerializer(data=request.data, context=kwargs)
 
         if serializer.is_valid(raise_exception=False):
-            data = {'token' : serializer.token}
+            data = {'token': serializer.token}
             data.update(serializer.data)
             return Response(data)
         else:
@@ -520,7 +428,7 @@ class BasicRegistrationView(SecureAPIViewBaseView):
     identity_directory_code = 'basic_internal'
 
     def get(self, request, *args, **kwargs):
-        return Response({"text" : "Basic Registration"})
+        return Response({"text": "Basic Registration"})
 
     def post(self, request, *args, **kwargs):
         kwargs = super(BasicRegistrationView, self).get_serializer_context()
@@ -529,8 +437,8 @@ class BasicRegistrationView(SecureAPIViewBaseView):
         if serializer.is_valid(raise_exception=False):
             serializer.save()
             data = {
-                'status' : status.HTTP_201_CREATED,
-                'result' : {},
+                'status': status.HTTP_201_CREATED,
+                'result': {},
             }
             return Response(data, status=status.HTTP_201_CREATED)
         else:
@@ -553,8 +461,9 @@ class EmailChangeRequestAPIView(SecureAPIViewBaseView):
             raise APIValidationError(
                 detail=dict(serializer.errors.items()))
 
+
 class EmailChangeValidationTokenCheckerAPIView(SecureAPIViewBaseView):
-    permission_classes =( IsAuthenticated,)
+    permission_classes = (IsAuthenticated,)
     identity_directory_code = 'basic_internal'
     serializer_class = EmailChangeValidationTokenCheckerSerializer
 
@@ -566,6 +475,7 @@ class EmailChangeValidationTokenCheckerAPIView(SecureAPIViewBaseView):
             return Response(serializer.data)
         else:
             raise APIValidationError(detail=serializer.errors)
+
 
 class EmailChangeInsecureAPIView(SecureAPIViewBaseView):
     permission_classes = (IsAuthenticated,)
@@ -582,6 +492,7 @@ class EmailChangeInsecureAPIView(SecureAPIViewBaseView):
         else:
             raise APIValidationError(detail=serializer.errors)
 
+
 class EmailChangeSecureAPIView(SecureAPIViewBaseView):
     permission_classes = (IsAuthenticated,)
     serializer_class = EmailChangeSecureSerializer
@@ -597,19 +508,20 @@ class EmailChangeSecureAPIView(SecureAPIViewBaseView):
         else:
             raise APIValidationError(detail=serializer.errors)
 
+
 class PasswordResetRequestView(SecureAPIViewBaseView):
     serializer_class = PasswordResetRequestSerializer
 
     def get(self, request, *args, **kwargs):
-        return Response({"text" : "Password Reset View"})
+        return Response({"text": "Password Reset View"})
 
     def post(self, request, *args, **kwargs):
         kwargs = super(PasswordResetRequestView, self).get_serializer_context()
         serializer = PasswordResetRequestSerializer(data=request.data, context=kwargs)
         if serializer.is_valid(raise_exception=True):
             serializer.save()
-            return Response({"text" : "Email has been sent"})
-        return Response({"text" : "Password Reset view"})
+            return Response({"text": "Email has been sent"})
+        return Response({"text": "Password Reset view"})
 
 
 class PasswordResetConfirmView(SecureAPIViewBaseView):
@@ -617,15 +529,16 @@ class PasswordResetConfirmView(SecureAPIViewBaseView):
     identity_directory_code = 'basic_internal'
 
     def get(self, request, *args, **kwargs):
-        return Response({"text" : "PasswordResetConfirm View"})
+        return Response({"text": "PasswordResetConfirm View"})
 
     def post(self, request, *args, **kwargs):
         kwargs = super(PasswordResetConfirmView, self).get_serializer_context()
         serializer = PasswordResetConfirmSerializer(data=request.data, context=kwargs)
         if serializer.is_valid(raise_exception=True):
             serializer.save()
-            return Response({"text" : "Your password has been changed"})
-        return Response({"text" : "password reset confirm view"})
+            return Response({"text": "Your password has been changed"})
+        return Response({"text": "password reset confirm view"})
+
 
 class EmailResetRequestAPIView(SecureAPIViewBaseView):
     serializer_class = EmailResetRequestSerializer
@@ -641,6 +554,7 @@ class EmailResetRequestAPIView(SecureAPIViewBaseView):
         else:
             raise APIValidationError(detail=serializer.errors)
 
+
 class EmailResetValidationTokenCheckerAPIView(SecureAPIViewBaseView):
     identity_directory_code = 'basic_internal'
     serializer_class = EmailResetValidationTokenCheckerSerializer
@@ -653,6 +567,7 @@ class EmailResetValidationTokenCheckerAPIView(SecureAPIViewBaseView):
             return Response(serializer.data)
         else:
             raise APIValidationError(detail=serializer.errors)
+
 
 #
 class EmailResetInsecureAPIView(SecureAPIViewBaseView):
@@ -668,6 +583,7 @@ class EmailResetInsecureAPIView(SecureAPIViewBaseView):
             return Response(serializer.data)
         else:
             raise APIValidationError(detail=serializer.errors)
+
 
 class EmailResetSecureAPIView(SecureAPIViewBaseView):
     serializer_class = EmailResetSecureSerializer
