@@ -2,7 +2,7 @@ from rest_framework import serializers
 from re import compile
 from talos.models import Principal, ValidationToken, _tznow
 from rest_framework import status
-from talos_test_app import constants
+from talos_rest import constants
 
 email_regex = compile(r'^[^@]+@[^@]+\.[^@]+$')
 
@@ -556,7 +556,7 @@ class GeneratePhoneCodeForUnAuthorizedUserSerializer(BasicSerializer):
         super(GeneratePhoneCodeForUnAuthorizedUserSerializer, self).__init__(*args, **kwargs)
 
     def validate_phone(self, phone):
-        from talos_test_app.validators import validate_phone
+        from talos_rest.validators import validate_phone
 
         validate_phone(phone)
 
@@ -645,7 +645,7 @@ class BasicRegistrationSerializer(BasicSerializer):
         super(BasicRegistrationSerializer, self).__init__(*args, **kwargs)
 
     def validate_email(self, email):
-        from talos_test_app.validators import validate_email
+        from talos_rest.validators import validate_email
 
         email = email.lower()
 
@@ -660,7 +660,7 @@ class BasicRegistrationSerializer(BasicSerializer):
         return email
 
     def validate_phone(self, phone):
-        from talos_test_app.validators import validate_phone
+        from talos_rest.validators import validate_phone
 
         validate_phone(phone)
 
@@ -682,7 +682,7 @@ class BasicRegistrationSerializer(BasicSerializer):
         return token
 
     def validate_password(self, password):
-        from talos_test_app.validators import validate_password
+        from talos_rest.validators import validate_password
 
         validate_password(password)
 
