@@ -466,6 +466,116 @@ class GoogleAuthenticatorDeleteSerializer(serializers.Serializer):
         self.validation_token.save()
 
 
+class GoogleAuthenticatorChangeRequestSerializer(serializers.Serializer):
+
+    def __init__(self, *args, **kwargs):
+        passed_kwargs_from_view = kwargs.get('context')
+        self.request = passed_kwargs_from_view['request']
+        self.principal = self.request.principal
+        super(GoogleAuthenticatorChangeRequestSerializer, self).__init__(*args, **kwargs)
+
+    def validate(self, attrs):
+        return attrs
+
+    def save(self):
+        validation_token = ValidationToken()
+        validation_token.principal = self.principal
+        validation_token.email = self.principal.email
+        validation_token.type = 'otp_change'
+        validation_token.save()
+
+
+class GoogleAuthenticatorChangeConfirmSerializer(serializers.Serializer):
+    token = serializers.CharField()
+    password = serializers.CharField()
+    otp_code = serializers.CharField()
+    sms_code = serializers.CharField()
+
+    def __init__(self, *args, **kwargs):
+        from talos.models import BasicIdentityDirectory
+        from talos.models import OneTimePasswordCredentialDirectory
+        passed_kwargs_from_view = kwargs.get('context')
+        self.request = passed_kwargs_from_view['request']
+        self.principal = self.request.principal
+        self.basic_identity_directory = BasicIdentityDirectory.objects.get(
+            code=passed_kwargs_from_view['identity_directory_code'])
+        self.basic_credential_directory = self.basic_identity_directory.credential_directory
+        self.otp_credential_directory = OneTimePasswordCredentialDirectory.objects.get(pk=1)
+        self.sms_credential_directory = OneTimePasswordCredentialDirectory.objects.get(pk=2)
+        super(GoogleAuthenticatorChangeConfirmSerializer, self).__init__(*args, **kwargs)
+
+
+    def validate_token(self, token):
+        try:
+            token = ValidationToken.objects.get(secret=token,
+                                                is_active=True,
+                                                email=self.principal.email)
+        except ValidationToken.DoesNotExist:
+            raise serializers.ValidationError('Token is incorrect')
+        return token
+
+    def validate_password(self, password):
+        if self.basic_credential_directory and not self.basic_credential_directory.verify_credentials(self.principal,
+                                                                                                      {'password' : password}):
+            raise serializers.ValidationError('Password is incorrect')
+        return password
+
+    def validate_otp_code(self, otp_code):
+        if self.otp_credential_directory and not self.otp_credential_directory.verify_credentials(self.principal,
+                                                                                                  {'code' : otp_code}):
+            raise serializers.ValidationError('OTP Code is incorrect')
+        return otp_code
+
+    def validate_sms_code(self, sms_code):
+        if self.sms_credential_directory and not self.sms_credential_directory.verify_credentials(self.principal,
+                                                                                                  {'code' : sms_code}):
+            raise serializers.ValidationError('SMS code is incorrect')
+        return sms_code
+
+    def save(self):
+        import pyotp
+        self.request.session['otp_verified'] = True
+        self.request.session['temp_otp_token'] = pyotp.random_base32()
+        self.salt = self.request.session['temp_otp_token']
+
+
+
+class GoogleAuthenticatorChangeDoneSerializer(serializers.Serializer):
+    otp_code = serializers.CharField()
+
+    def __init__(self, *args, **kwargs):
+        from talos.models import OneTimePasswordCredentialDirectory
+        passed_kwargs_from_view = kwargs.get('context')
+        self.request = passed_kwargs_from_view['request']
+        self.principal = self.request.principal
+        self.otp_credential_directory = OneTimePasswordCredentialDirectory.objects.get(pk=1)
+        self.sms_credential_directory = OneTimePasswordCredentialDirectory.objects.get(pk=2)
+        super(GoogleAuthenticatorChangeDoneSerializer, self).__init__(*args, **kwargs)
+
+
+    def validate_otp_code(self, otp_code):
+        import pyotp
+        if not self.request.session.get('otp_verified', None) or not self.request.session.get('temp_otp_token', None):
+            raise serializers.ValidationError('OTP credentials is not verified')
+
+        print(self.request.session.get('temp_otp_token'))
+        totp = pyotp.TOTP(self.request.session.get('temp_otp_token', None))
+        if not totp.verify(otp_code):
+            raise serializers.ValidationError('OTP Code is incorrect')
+        return otp_code
+
+    def validate(self, attrs):
+        return attrs
+
+    def save(self):
+        if self.otp_credential_directory:
+            self.otp_credential_directory.update_credentials(self.principal,
+                                                             old_credentials=None,
+                                                             new_credentials={'salt' : self.request.session['temp_otp_token']})
+
+
+
+
 class GeneratePhoneCodeForAuthorizedUserSerializer(serializers.Serializer):
 
     def __init__(self, *args, **kwargs):
