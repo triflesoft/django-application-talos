@@ -784,10 +784,7 @@ class VerifyPhoneCodeForUnAuthorizedUserSerializer(BasicSerializer):
 
     def validate_phone(self, phone):
         from talos.models import PhoneSMSValidationToken
-        try:
-            PhoneSMSValidationToken.objects.get(phone=phone,
-                                                is_active=True)
-        except PhoneSMSValidationToken.DoesNotExist:
+        if PhoneSMSValidationToken.objects.filter(phone=phone, is_active=True).count() == 0:
             raise serializers.ValidationError('Phone does not exists')
         return phone
 
