@@ -116,7 +116,7 @@ class SessionAPIView(SecureAPIViewBaseView):
     def get(self, request, *args, **kwargs):
         if str(self.request.user) == 'Anonymous':
             # data = SuccessResponse(code=status.HTTP_404_NOT_FOUND)
-            success_response = SuccessResponse(code=status.HTTP_404_NOT_FOUND)
+            success_response = SuccessResponse(status=status.HTTP_404_NOT_FOUND)
 
         else:
             success_response = SuccessResponse()
@@ -138,7 +138,7 @@ class SessionAPIView(SecureAPIViewBaseView):
 
     def delete(self, reqest, *args, **kwargs):
         if str(self.request.user) == 'Anonymous':
-            success_response = SuccessResponse(code=status.HTTP_404_NOT_FOUND)
+            success_response = SuccessResponse(status=status.HTTP_404_NOT_FOUND)
         else:
             self.request.session.flush()
             success_response = SuccessResponse()
@@ -507,7 +507,8 @@ class BasicRegistrationView(SecureAPIViewBaseView):
 
         if serializer.is_valid(raise_exception=False):
             serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            success_response = SuccessResponse(status=status.HTTP_201_CREATED, data=serializer.data)
+            return Response(success_response.data)
         else:
             raise APIValidationError(serializer.errors)
 
