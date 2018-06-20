@@ -12,7 +12,7 @@ class TestUtils(APITestCase):
     full_name = 'bixtrim'
     email = 'at@bixtrim.com'
     password = 'bixtrim_password'
-    phone = '+995555555555'
+    phone = 'phone'
 
     def __init__(self, *args, **kwargs):
         self.set_values()
@@ -210,7 +210,7 @@ class TestRegistration(TestUtils):
         data = {
             'full_name': self.full_name,
             'email': self.email,
-            'phone': '+995555555551',
+            'phone': 'phone',
             'password': self.password
         }
 
@@ -283,7 +283,7 @@ class TestRegistration(TestUtils):
             'password': self.password,
             'token': phone_sms_token.secret,
             'code': phone_sms_token.salt,
-            'phone': '+995555555551'
+            'phone': 'phone'
         }
 
         response = self.client.post(self.url, data, format='json')
@@ -482,7 +482,7 @@ class GeneratePhoneCodeForUnAuthorizedUser(TestUtils):
 
     def test_generate_invalid_phone(self):
         data = {
-            'phone' : '+511123123'
+            'phone' : 'phone'
         }
 
         response = self.client.post(self.url, data, format='json')
@@ -557,7 +557,7 @@ class TestVerifyPhoneCodeForUnAuthorizedUser(TestUtils):
         self.assertEqual(response.data.get('error').get('code')[0], constants.SMS_OTP_INVALID_CODE)
 
         data = {
-            'phone' : '+8855555555',
+            'phone' : 'phone_valid',
             'code' : phone_sms_token.salt
         }
 
