@@ -881,8 +881,6 @@ class BasicRegistrationSerializer(BasicSerializer):
             raise serializers.ValidationError('Token and phone is invalid')
         return attrs
 
-    def validate_password(self, password):
-        return None 
 
     def save(self):
         from talos.models import PrincipalProfile
