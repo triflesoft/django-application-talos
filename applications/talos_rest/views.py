@@ -8,7 +8,6 @@ from rest_framework.response import Response
 
 from talos_rest import permissions
 from .utils import SuccessResponse, ErrorResponse
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.generics import GenericAPIView
 from rest_framework import status
 # Serializer classes
@@ -31,6 +30,9 @@ from talos_rest.serializers import SessionSerializer, \
     PhoneChangeInsecureSerializer, PhoneResetRequestSerializer, \
     PhoneResetValidationTokenCheckerSerializer, PhoneResetInsecureSerializer, \
     PhoneResetSecureSerializer, PasswordChangeInsecureSerializer
+
+
+from talos_rest.permissions import IsAuthenticated
 
 
 class TranslationContextMixin(object):
