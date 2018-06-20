@@ -26,7 +26,8 @@ from .views import (SessionAPIView, PrincipalRegistrationRequestEditAPIView,
                     PrincipalSecurityLevelView,
                     GeneratePhoneCodeForAuthorizedUserView,
                     VerifyPhoneCodeForAuthorizedUserView,
-                    ChangePasswordInsecureView)
+                    ChangePasswordInsecureView,
+                    ChangePasswordSecureView)
 
 
 from rest_framework.documentation import include_docs_urls
@@ -63,4 +64,7 @@ urlpatterns = [
          name='verify-phone-code-for-authorized-user'),
 
     path('change-password-unsecure', ChangePasswordInsecureView.as_view(), name='change-password-unsecure'),
+    path('change-password-secure', ChangePasswordSecureView.as_view(), name='change-password-secure'),
+
+
 ]

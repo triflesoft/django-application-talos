@@ -22,7 +22,8 @@ from talos_test_app.serializers import (SessionSerializer,
                                         GoogleAuthenticatorDeleteSerializer,
                                         GeneratePhoneCodeForAuthorizedUserSerializer,
                                         VerifyPhoneCodeForAuthorizedUserSerializer,
-                                        ChangePasswordInsecureSerializer)
+                                        ChangePasswordInsecureSerializer,
+                                        ChangePasswordSecureSerializer)
 
 
 class TranslationContextMixin(object):
@@ -332,3 +333,20 @@ class ChangePasswordInsecureView(SecureAPIViewBaseView):
             return Response({"text" : "Your password has been changed"})
         return Response({"text" : "Giorgi"})
 
+
+class ChangePasswordSecureView(SecureAPIViewBaseView):
+    permission_classes = (IsAuthenticated,)
+    serializer_class = ChangePasswordSecureSerializer
+
+    identity_directory_code = 'basic_internal'
+
+    def get(self, request, *args, **kwargs):
+        return Response({"text" : "Change Password Secure"})
+
+    def post(self, request, *args, **kwargs):
+        kwargs = super(ChangePasswordSecureView, self).get_serializer_context()
+        serializer = ChangePasswordSecureSerializer(data=request.data, context=kwargs)
+        if serializer.is_valid(raise_exception=True):
+            serializer.save()
+            return Response({"text" : "Your password has been changed succesfully"})
+        return Response({"text" : "Change Password Secure POST Request"})

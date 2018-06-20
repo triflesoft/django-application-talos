@@ -506,3 +506,44 @@ class ChangePasswordInsecureSerializer(serializers.Serializer):
         self.basic_credential_directory.update_credentials(self.principal,
                                                            old_credentials=old_credentials,
                                                            new_credentials=new_credentials)
+
+class ChangePasswordSecureSerializer(serializers.Serializer):
+    old_password = serializers.CharField()
+    new_password = serializers.CharField()
+    otp_code = serializers.CharField()
+
+    def __init__(self, *args, **kwargs):
+        from talos.models import OneTimePasswordCredentialDirectory
+        from talos.models import BasicIdentityDirectory
+        passed_kwargs_from_view = kwargs.get('context')
+        self.request = passed_kwargs_from_view['request']
+        self.principal = self.request.principal
+        self.otp_directory = OneTimePasswordCredentialDirectory.objects.get(pk=1)
+        self.basic_identity_directory = BasicIdentityDirectory.objects.get(
+            code=passed_kwargs_from_view['identity_directory_code'])
+        self.basic_credential_directory = self.basic_identity_directory.credential_directory
+        super(ChangePasswordSecureSerializer, self).__init__(*args, **kwargs)
+
+    def validate_old_password(self, old_password):
+        if not self.basic_credential_directory.verify_credentials(self.principal,
+                                                              {'password' : old_password}):
+            raise serializers.ValidationError('Password is incorrect')
+        return old_password
+
+    def validate(self, attrs):
+        if attrs['old_password'] == attrs['new_password']:
+            raise serializers.ValidationError('Passwords must be different')
+        return attrs
+
+    def validate_otp_code(self, otp_code):
+        if not self.otp_directory.verify_credentials(self.principal,
+                                                         {'code' : otp_code}):
+            raise serializers.ValidationError('Sms Code is incorrect')
+        return otp_code
+
+    def save(self):
+        old_credentials = {'password' : self.validated_data['old_password']}
+        new_credentials = {'password' : self.validated_data['new_password']}
+        self.basic_credential_directory.update_credentials(self.principal,
+                                                           old_credentials=old_credentials,
+                                                           new_credentials=new_credentials)
