@@ -487,7 +487,7 @@ class Realm(AbstractReplicatableModel):
 class BasicIdentityDirectory(AbstractIdentityDirectory):
     realm = models.ForeignKey(Realm, null=True, blank=True, related_name='+', on_delete=models.CASCADE)
     credential_directory = models.ForeignKey('BasicCredentialDirectory', null=True, blank=True, related_name='identity_directories', on_delete=models.CASCADE)
-    
+
 
     class Meta:
         model_permissions = '__all__'
