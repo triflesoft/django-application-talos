@@ -109,17 +109,9 @@ class BasicLoginAPIView(SecureAPIViewBaseView):
 
         if serializer.is_valid(raise_exception=False):
             serializer.save()
-            session_id = self.request.session._session.uuid
-            principal = str(self.request._request.user)
-            # return Response(
-            #     { "code" : 200,
-            #              "result":{
-            #              "user" : principal,
-            #              'session_id' : session_id}}         )
             return Response(serializer.data)
         else:
-            raise APIValidationError(
-                                     detail=dict(serializer.errors.items()))
+            raise APIValidationError(detail=serializer.errors)
 
 
 class PrincipalRegistrationRequestEditAPIView(SecureAPIViewBaseView):
@@ -146,19 +138,29 @@ class PrincipalRegistrationTokenValidationAPIView(SecureAPIViewBaseView):
     serializer_class = PrincipalRegistrationTokenValidationSerializer
 
     def get(self, request, *args, **kwargs):
-        return Response({"text": "token validation"})
 
-    def post(self, request, *args, **kwargs):
+
         kwargs = super(PrincipalRegistrationTokenValidationAPIView, self).get_serializer_context()
         data = request.data
+        print (data)
         serializer = PrincipalRegistrationTokenValidationSerializer(data=data, context=kwargs)
-
         if serializer.is_valid(raise_exception=False):
             return Response({"token": data['token']})
         else:
             raise APIValidationError(
                                      detail=dict(serializer.errors.items()))
-
+    #
+    # def post(self, request, *args, **kwargs):
+    #     kwargs = super(PrincipalRegistrationTokenValidationAPIView, self).get_serializer_context()
+    #     data = request.data
+    #     serializer = PrincipalRegistrationTokenValidationSerializer(data=data, context=kwargs)
+    #
+    #     if serializer.is_valid(raise_exception=False):
+    #         return Response({"token": data['token']})
+    #     else:
+    #         raise APIValidationError(
+    #                                  detail=dict(serializer.errors.items()))
+    #
 
 
 class PrincipalRegistrationConfirmationAPIView(SecureAPIViewBaseView):

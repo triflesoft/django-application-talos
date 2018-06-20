@@ -5,13 +5,14 @@ from rest_framework import status
 
 email_regex = compile(r'^[^@]+@[^@]+\.[^@]+$')
 
+
 class BasicSerializer(serializers.Serializer):
     BASIC_SUCCESS_CODE = status.HTTP_200_OK
 
     def to_representation(self, instance):
         data = super(BasicSerializer, self).to_representation(instance)
-        final_data = {'code': self.BASIC_SUCCESS_CODE ,
-                      'result' : data}
+        final_data = {'code': self.BASIC_SUCCESS_CODE,
+                      'result': data}
         return final_data
 
 
@@ -33,7 +34,6 @@ class BasicLoginSerializer(BasicSerializer):
         del passed_kwargs_from_view['request']
 
         super(BasicLoginSerializer, self).__init__(*args, **kwargs)
-
 
     def validate_username(self, value):
 
@@ -67,7 +67,6 @@ class BasicLoginSerializer(BasicSerializer):
     def save(self):
         self.principal._load_authentication_context(self.evidences)
         self.request.principal = self.principal
-
 
 
 class PrincipalRegistrationRequestSerializer(serializers.Serializer):
@@ -203,8 +202,8 @@ class PrincipalRegistrationConfirmSerializer(serializers.Serializer):
         password2 = value  # self.validated_data.get('password2', None)
 
         if password1 and password2 and (password1 != password2):
-           raise serializers.ValidationError('Passwords do not match.',
-                                             code='invalid_password_confirmation')
+            raise serializers.ValidationError('Passwords do not match.',
+                                              code='invalid_password_confirmation')
 
         return password2
 
@@ -238,6 +237,7 @@ class PrincipalRegistrationConfirmSerializer(serializers.Serializer):
         self.token.principal = self.principal
         self.token.is_active = False
         self.token.save()
+
 
 class EmailChangeRequestSerializer(serializers.Serializer):
     new_email = serializers.CharField(label='New E-mail')
@@ -318,7 +318,6 @@ class EmailChangeConfirmSerializer(serializers.Serializer):
         self.token = passed_kwargs_from_view['token']
 
         del kwargs['context']
-
 
         super(EmailChangeConfirmSerializer, self).__init__(*args, **kwargs)
 

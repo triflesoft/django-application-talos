@@ -32,9 +32,9 @@ urlpatterns = [
     # METHOD DELETE domain/v1/session
     path('logout', LogoutAPIView.as_view()),
 
-    path('principal-registration-request-edit/', PrincipalRegistrationRequestEditAPIView.as_view(),
-         name='talos-principal-registration-request-edit'),
-    path('principal-registration-validate-token',
+    path('principal', PrincipalRegistrationRequestEditAPIView.as_view(),
+         name='talos-rest-principal-regisration-request'),
+    path('token/<slug:secret>',
          PrincipalRegistrationTokenValidationAPIView.as_view(),
          name='talos-principal-token-validation'),
     path('principal-registration-confirm-edit/<slug:secret>',
