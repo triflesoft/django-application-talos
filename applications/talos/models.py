@@ -488,6 +488,7 @@ class BasicIdentityDirectory(AbstractIdentityDirectory):
     realm = models.ForeignKey(Realm, null=True, blank=True, related_name='+', on_delete=models.CASCADE)
     credential_directory = models.ForeignKey('BasicCredentialDirectory', null=True, blank=True, related_name='identity_directories', on_delete=models.CASCADE)
 
+
     class Meta:
         model_permissions = '__all__'
         object_permissions = '__all__'
@@ -738,6 +739,41 @@ class OneTimePasswordCredentialDirectory(AbstractCredentialDirectory):
         verbose_name = 'One-Time Password Credential Directory'
         verbose_name_plural = 'One-Time Password Credential Directories'
 
+    @staticmethod
+    def get_auth_directory():
+        return BasicCredentialDirectory.objects.get(code=getattr(settings, 'TALOS_AUTH_DEFAULT_CREDENTIAL_DIRECTORY', 'basic_internal'))
+
+    def __init__(self, *args, **kwargs):
+        super(OneTimePasswordCredentialDirectory, self).__init__(*args, **kwargs)
+        self.backend_object = None
+
+    def _ensure_backend(self):
+        if not self.backend_object:
+            self.backend_object = _create_class_by_name(self.backend_class)(self)
+
+    def create_credentials(self, principal, credentials):
+        self._ensure_backend()
+
+        return self.backend_object.create_credentials(principal, credentials)
+
+    def verify_credentials(self, principal, credentials):
+        self._ensure_backend()
+
+        return self.backend_object.verify_credentials(principal, credentials)
+
+    def update_credentials(self, principal, old_credentials, new_credentials):
+        self._ensure_backend()
+
+        return self.backend_object.update_credentials(principal, old_credentials, new_credentials)
+
+    def reset_credentials(self, super_principal, principal, new_credentials):
+        self._ensure_backend()
+
+        return self.backend_object.reset_credentials(super_principal, principal, new_credentials)
+
+    def save(self, *args, **kwargs):
+        super(OneTimePasswordCredentialDirectory, self).save(*args, **kwargs)
+        self.backend_object = None
 
 class OneTimePasswordCredentialDirectoryObjectPermission(AbstractObjectPermission):
     target = models.ForeignKey(OneTimePasswordCredentialDirectory, related_name='permissions', on_delete=models.CASCADE)
@@ -781,7 +817,7 @@ class OneTimePasswordCredential(AbstractCredential):
         verbose_name_plural = 'One-Time Password Credentials'
 
     def __str__(self):
-        return self.principal
+        return str(self.principal)
 
 
 class TokenCredentialDirectory(AbstractCredentialDirectory):
@@ -827,6 +863,7 @@ class TokenCredential(AbstractCredential):
     directory = models.ForeignKey(TokenCredentialDirectory, related_name='credentials', on_delete=models.CASCADE)
     public_value = models.CharField(max_length=255)
     secret_value = models.CharField(max_length=255)
+
 
     class Meta:
         unique_together = [
