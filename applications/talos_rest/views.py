@@ -117,8 +117,8 @@ class SessionAPIView(SecureAPIViewBaseView):
 
     def get(self, request, *args, **kwargs):
         if str(self.request.user) == 'Anonymous':
-            response = ErrorResponse(status=status.HTTP_404_NOT_FOUND)
 
+            response = ErrorResponse(status=status.HTTP_404_NOT_FOUND)
         else:
             response = SuccessResponse()
             response.set_result_pairs('session_id', request.session._session.uuid)
@@ -139,7 +139,7 @@ class SessionAPIView(SecureAPIViewBaseView):
 
     def delete(self, reqest, *args, **kwargs):
         if str(self.request.user) == 'Anonymous':
-            success_response = SuccessResponse(code=status.HTTP_404_NOT_FOUND)
+            success_response = SuccessResponse(status=status.HTTP_404_NOT_FOUND)
         else:
             self.request.session.flush()
             success_response = SuccessResponse()
@@ -488,31 +488,31 @@ class AuthorizationUsingGoogleAuthenticatorView(SecureAPIViewBaseView):
 class GeneratePhoneCodeForUnAuthorizedUserView(SecureAPIViewBaseView):
     serializer_class = GeneratePhoneCodeForUnAuthorizedUserSerializer
 
-    def get(self, request, *args, **kwargs):
-        return Response({"text" : "Generate Phone Code for UnAuthorized user"})
-
     def post(self, request, *args, **kwargs):
         kwargs = super(GeneratePhoneCodeForUnAuthorizedUserView, self).__init__(*args, **kwargs)
         serializer = GeneratePhoneCodeForUnAuthorizedUserSerializer(data=request.data, context=kwargs)
 
-        if serializer.is_valid(raise_exception=True):
+        if serializer.is_valid(raise_exception=False):
             serializer.save()
-            return Response({"text" : "SMS code has been sent on you phone"})
+            return Response(serializer.data)
+        else:
+            raise APIValidationError(serializer.errors)
 
 
 
 class VerifyPhoneCodeForUnAuthorizedUserView(SecureAPIViewBaseView):
     serializer_class = VerifyPhoneCodeForUnAuthorizedUserSerializer
 
-    def get(self, request, *args, **kwargs):
-        return Response({"text" : "Verify Phone Code For UnAuthorized user"})
-
     def post(self, request, *args, **kwargs):
         kwargs = super(VerifyPhoneCodeForUnAuthorizedUserView, self).get_serializer_context()
         serializer = VerifyPhoneCodeForUnAuthorizedUserSerializer(data=request.data, context=kwargs)
 
-        if serializer.is_valid(raise_exception=True):
-            return Response({"token" : serializer.secret})
+        if serializer.is_valid(raise_exception=False):
+            data = {'token' : serializer.token}
+            data.update(serializer.data)
+            return Response(data)
+        else:
+            raise APIValidationError(serializer.errors)
 
 
 class BasicRegistrationView(SecureAPIViewBaseView):
@@ -526,9 +526,15 @@ class BasicRegistrationView(SecureAPIViewBaseView):
         kwargs = super(BasicRegistrationView, self).get_serializer_context()
         serializer = BasicRegistrationSerializer(data=request.data, context=kwargs)
 
-        if serializer.is_valid(raise_exception=True):
+        if serializer.is_valid(raise_exception=False):
             serializer.save()
-            return Response({"text" : "You have registered succesfully"})
+            data = {
+                'status' : status.HTTP_201_CREATED,
+                'result' : {},
+            }
+            return Response(data, status=status.HTTP_201_CREATED)
+        else:
+            raise APIValidationError(serializer.errors)
 
 
 class EmailChangeRequestAPIView(SecureAPIViewBaseView):
@@ -677,16 +683,16 @@ class EmailResetSecureAPIView(SecureAPIViewBaseView):
         else:
             raise APIValidationError(detail=serializer.errors)
 
-class PhoneResetRequestAPIView(SecureAPIViewBaseView):
-    serializer_class = PhoneResetRequestSerializer
-
-    def post(self, request, *args, **kwargs):
-        kwargs = super(PhoneResetRequestAPIView, self).get_serializer_context()
-        data = request.data
-        serializer = PhoneResetRequestSerializer(data=data, context=kwargs)
-
-        if serializer.is_valid(raise_exception=False):
-            serializer.save()
-            return Response(serializer.data)
-        else:
-            raise APIValidationError(detail=serializer.errors)
+# class PhoneResetRequestAPIView(SecureAPIViewBaseView):
+#     serializer_class = PhoneResetRequestSerializer
+#
+#     def post(self, request, *args, **kwargs):
+#         kwargs = super(PhoneResetRequestAPIView, self).get_serializer_context()
+#         data = request.data
+#         serializer = PhoneResetRequestSerializer(data=data, context=kwargs)
+#
+#         if serializer.is_valid(raise_exception=False):
+#             serializer.save()
+#             return Response(serializer.data)
+#         else:
+#             raise APIValidationError(detail=serializer.errors)

@@ -16,6 +16,6 @@ def send_message(to, _from, body):
 
 
 def generate_random_number(length=10):
-    characters = string.ascii_letters + string.digits
+    characters = string.digits
     return ''.join(secrets.choice(characters) for _ in range(length))
 
