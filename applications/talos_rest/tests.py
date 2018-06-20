@@ -44,7 +44,7 @@ class TestUtils(APITestCase):
 
         basic_identity = BasicIdentity()
         basic_identity.principal = self.principal
-        basic_identity.username = self.email
+        basic_identity.email = self.email
         basic_identity.directory = BasicIdentityDirectory.objects.get(code='basic_internal')
         basic_identity.save()
 
@@ -166,7 +166,7 @@ class TestRegistration(TestUtils):
         basic_identity = BasicIdentity.objects.last()
         self.assertIsNotNone(basic_identity)
         self.assertEqual(basic_identity.principal, principal)
-        self.assertEqual(basic_identity.username, principal.email)
+        self.assertEqual(basic_identity.email, principal.email)
 
     def test_registration_without_phone_sms_token(self):
         data = {
@@ -383,7 +383,7 @@ class TestSessions(TestUtils):
 
         basic_identity = BasicIdentity()
         basic_identity.principal = self.principal
-        basic_identity.username = self.email
+        basic_identity.email = self.email
         basic_identity.directory = BasicIdentityDirectory.objects.get(code='ldap')
         basic_identity.save()
 
@@ -483,7 +483,6 @@ class GeneratePhoneCodeForUnAuthorizedUser(TestUtils):
         }
 
         response = self.client.post(self.url, data, format='json')
-
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data['status'], status.HTTP_400_BAD_REQUEST)
@@ -1195,8 +1194,3 @@ class TestGoogleAuthenticatorDelete(TestUtils):
 
 
 
-class TestSendSms(TestUtils):
-    def test_send_sms(self):
-        from talos.contrib.sms_sender import SMSSender
-        sms_sender = SMSSender()
-        #sms_sender.send_message('+995599439670', 'Message')
