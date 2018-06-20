@@ -782,6 +782,15 @@ class VerifyPhoneCodeForUnAuthorizedUserSerializer(BasicSerializer):
     def __init__(self, *args, **kwargs):
         super(VerifyPhoneCodeForUnAuthorizedUserSerializer, self).__init__(*args, **kwargs)
 
+    def validate_phone(self, phone):
+        from talos.models import PhoneSMSValidationToken
+        try:
+            PhoneSMSValidationToken.objects.get(phone=phone,
+                                                is_active=True)
+        except PhoneSMSValidationToken.DoesNotExist:
+            raise serializers.ValidationError('Phone does not exists')
+        return phone
+
     def validate(self, attrs):
 
         from talos.models import PhoneSMSValidationToken
