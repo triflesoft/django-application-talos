@@ -3,12 +3,6 @@ from rest_framework.test import APITestCase
 from rest_framework import status
 from talos_rest import constants
 
-from talos.models import ValidationToken
-
-from .utils import SuccessResponse, ErrorResponse
-
-HTTP_HOST = 'localhost:8000'
-
 
 class TestUtils(APITestCase):
     full_name = 'bixtrim'
@@ -34,6 +28,7 @@ class TestUtils(APITestCase):
         from talos.models import Principal
         from talos.models import BasicIdentity
         from talos.models import BasicIdentityDirectory
+        from talos.models import PrincipalProfile
 
         principal = Principal.objects.create(full_name=self.full_name,
                                              phone=self.phone,
@@ -47,6 +42,11 @@ class TestUtils(APITestCase):
         basic_identity.email = self.email
         basic_identity.directory = BasicIdentityDirectory.objects.get(code='basic_internal')
         basic_identity.save()
+
+        principal_profile  = PrincipalProfile()
+        principal_profile.principal = principal
+        principal_profile.is_secure = False
+        principal_profile.save()
 
     def login(self):
         data = {
@@ -291,13 +291,13 @@ class TestSessions(TestUtils):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.data['status'], status.HTTP_404_NOT_FOUND)
 
-    def logout_when_user_isnot_log_in(self):
+    def test_logout_when_user_isnot_log_in(self):
         response = self.client.delete(self.url)
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.data['status'], status.HTTP_404_NOT_FOUND)
 
-    def logout_when_user_is_log_in(self):
+    def test_logout_when_user_is_log_in(self):
         self.create_user()
         self.login()
 
@@ -305,6 +305,7 @@ class TestSessions(TestUtils):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['status'], status.HTTP_200_OK)
+
 
     def test_login_added_correct_evidences(self):
         self.create_user()
@@ -474,3 +475,36 @@ class TestVerifyPhoneCodeForUnAuthorizedUser(TestUtils):
 
         self.assertTrue(response.data.get('error').get('code', False))
         self.assertEqual(response.data.get('error').get('code')[0], constants.SMS_OTP_INVALID_CODE)
+
+
+class TestEmailChange(TestUtils):
+    url  = reverse("email-change-request")
+
+    def test_get_method_on_email_change(self):
+
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+        self.assertEqual(response.data['status'], status.HTTP_405_METHOD_NOT_ALLOWED)
+        self.assertEquals(response.data.get('error'), 'method_not_allowed')
+
+    def test_email_change_when_not_session(self):
+
+        response = self.client.post(self.url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data['status'], status.HTTP_403_FORBIDDEN)
+        self.assertListEqual(response.data.get('error'),
+                             ['permission_denied', 'permission_denied', 'permission_denied', 'permission_denied', 'permission_denied'])
+        self.assertListEqual(response.data.get('details'),
+                             ['authenticated', 'knowledge_factor', 'knowledge_factor_password', 'ownership_factor', 'ownership_factor_otp_token'])
+
+    def test_email_change_when_not_enought_permissions(self):
+        self.create_user()
+        self.login()
+        response = self.client.post(self.url)
+        print (response.data)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data['status'], status.HTTP_403_FORBIDDEN)
+        # self.assertListEqual(response.data.get('error'),['permission_denied', 'permission_denied'])
+        # self.assertListEqual(response.data.get('details'),
+
+
