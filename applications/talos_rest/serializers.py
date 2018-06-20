@@ -2,6 +2,7 @@ from rest_framework import serializers
 from re import compile
 from talos.models import Principal, ValidationToken, _tznow
 from rest_framework import status
+from talos_test_app import constants
 
 email_regex = compile(r'^[^@]+@[^@]+\.[^@]+$')
 
@@ -560,7 +561,8 @@ class GeneratePhoneCodeForUnAuthorizedUserSerializer(BasicSerializer):
         validate_phone(phone)
 
         if Principal.objects.filter(phone=phone).count() > 0:
-            raise serializers.ValidationError('This mobile phone is already user')
+            raise serializers.ValidationError('This mobile phone is already user',
+                                              code=constants.PHONE_USED_CODE)
         return phone
 
     def save(self):
@@ -650,7 +652,7 @@ class BasicRegistrationSerializer(BasicSerializer):
         try:
             Principal.objects.get(email=email)
             raise serializers.ValidationError("Email is already used",
-                                              code='email_used')
+                                              code=constants.EMAIL_USED_CODE)
         except Principal.DoesNotExist:
             pass
         return email
@@ -663,7 +665,7 @@ class BasicRegistrationSerializer(BasicSerializer):
         try:
             Principal.objects.get(phone=phone)
             raise serializers.ValidationError("Phone is already used",
-                                              code='phone_used')
+                                              code=constants.PHONE_USED_CODE)
         except Principal.DoesNotExist:
             pass
         return phone
@@ -674,7 +676,7 @@ class BasicRegistrationSerializer(BasicSerializer):
             PhoneSMSValidationToken.objects.get(secret=token)
         except PhoneSMSValidationToken.DoesNotExist:
             raise serializers.ValidationError('Token does not exists',
-                                              'token_not_exists')
+                                              constants.TOKEN_NOT_EXISTS)
         return token
 
     def validate(self, attrs):
@@ -690,7 +692,7 @@ class BasicRegistrationSerializer(BasicSerializer):
             self.token = phone_sms_validation_token
         except PhoneSMSValidationToken.DoesNotExist:
             raise serializers.ValidationError('Token and phone is invalid',
-                                              code='token_phone_invalid')
+                                              code=constants.TOKEN_PHONE_INVALID)
         return attrs
 
 
@@ -704,14 +706,11 @@ class BasicRegistrationSerializer(BasicSerializer):
 
         self.principal.save()
 
-
         PrincipalProfile.objects.create(principal=self.principal)
-
 
         self.identity_directory.create_credentials(self.principal, {'username': self.validated_data['email']})
         self.credential_directory.create_credentials(self.principal, {'password': self.validated_data['password']})
 
-        # self.otp_credential_directory.create_credentials(self.principal, {})
         if self.token:
             self.token.principal = self.principal
             self.token.is_active = False
