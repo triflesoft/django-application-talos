@@ -11,7 +11,8 @@ def generate_docs_url(context):
     http_method_to_action = {
         'GET': 'read',
         'POST': 'create',
-        'DELETE': 'delete'
+        'DELETE': 'delete',
+        'PUT' : 'change'
 
     }
     # This part generates urls from document GUI

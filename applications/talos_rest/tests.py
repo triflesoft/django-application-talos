@@ -4,7 +4,7 @@ from rest_framework import status
 
 from talos.models import ValidationToken
 
-from utils import SuccessResponse, ErrorResponse
+from .utils import SuccessResponse, ErrorResponse
 
 HTTP_HOST = 'localhost:8000'
 

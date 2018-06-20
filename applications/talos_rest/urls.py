@@ -1,3 +1,4 @@
+
 """talos_test URL Configuration
 
 The `urlpatterns` list routes URLs to views. For more information please see:
@@ -20,7 +21,7 @@ from .views import (SessionAPIView, PrincipalRegistrationRequestEditAPIView,
                     PrincipalRegistrationTokenValidationAPIView,
                     EmailChangeRequestAPIView,
                     EmailChangeConfirmEditAPIView,
-                    GoogleAuthenticationActivateRequestView,
+                    GoogleAuthenticationActivateView,
                     GoogleAuthenticatorVerifyView,
                     GoogleAuthenticatorDeleteView,
                     PrincipalSecurityLevelView,
@@ -32,9 +33,8 @@ from .views import (SessionAPIView, PrincipalRegistrationRequestEditAPIView,
                     AuthorizationUsingGoogleAuthenticatorView,
                     GeneratePhoneCodeForUnAuthorizedUserView,
                     VerifyPhoneCodeForUnAuthorizedUserView,
-                    BasicRegistrationView,
-                    PasswordResetRequestView, PasswordResetConfirmView, GoogleAuthenticatorDeleteRequestView,
-                    GoogleAuthenticatorActivateConfirmView)
+                    BasicRegistrationView, EmailChangeAPIView,
+                    EmailChangeValidationTokenCheckerAPIView)
 
 
 from rest_framework.documentation import include_docs_urls
@@ -44,29 +44,35 @@ urlpatterns = [
 
     path('session', SessionAPIView.as_view(), name='talos-rest-sessions'),
 
-    path('principal/registration_request', PrincipalRegistrationRequestEditAPIView.as_view(),
-         name='talos-rest-principal-regisration-request'),
-    path('registration_token/<slug:secret>',
-         PrincipalRegistrationTokenValidationAPIView.as_view(),
-         name='talos-rest-principal-token-validation'),
-    path('principal/registration_token/<slug:secret>',
-         PrincipalRegistrationConfirmationAPIView.as_view(),
-         name='talos-rest-principal-registration-confirm'),
+    # path('principal/registration_request', PrincipalRegistrationRequestEditAPIView.as_view(),
+    #      name='talos-rest-principal-regisration-request'),
+    # path('registration_token/<slug:secret>',
+    #      PrincipalRegistrationTokenValidationAPIView.as_view(),
+    #      name='talos-rest-principal-token-validation'),
+    # path('principal/registration_token/<slug:secret>',
+    #      PrincipalRegistrationConfirmationAPIView.as_view(),
+    #      name='talos-rest-principal-registration-confirm'),
 
-    path('principal/email/request', EmailChangeRequestAPIView.as_view(), name='talos-email-change-request'),
-    path('principal/email/email_change_token/<slug:secret>', EmailChangeConfirmEditAPIView.as_view(), name='talos-email-change-confirm'),
+    # Email Change
+    path('principal/email/request', EmailChangeRequestAPIView.as_view(),
+         name='talos-email-change-request'),
+
+    path('email/email_change_token/<slug:secret>',EmailChangeValidationTokenCheckerAPIView.as_view(),
+         name='email-token-validation'),
+    path('principal/email/email_change_token/<slug:secret>', EmailChangeAPIView.as_view(), name='principal-email-change-confirm'),
+
+
+
     # TODO VERSIONING
     # re_path(r'^(?P<version>(v1|v2))/bookings/$',BasicLoginAPIView.as_view(),name='bookings-list'),
 
-    path('google-authenticator/activate/request', GoogleAuthenticationActivateRequestView.as_view(), name='google-authenticator-activate-request'),
-    path('google-authenticator/activate/confirm', GoogleAuthenticatorActivateConfirmView.as_view(), name='google-authenticator-activate-confirm'),
+    path('google-authenticator/', GoogleAuthenticationActivateView.as_view(), name='google-authenticator-activate'),
     path('google-authenticator/verify', GoogleAuthenticatorVerifyView.as_view(), name='google-authenticator-verify'),
-    path('google-authenticator/delete/request', GoogleAuthenticatorDeleteRequestView.as_view(), name='google-authenticator-delete-request'),
-    path('google-authenticator/delete/confirm', GoogleAuthenticatorDeleteView.as_view(), name='google-authenticator-delete'),
+    path('google-authenticator/delete', GoogleAuthenticatorDeleteView.as_view(), name='google-authenticator-delete'),
 
     path('principal/security-level', PrincipalSecurityLevelView.as_view(), name='principal-security-level'),
 
-    path('authorized-phone-verification/generate', GeneratePhoneCodeForAuthorizedUserView.as_view(),
+    path('authorized-phone-verification/generate/', GeneratePhoneCodeForAuthorizedUserView.as_view(),
          name='generate-phone-code-for-authorized-user'),
 
     path('authorized-phone-verification/verify', VerifyPhoneCodeForAuthorizedUserView.as_view(),
@@ -88,8 +94,6 @@ urlpatterns = [
 
     path('basic-registration', BasicRegistrationView.as_view(), name='basic-registration'),
 
-    path('password-reset-request', PasswordResetRequestView.as_view(), name='password-reset-request'),
 
-    path('password-reset-confirm', PasswordResetConfirmView.as_view(), name='password-reset-confirm'),
 
 ]
