@@ -22,7 +22,6 @@ from .views import TokenLoginView
 
 auth_url_patterns = [
     path('', IndexView.as_view(), name='talos-index'),
-    # METHOD POST domain/v1/principal
     path('principal-registration-request-edit/', PrincipalRegistrationRequestEditView.as_view(), name='talos-principal-registration-request-edit'),
     path('principal-registration-request-done/', PrincipalRegistrationRequestDoneView.as_view(), name='talos-principal-registration-request-done'),
     path('principal-registration-confirm-edit/<slug:secret>', PrincipalRegistrationConfirmEditView.as_view(), name='talos-principal-registration-confirm-edit'),
@@ -33,9 +32,9 @@ auth_url_patterns = [
     path('email-change-confirm-edit/<slug:secret>', EmailChangeConfirmEditView.as_view(), name='talos-email-change-confirm-edit'),
     path('email-change-confirm-done/', EmailChangeConfirmDoneView.as_view(), name='talos-email-change-confirm-done'),
 
-    path('logout/', LogoutView.as_view(), name='talos-logout'), #Method DELETE domain/v1/session
-    path('basic-login/', BasicLoginView.as_view(), name='talos-basic-login'), # Method POST domain/v1/session
-    path('token-login/', TokenLoginView.as_view(), name='talos-token-login'), # Method POST domain/v1/token
+    path('logout/', LogoutView.as_view(), name='talos-logout'),
+    path('basic-login/', BasicLoginView.as_view(), name='talos-basic-login'),
+    path('token-login/', TokenLoginView.as_view(), name='talos-token-login'),
 
     path('basic-password-change-edit/', BasicPasswordChangeConfirmEditView.as_view(), name='talos-basic-password-change-edit'),
     path('basic-password-change-done/', BasicPasswordChangeConfirmDoneView.as_view(), name='talos-basic-password-change-done'),

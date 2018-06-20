@@ -12,7 +12,9 @@ from rest_framework.generics import GenericAPIView
 from talos_test_app.serializers import (BasicLoginSerializer,
                                         PrincipalRegistrationRequestSerializer,
                                         PrincipalRegistrationConfirmSerializer,
-                                        PrincipalRegistrationTokenValidationSerializer)
+                                        PrincipalRegistrationTokenValidationSerializer,
+                                        EmailChangeRequestSerializer,
+                                        EmailChangeConfirmSerializer)
 
 
 class TranslationContextMixin(object):
@@ -186,3 +188,41 @@ class LogoutAPIView(SecureTemplateViewBaseView):
         self.request.session.flush()
 
         return Response({"text": "user logged out"})
+
+
+class EmailChangeRequestEditAPIView(SecureAPIViewBaseView):
+    serializer_class = EmailChangeRequestSerializer
+
+    def get(self, request, *args, **kwargs):
+        return Response({"text": "Email change request"})
+
+    def post(self, request, *args, **kwargs):
+        kwargs = super(EmailChangeRequestEditAPIView, self).get_serializer_context()
+        data = request.data
+        serializer = EmailChangeRequestSerializer(data=data, context=kwargs)
+
+        if serializer.is_valid(raise_exception=True):
+            serializer.save()
+            return Response({"text": "email change request send to mail"})
+        else:
+            return Response({"text": "error"})
+
+class EmailChangeConfirmEditAPIView(SecureAPIViewBaseView):
+    #  TODO email changed validate via session, or maybe need to pass username?
+    token_type = 'email_change'
+
+    serializer_class = EmailChangeConfirmSerializer
+
+    def get(self, request, *args, **kwargs):
+        return Response({"text": "Email change confirmation"})
+
+    def post(self, request, *args, **kwargs):
+        kwargs = super(EmailChangeConfirmEditAPIView, self).get_serializer_context()
+        data = request.data
+        serializer = EmailChangeConfirmSerializer(data=data, context=kwargs)
+
+        if serializer.is_valid(raise_exception=True):
+            serializer.save()
+            return Response({"text": "email change request done"})
+        else:
+            return Response({"text": "error"})

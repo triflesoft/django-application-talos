@@ -13,19 +13,25 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
-from django.conf.urls import url
-from django.urls import path, re_path
+
+from django.urls import path
 from .views import (BasicLoginAPIView, PrincipalRegistrationRequestEditAPIView,
                     PrincipalRegistrationConfirmationAPIView,
                     PrincipalRegistrationTokenValidationAPIView,
-                    LogoutAPIView)
+                    LogoutAPIView,
+                    EmailChangeRequestEditAPIView,
+                    EmailChangeConfirmEditAPIView)
 
 from rest_framework.documentation import include_docs_urls
 
 urlpatterns = [
-     path('docs/', include_docs_urls(title='My API title',public=False)),
+    path('docs/', include_docs_urls(title='My API title', public=False, description='test')),
+
     # METHOD POST domain/v1/session
     path('basic_login/', BasicLoginAPIView.as_view(), name='talos-basic-login'),
+    # METHOD DELETE domain/v1/session
+    path('logout', LogoutAPIView.as_view()),
+
     path('principal-registration-request-edit/', PrincipalRegistrationRequestEditAPIView.as_view(),
          name='talos-principal-registration-request-edit'),
     path('principal-registration-validate-token',
@@ -34,7 +40,10 @@ urlpatterns = [
     path('principal-registration-confirm-edit/<slug:secret>',
          PrincipalRegistrationConfirmationAPIView.as_view(),
          name='talos-principal-registration-confirm-edit'),
-    path('logout', LogoutAPIView.as_view()),
+
+    path('email-change-request-edit/', EmailChangeRequestEditAPIView.as_view(), name='talos-email-change-request-edit'),
+    path('email-change-confirm-edit/<slug:secret>', EmailChangeConfirmEditAPIView.as_view(), name='talos-email-change-confirm-edit'),
+
     # TODO VERSIONING
     # re_path(r'^(?P<version>(v1|v2))/bookings/$',BasicLoginAPIView.as_view(),name='bookings-list'),
 ]

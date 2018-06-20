@@ -8,8 +8,8 @@ email_regex = compile(r'^[^@]+@[^@]+\.[^@]+$')
 
 
 class BasicLoginSerializer(serializers.Serializer):
-    username = serializers.CharField(label='Username')
-    password = serializers.CharField(label='Password')
+    username = serializers.CharField(label='Username', help_text='Please enter username')
+    password = serializers.CharField(label='Password', help_text='Please enter username')
 
     def __init__(self, *args, **kwargs):
         from talos.models import BasicIdentityDirectory
@@ -24,7 +24,7 @@ class BasicLoginSerializer(serializers.Serializer):
         del passed_kwargs_from_view['identity_directory_code']
         del passed_kwargs_from_view['request']
 
-        return super(BasicLoginSerializer, self).__init__(*args, **kwargs)
+        super(BasicLoginSerializer, self).__init__(*args, **kwargs)
 
     def validate_username(self, value):
 
@@ -106,6 +106,17 @@ class PrincipalRegistrationRequestSerializer(serializers.Serializer):
                 reverse('talos-principal-registration-confirm-edit',
                         args=[validation_token.secret])),
             'email': email}
+        # mail_subject = render_to_string('talos/basic_password_reset/request_email_subject.txt', context)
+        # mail_body_text = render_to_string('talos/basic_password_reset/request_email_body.txt', context)
+        # mail_body_html = render_to_string('talos/basic_password_reset/request_email_body.html', context)
+        #
+        # send_mail(
+        #     subject=mail_subject,
+        #     message=mail_body_text,
+        #     html_message=mail_body_html,
+        #     from_email=None,
+        #     recipient_list=[self.principal.email],
+        #     fail_silently=True)
 
 
 class PrincipalRegistrationTokenValidationSerializer(serializers.Serializer):
@@ -215,5 +226,105 @@ class PrincipalRegistrationConfirmSerializer(serializers.Serializer):
         self.identity_directory.create_credentials(self.principal, {'username': username})
         self.credential_directory.create_credentials(self.principal, {'password': password})
         self.token.principal = self.principal
+        self.token.is_active = False
+        self.token.save()
+
+class EmailChangeRequestSerializer(serializers.Serializer):
+    new_email = serializers.CharField(label='New E-mail')
+
+    def __init__(self, *args, **kwargs):
+        self.request = kwargs['context'].get('request')
+
+        del kwargs['context']
+
+        super(EmailChangeRequestSerializer, self).__init__(*args, **kwargs)
+
+    def validate_new_email(self, value):
+        from talos.models import Principal
+
+        new_email = value
+
+        if not email_regex.match(new_email):
+            raise serializers.ValidationError(
+                'E-mail address is ill-formed.',
+                code='invalid_email')
+
+        try:
+            principal = Principal.objects.get(email=new_email)
+
+            raise serializers.ValidationError(
+                'Principal with provided e-mail is already registered.',
+                code='invalid_email')
+        except Principal.DoesNotExist:
+            pass
+
+        return new_email
+
+    def save(self):
+        # TODO SEND MAIL
+        from django.core.mail import send_mail
+        from django.template.loader import render_to_string
+        from django.urls import reverse
+        from talos.models import ValidationToken
+
+        new_email = self.validated_data['new_email']
+
+        validation_token = ValidationToken()
+        validation_token.email = new_email
+        validation_token.principal = self.request.principal
+        validation_token.type = 'email_change'
+        validation_token.save()
+
+        context = {
+            'url': '{0}://{1}{2}'.format(
+                self.request.scheme,
+                self.request.META['HTTP_HOST'],
+                reverse('talos-email-change-confirm-edit', args=[validation_token.secret])),
+            'principal': validation_token.principal,
+            'new_email': new_email}
+        #
+        # mail_subject = render_to_string('talos/email_change/request_email_subject.txt', context)
+        # mail_body_text = render_to_string('talos/email_change/request_email_body.txt', context)
+        # mail_body_html = render_to_string('talos/email_change/request_email_body.html', context)
+        #
+        # send_mail(
+        #     subject=mail_subject,
+        #     message=mail_body_text,
+        #     html_message=mail_body_html,
+        #     from_email=None,
+        #     recipient_list=[new_email],
+        #     fail_silently=True)
+
+
+class EmailChangeConfirmSerializer(serializers.Serializer):
+    new_email = serializers.CharField(
+        label='New E-mail',
+        max_length=255)
+
+    def __init__(self, *args, **kwargs):
+        from talos.models import BasicIdentityDirectory
+        passed_kwargs_from_view = kwargs['context']
+        print (passed_kwargs_from_view)
+        self.request = passed_kwargs_from_view['request']
+        self.token = passed_kwargs_from_view['token']
+
+        del kwargs['context']
+
+
+        super(EmailChangeConfirmSerializer, self).__init__(*args, **kwargs)
+
+    def validate(self, attrs):
+        print ("VALIDADE")
+        print (self.token)
+        if not self.token or (self.token.principal != self.request.principal):
+            raise serializers.ValidationError(
+                'Token is not valid.',
+                code='invalid_secret')
+
+        return self.token
+
+    def save(self):
+        self.token.principal.email = self.token.email
+        self.token.principal.save()
         self.token.is_active = False
         self.token.save()
