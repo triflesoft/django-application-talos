@@ -140,12 +140,11 @@ class PrincipalRegistrationTokenValidationAPIView(SecureAPIViewBaseView):
     def get(self, request, *args, **kwargs):
 
 
-        kwargs = super(PrincipalRegistrationTokenValidationAPIView, self).get_serializer_context()
-        data = request.data
-        print (data)
-        serializer = PrincipalRegistrationTokenValidationSerializer(data=data, context=kwargs)
+        serializer = PrincipalRegistrationTokenValidationSerializer(data=kwargs)
+        print (serializer)
         if serializer.is_valid(raise_exception=False):
-            return Response({"token": data['token']})
+            pass
+            return Response({"token": "test"})
         else:
             raise APIValidationError(
                                      detail=dict(serializer.errors.items()))

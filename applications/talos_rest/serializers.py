@@ -132,13 +132,12 @@ class PrincipalRegistrationTokenValidationSerializer(serializers.Serializer):
     """ Validate token from PrincipalRegistrationRequest
         if token is valid it means that email is validated successfully
     """
-    token = serializers.CharField(label='Token', max_length=255)
+    secret = serializers.CharField(label='Token', max_length=255)
 
     def __init__(self, *args, **kwargs):
-        self.request = kwargs['context'].get('request')
         super(PrincipalRegistrationTokenValidationSerializer, self).__init__(*args, **kwargs)
 
-    def validate_token(self, value):
+    def validate_secret(self, value):
         """ Validate token"""
         try:
             token = ValidationToken.objects.get(

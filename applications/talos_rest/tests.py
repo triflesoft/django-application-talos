@@ -23,15 +23,13 @@ class TalosRestTest(APITestCase):
         data = {'email': 'test@bixtrim.com'}
 
         response = self.client.post(url, data, format='json', HTTP_HOST='example.com')
-        response = self.client.post(url, data, format='json', HTTP_HOST='example.com')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(ValidationToken.objects.count(), 2)
 
-    def test_registration_token_validation(self):
-        url = reverse('talos-rest-principal-regisration-request')
-
-        data = {'email': 'test@bixtrim.com'}
-
-        response = self.client.post(url, data, format='json', HTTP_HOST='example.com')
+    def test_registration_token_validation_when_no_token(self):
+        failed_secret = '123'
+        url = '/api/token/{secret}'.format(secret = failed_secret)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
