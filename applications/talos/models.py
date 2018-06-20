@@ -992,10 +992,6 @@ class Principal(AbstractReplicatableModel):
             self._model_actions_effective_application.add(model_action.application)
             self._model_actions_effective_model_action[model_action.model].add(model_action.action)
 
-    def update_evidences(self, evidences):
-        for evidence in evidences:
-            self._evidences_effective[evidence.code] = evidence
-
     def _extract_authentication_context(self):
         from django.core import serializers
 
