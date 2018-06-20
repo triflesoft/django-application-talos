@@ -30,8 +30,10 @@ from .views import SessionAPIView, EmailChangeRequestAPIView, \
     GoogleAuthenticatorChangeDoneView, EmailChangeInsecureAPIView, EmailChangeSecureAPIView, \
     PhoneChangeValidationTokenCheckerAPIView, PhoneChangeRequestAPIView, PhoneChangeSecureAPIView, \
     PhoneChangeInsecureAPIView, PhoneResetRequestAPIView, PhoneResetValidationTokenCheckerAPIView, \
-    PhoneResetInsecureAPIView, PhoneResetSecureAPIView, PrincipalSecurityLevelByTokenView, EmailResetInsecureAPIView, \
-    EmailResetSecureAPIView, ProvidedEvidencesView, TestView, PasswordChangeInsecureView, PasswordChangeSecureView
+    PhoneResetInsecureAPIView, PhoneResetSecureAPIView, PrincipalSecurityLevelByTokenView, \
+    EmailResetInsecureAPIView, \
+    EmailResetSecureAPIView, ProvidedEvidencesView, TestView, PasswordChangeInsecureView, \
+    PasswordChangeSecureView, LdapLoginAPIView
 
 from rest_framework.documentation import include_docs_urls
 
@@ -43,7 +45,8 @@ urlpatterns = [
     path('docs/', include_docs_urls(title='My API title', public=False,
                                     description='Talos Rest API overview')),
 
-    path('session', SessionAPIView.as_view(), name='talos-rest-sessions'),
+    path('<slug:identity_directory_code>/session', SessionAPIView.as_view(), name='talos-rest-sessions'),
+    path('ldap/session', LdapLoginAPIView.as_view(), name = 'talos-rest-ldap-login'),
 
     # Email Change
     path('principal/email/change-request', EmailChangeRequestAPIView.as_view(),

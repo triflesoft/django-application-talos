@@ -29,8 +29,8 @@ from talos_rest.serializers import SessionSerializer, \
     PhoneChangeValidationTokenCheckerSerializer, PhoneChangeSecureSerializer, \
     PhoneChangeInsecureSerializer, PhoneResetRequestSerializer, \
     PhoneResetValidationTokenCheckerSerializer, PhoneResetInsecureSerializer, \
-    PhoneResetSecureSerializer, PasswordChangeInsecureSerializer, PasswordChangeSecureSerializer
-
+    PhoneResetSecureSerializer, PasswordChangeInsecureSerializer, PasswordChangeSecureSerializer, \
+    LdapLoginSerializer
 
 from talos_rest.permissions import IsAuthenticated, IsBasicAuthenticated, IsSecureLevelOn
 
@@ -99,11 +99,13 @@ class SecureTemplateViewBaseView(TranslationContextMixin, GenericAPIView):
 
 
 class SessionAPIView(SecureAPIViewBaseView):
-    identity_directory_code = 'basic_internal'
+    # identity_directory_code = 'basic_internal'
 
     serializer_class = SessionSerializer
 
     def get(self, request, *args, **kwargs):
+        self.identity_directory_code = kwargs['identity_directory_code']
+
         if str(self.request.user) == 'Anonymous':
 
             response = ErrorResponse(status=status.HTTP_404_NOT_FOUND)
@@ -115,6 +117,8 @@ class SessionAPIView(SecureAPIViewBaseView):
                         status=response.status)
 
     def post(self, request, *args, **kwargs):
+        self.identity_directory_code = kwargs['identity_directory_code']
+
         kwargs = super(SessionAPIView, self).get_serializer_context()
         data = request.data
         serializer = SessionSerializer(data=data, context=kwargs)
@@ -126,6 +130,8 @@ class SessionAPIView(SecureAPIViewBaseView):
             raise APIValidationError(detail=serializer.errors)
 
     def delete(self, reqest, *args, **kwargs):
+        self.identity_directory_code = kwargs['identity_directory_code']
+
         if str(self.request.user) == 'Anonymous':
             reseponse = ErrorResponse(status=status.HTTP_404_NOT_FOUND)
         else:
@@ -759,7 +765,24 @@ class PasswordChangeSecureView(SecureAPIViewBaseView):
         serializer = PasswordChangeSecureSerializer(data=request.data, context=kwargs)
         if serializer.is_valid(raise_exception=False):
             if serializer.save():
-                success_response = SuccessResponse()
-                return Response(success_response.data, success_response.status)
+                return Response({'text' : 'Your password has been changed'})
+
+        return Response({'text' : 'Your password has not been changed'})
+
+
+class LdapLoginAPIView(SecureAPIViewBaseView):
+    identity_directory_code = 'ldap'
+
+    serializer_class = LdapLoginSerializer
+
+    def post(self, request, *args, **kwargs):
+        kwargs = super(LdapLoginAPIView, self).get_serializer_context()
+        data = request.data
+        serializer = LdapLoginSerializer(data=data, context=kwargs)
+
+        if serializer.is_valid(raise_exception=False):
+            serializer.save()
+            return Response(serializer.data)
         else:
-            raise APIValidationError(serializer.errors)
+            raise APIValidationError(detail=serializer.errors)
+

@@ -136,7 +136,6 @@ class SessionSerializer(BasicSerializer):
 
     def __init__(self, *args, **kwargs):
         from talos.models import BasicIdentityDirectory
-
         passed_kwargs_from_view = kwargs.get('context')
         self.identity_directory = BasicIdentityDirectory.objects.get(
             code=passed_kwargs_from_view['identity_directory_code'])
@@ -1461,3 +1460,56 @@ class PasswordChangeSecureSerializer(GoogleOtpSerializerMixin, ValidatePasswordM
         return self.basic_credential_directory.update_credentials(self.principal,
                                                                   {'password': self.password},
                                                                   {'password': self.validated_data['new_password']})
+
+
+class LdapLoginSerializer(BasicSerializer):
+    email = serializers.CharField(label='Email', help_text='Please enter email')
+    password = serializers.CharField(label='Password', help_text='Please enter password')
+
+    def __init__(self, *args, **kwargs):
+        from talos.models import BasicIdentityDirectory
+
+        passed_kwargs_from_view = kwargs.get('context')
+        self.identity_directory = BasicIdentityDirectory.objects.get(
+            code=passed_kwargs_from_view['identity_directory_code'])
+        self.credential_directory = self.identity_directory.credential_directory
+        self.evidences = list(self.credential_directory.provided_evidences.all().order_by('id'))
+        self.request = passed_kwargs_from_view['request']
+
+        del passed_kwargs_from_view['identity_directory_code']
+        del passed_kwargs_from_view['request']
+
+        super(LdapLoginSerializer, self).__init__(*args, **kwargs)
+
+    def validate_email(self, value):
+
+        email = value
+
+        self.principal = self.identity_directory.get_principal({'email': email})
+
+        if not self.principal:
+            raise serializers.ValidationError(
+                'Username is not valid. Note that username may be case-sensitive.',
+                code=constants.USERNAME_INVALID_CODE)
+
+        if not self.principal.is_active:
+            raise serializers.ValidationError(
+                'Username is valid, but account is disabled.',
+                code=constants.ACCOUNT_INACTIVE_CODE)
+
+        return email
+
+    def validate_password(self, value):
+        password = value
+        if self.principal and (
+                not self.credential_directory.verify_credentials(self.principal,
+                                                                 {'password': password})):
+            raise serializers.ValidationError(
+                'Password is not valid. Note that password is case-sensitive.',
+                code=constants.PASSWORD_INVALID_CODE)
+
+        # return password
+
+    def save(self):
+        self.principal._load_authentication_context(self.evidences)
+        self.request.principal = self.principal
