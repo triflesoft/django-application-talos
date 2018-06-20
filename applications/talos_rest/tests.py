@@ -86,13 +86,38 @@ class TestUtils(APITestCase):
 
     def generate_sms_code(self,principal):
         from talos.models import  OneTimePasswordCredentialDirectory
-
         if self.principal is None:
             raise Exception('Please run create_user() login() before this function')
 
         sms_otp_directory = OneTimePasswordCredentialDirectory.objects.get(
             code=PHONE_SMS_CREDENTIAL_DIRECTORY_CODE)
         sms_otp_directory.create_credentials(principal, {})
+
+    def add_evidence_google(self):
+        from talos.models import OneTimePasswordCredentialDirectory
+        from talos.models import OneTimePasswordCredential
+        import pyotp
+
+        add_evidence_google_url = reverse('add-evidence-google')
+
+
+        otp_directory = OneTimePasswordCredentialDirectory.objects.get(code='onetimepassword_internal_google_authenticator')
+        otp_directory.create_credentials(self.principal, {})
+
+        otp_credential = OneTimePasswordCredential.objects.last()
+
+        self.assertIsNotNone(otp_credential)
+
+        secret = otp_credential.salt
+        totp = pyotp.TOTP(secret)
+        google_otp_code = totp.now()
+
+        data = {
+            'google_otp_code' : google_otp_code
+        }
+
+        response = self.client.post(add_evidence_google_url, data, format='json')
+
 
     def assertResponseStatus(self, response, status = status.HTTP_200_OK):
         self.assertEquals(response.status_code, status)
@@ -808,3 +833,81 @@ class TestAddSMSEvidence(TestUtils):
         response = self.client.get(provided_evidences_url, {}, format='json')
         self.assertListEqual(response.data.get('result').get('provided-evidences'),expected_provided_evidences)
 
+
+class TestAddGoogleEvidence(TestUtils):
+    url = reverse('add-evidence-google')
+
+    def test_add_evidence_google(self):
+        from talos.models import OneTimePasswordCredentialDirectory
+        from talos.models import OneTimePasswordCredential
+        from talos.models import Principal
+        import pyotp
+
+        self.create_user()
+        self.login()
+
+        principal = Principal.objects.last()
+        otp_diretory = OneTimePasswordCredentialDirectory.objects.get(
+            code='onetimepassword_internal_google_authenticator')
+
+        otp_diretory.create_credentials(principal, {})
+
+        self.assertEqual(OneTimePasswordCredential.objects.all().count(), 1)
+
+        otp_credential = OneTimePasswordCredential.objects.last()
+
+        secret = otp_credential.salt
+
+        totp = pyotp.TOTP(secret)
+        code = totp.now()
+
+        data = {
+            'google_otp_code': code
+        }
+
+        response = self.client.post(self.url, data, format='json')
+
+
+        self.assertResponseStatus(response, status.HTTP_200_OK)
+
+        # Try incorrect data
+
+        data = {
+            'google_otp_code' : 'aaaa'
+        }
+
+        response = self.client.post(self.url, data, format='json')
+
+        self.assertResponseStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertTrue(response.data.get('error').get('google_otp_code', False))
+        self.assertEqual(response.data.get('error').get('google_otp_code')[0], constants.GOOGLE_OTP_INVALID_CODE)
+
+
+    def test_add_evidence_google_check_provided_evidences(self):
+        self.create_user()
+        self.login()
+
+        provided_evidences_url = reverse('provided-evidences')
+
+        response = self.client.get(provided_evidences_url, {}, format='json')
+
+        expected_provided_evidences = ['authenticated',
+                                       'knowledge_factor',
+                                       'knowledge_factor_password',
+                                       'knowledge_factor_password_confirmation']
+
+        self.assertResponseStatus(response, status.HTTP_200_OK)
+        self.assertListEqual(response.data.get('result').get('provided-evidences'), expected_provided_evidences)
+
+        expected_provided_evidences = ['authenticated',
+                                       'knowledge_factor',
+                                       'knowledge_factor_password',
+                                       'knowledge_factor_password_confirmation',
+                                       'ownership_factor',
+                                       'ownership_factor_otp_token',
+                                       'ownership_factor_google_authenticator']
+        self.add_evidence_google()
+
+        response = self.client.get(provided_evidences_url, {}, format='json')
+        self.assertListEqual(response.data.get('result').get('provided-evidences'), expected_provided_evidences)
+        
