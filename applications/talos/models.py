@@ -1096,6 +1096,9 @@ class Principal(AbstractReplicatableModel):
 
         self._complete_authentication_context()
 
+    def load_authentication_context(self, provided_evidences):
+        return self._load_authentication_context(provided_evidences)
+
     # django.contrib.auth compatibility
     def check_password(self, raw_password):
         self._ensure_basic_credential_directory()

@@ -93,6 +93,7 @@ class ValidateSecretWhenLogedInMixin():
 class ValidateSecretWhenLoggedOutMixin():
     def __init__(self, *args, **kwargs):
         self.fields['secret'] = serializers.CharField(label='Token', max_length=255)
+        self.token = None
         super(ValidateSecretWhenLoggedOutMixin, self).__init__(*args, **kwargs)
 
     token_type = None
@@ -114,7 +115,6 @@ class ValidateSecretWhenLoggedOutMixin():
             raise serializers.ValidationError(
                 'Token is not valid.',
                 code=constants.TOKEN_INVALID_CODE)
-
         return self.token
 
 
@@ -144,16 +144,14 @@ class SessionSerializer(BasicSerializer):
         self.credential_directory = self.identity_directory.credential_directory
         self.evidences = list(self.credential_directory.provided_evidences.all().order_by('id'))
         self.request = passed_kwargs_from_view['request']
-
+        self.principal = None
         del passed_kwargs_from_view['identity_directory_code']
         del passed_kwargs_from_view['request']
 
         super(SessionSerializer, self).__init__(*args, **kwargs)
 
     def validate_email(self, value):
-
         email = value
-
         self.principal = self.identity_directory.get_principal({'username': email})
 
         if not self.principal:
@@ -180,7 +178,7 @@ class SessionSerializer(BasicSerializer):
         # return password
 
     def save(self):
-        self.principal._load_authentication_context(self.evidences)
+        self.principal.load_authentication_context(self.evidences)
         self.request.principal = self.principal
 
 
@@ -320,9 +318,6 @@ class GoogleAuthenticatorChangeRequestSerializer(BasicSerializer):
         self.principal = self.request.principal
         super(GoogleAuthenticatorChangeRequestSerializer, self).__init__(*args, **kwargs)
 
-    def validate(self, attrs):
-        return attrs
-
     def save(self):
         validation_token = ValidationToken()
         validation_token.principal = self.principal
@@ -351,6 +346,7 @@ class GoogleAuthenticatorChangeConfirmSerializer(BasicSerializer):
             code=GOOGLE_OTP_CREDENTIAL_DIRECTORY_CODE)
         self.sms_credential_directory = OneTimePasswordCredentialDirectory.objects.get(
             code=PHONE_SMS_CREDENTIAL_DIRECTORY_CODE)
+        self.salt = None
         super(GoogleAuthenticatorChangeConfirmSerializer, self).__init__(*args, **kwargs)
 
     def validate_token(self, token):
@@ -432,9 +428,6 @@ class GeneratePhoneCodeForAuthorizedUserSerializer(serializers.Serializer):
             code=PHONE_SMS_CREDENTIAL_DIRECTORY_CODE)
         super(GeneratePhoneCodeForAuthorizedUserSerializer, self).__init__(*args, **kwargs)
 
-    def validate(self, attrs):
-        return attrs
-
     def save(self):
         if self.sms_otp_directory:
             self.sms_otp_directory.create_credentials(self.principal, {})
@@ -458,9 +451,6 @@ class VerifyPhoneCodeForAuthorizedUserSerializer(serializers.Serializer):
                                                                                     {'code': code}):
             raise serializers.ValidationError('Code is incorrect', code=constants.SMS_OTP_INVALID_CODE)
         return code
-
-    def validate(self, attrs):
-        return attrs
 
     def save(self):
         for sms_otp_evidence in self.sms_otp_evidences:
@@ -573,7 +563,7 @@ class AddSMSEvidenceSerializer(SMSOtpSerializerMixin, BasicSerializer):
 
         provided_evidences = Evidence.objects.filter(code__in=evidence_codes)
 
-        self.principal._load_authentication_context(provided_evidences)
+        self.principal.load_authentication_context(provided_evidences)
 
 
 class AddGoogleEvidenceSerializer(GoogleOtpSerializerMixin, serializers.Serializer):
@@ -595,7 +585,7 @@ class AddGoogleEvidenceSerializer(GoogleOtpSerializerMixin, serializers.Serializ
 
         provided_evidences = Evidence.objects.filter(code__in=evidence_codes)
 
-        self.principal._load_authentication_context(provided_evidences)
+        self.principal.load_authentication_context(provided_evidences)
 
 
 class GeneratePhoneCodeForUnAuthorizedUserSerializer(BasicSerializer):
@@ -1569,5 +1559,5 @@ class LdapLoginSerializer(BasicSerializer):
         # return password
 
     def save(self):
-        self.principal._load_authentication_context(self.evidences)
+        self.principal.load_authentication_context(self.evidences)
         self.request.principal = self.principal
