@@ -1,5 +1,5 @@
-from rest_framework import serializers
 from re import compile
+from rest_framework import serializers
 from talos.models import Principal
 from talos.models import ValidationToken
 from talos.models import _tznow
@@ -431,10 +431,10 @@ class GoogleAuthenticatorChangeDoneSerializer(BasicSerializer):
     def save(self):
         if self.otp_credential_directory:
             temp_otp_token = self.request.session['temp_otp_token']
+            new_credentials = {'salt': temp_otp_token}
             self.otp_credential_directory.update_credentials(self.principal,
                                                              old_credentials=None,
-                                                             new_credentials={
-                                                             'salt': temp_otp_token})
+                                                             new_credentials=new_credentials)
 
 
 class GeneratePhoneCodeForAuthorizedUserSerializer(serializers.Serializer):
@@ -618,9 +618,6 @@ class AddGoogleEvidenceSerializer(GoogleOtpSerializerMixin, serializers.Serializ
 
 class GeneratePhoneCodeForUnAuthorizedUserSerializer(BasicSerializer):
     phone = serializers.CharField()
-
-    def __init__(self, *args, **kwargs):
-        super(GeneratePhoneCodeForUnAuthorizedUserSerializer, self).__init__(*args, **kwargs)
 
     def validate_phone(self, phone):
         from talos_rest.validators import validate_phone
@@ -1276,6 +1273,7 @@ class PhoneResetInsecureSerializer(SMSOtpSerializerMixin, ValidatePasswordMixin,
     token = serializers.CharField(label='Token')
 
     def __init__(self, *args, **kwargs):
+        self.principal = None
         super(PhoneResetInsecureSerializer, self).__init__(*args, **kwargs)
 
     def validate_token(self, token):
@@ -1312,6 +1310,7 @@ class PhoneResetSecureSerializer(GoogleOtpSerializerMixin, ValidatePasswordMixin
     token = serializers.CharField(label='Token')
 
     def __init__(self, *args, **kwargs):
+        self.principal = None
         super(PhoneResetSecureSerializer, self).__init__(*args, **kwargs)
 
     def validate_token(self, token):
@@ -1580,7 +1579,7 @@ class LdapLoginSerializer(BasicSerializer):
         self.credential_directory = self.identity_directory.credential_directory
         self.evidences = list(self.credential_directory.provided_evidences.all().order_by('id'))
         self.request = passed_kwargs_from_view['request']
-
+        self.principal = None
         del passed_kwargs_from_view['identity_directory_code']
         del passed_kwargs_from_view['request']
 
