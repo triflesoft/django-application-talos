@@ -3,8 +3,9 @@ from rest_framework.test import APITestCase
 from rest_framework import status
 from talos_rest import constants
 
-from talos.models import ValidationToken, OneTimePasswordCredential, Principal, BasicIdentity, \
-    PrincipalProfile, BasicIdentityDirectory, BasicIdentityDirectoryOption
+from talos.models import ValidationToken
+from talos.models import OneTimePasswordCredential
+from talos.models import Principal
 from talos_rest.serializers import PHONE_SMS_CREDENTIAL_DIRECTORY_CODE
 
 
@@ -25,6 +26,7 @@ class TestUtils(APITestCase):
 
     def __init__(self, *args, **kwargs):
         self.set_values()
+        self.principal = None
         super(TestUtils, self).__init__(*args, **kwargs)
 
     def set_values(self,
@@ -69,12 +71,11 @@ class TestUtils(APITestCase):
         }
         url = reverse('talos-rest-sessions')
 
-        response = self.client.post(url, data, format='json')
+        self.client.post(url, data, format='json')
 
     def add_evidence_sms(self):
         from talos.models import OneTimePasswordCredentialDirectory
         from talos.models import OneTimePasswordCredential
-        from talos.models import Principal
         import pyotp
 
         add_evidence_sms_url = reverse('add-evidence-sms')
@@ -95,7 +96,7 @@ class TestUtils(APITestCase):
             'sms_code' : totp.now()
         }
 
-        response = self.client.post(add_evidence_sms_url, data, format='json')
+        self.client.post(add_evidence_sms_url, data, format='json')
 
     def generate_sms_code(self,principal):
         from talos.models import  OneTimePasswordCredentialDirectory
@@ -132,7 +133,7 @@ class TestUtils(APITestCase):
             'google_otp_code' : google_otp_code
         }
 
-        response = self.client.post(add_evidence_google_url, data, format='json')
+        self.client.post(add_evidence_google_url, data, format='json')
 
 
     def assertResponseStatus(self, response, status = status.HTTP_200_OK):
