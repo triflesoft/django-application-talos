@@ -196,7 +196,6 @@ class GoogleAuthenticatorActivateRequestSerializer(ValidatePasswordMixin, BasicS
 
     def validate(self, attrs):
         from talos.models import OneTimePasswordCredential
-        from talos.models import OneTimePasswordCredentialDirectory
 
         try:
             self.otp_credential_directory.credentials.get(principal=self.principal,
@@ -845,8 +844,6 @@ class EmailChangeRequestSerializer(BasicSerializer):
                 code=constants.EMAIL_INVALID_CODE)
 
         try:
-            principal = Principal.objects.get(email=new_email)
-
             raise serializers.ValidationError(
                 'Principal with provided e-mail is already registered.',
                 code=constants.EMAIL_USED_CODE)
@@ -961,8 +958,6 @@ class EmailResetRequestSerializer(BasicSerializer):
                 code=constants.EMAIL_INVALID_CODE)
 
         try:
-            principal = Principal.objects.get(email=new_email)
-
             raise serializers.ValidationError(
                 'Principal with provided e-mail is already registered.',
                 code=constants.EMAIL_USED_CODE)
@@ -980,7 +975,7 @@ class EmailResetRequestSerializer(BasicSerializer):
                 code=constants.EMAIL_INVALID_CODE)
 
         try:
-            principal = Principal.objects.get(email=email)
+            Principal.objects.get(email=email)
         except Principal.DoesNotExist:
             raise serializers.ValidationError(
                 'Principal with provided email not exists',
@@ -1129,8 +1124,6 @@ class PhoneChangeRequestSerializer(BasicSerializer):
         from talos.models import Principal
 
         try:
-            principal = Principal.objects.get(phone=new_phone)
-
             raise serializers.ValidationError(
                 'Principal with provided phone is already registered.',
                 code=constants.PHONE_USED_CODE)
@@ -1219,8 +1212,7 @@ class PhoneResetRequestSerializer(BasicSerializer):
         from talos.models import Principal
 
         try:
-            principal = Principal.objects.get(phone=new_phone)
-
+            Principal.objects.get(phone=new_phone)
             raise serializers.ValidationError(
                 'Principal with provided phone is already registered.',
                 code=constants.PHONE_USED_CODE)
@@ -1238,7 +1230,7 @@ class PhoneResetRequestSerializer(BasicSerializer):
                 code=constants.EMAIL_INVALID_CODE)
 
         try:
-            principal = Principal.objects.get(email=email)
+            Principal.objects.get(email=email)
         except Principal.DoesNotExist:
             raise serializers.ValidationError(
                 'Principal with provided email not exists',
@@ -1366,9 +1358,6 @@ class PasswordResetRequestSerializer(BasicSerializer):
         return email
 
     def save(self):
-        from django.core.mail import send_mail
-        from django.template.loader import render_to_string
-        from django.urls import reverse
         from talos.models import ValidationToken
 
         validation_token = ValidationToken()
@@ -1457,7 +1446,6 @@ class PasswordResetSecureSerializer(GoogleOtpSerializerMixin, BasicSerializer):
     token_type = 'password_reset'
 
     def __init__(self, *args, **kwargs):
-        from talos.models import OneTimePasswordCredentialDirectory
         from talos.models import BasicIdentityDirectory
         passed_kwargs_from_view = kwargs.get('context')
 
@@ -1504,7 +1492,6 @@ class PasswordChangeInsecureSerializer(SMSOtpSerializerMixin, ValidatePasswordMi
     new_password = serializers.CharField()
 
     def __init__(self, *args, **kwargs):
-        from talos.models import BasicIdentityDirectory
         passed_kwargs_from_view = kwargs.get('context')
         self.request = passed_kwargs_from_view['request']
         self.principal = self.request.principal
@@ -1538,7 +1525,6 @@ class PasswordChangeSecureSerializer(GoogleOtpSerializerMixin, ValidatePasswordM
     new_password = serializers.CharField()
 
     def __init__(self, *args, **kwargs):
-        from talos.models import BasicIdentityDirectory
         passed_kwargs_from_view = kwargs.get('context')
         self.request = passed_kwargs_from_view['request']
         self.principal = self.request.principal
