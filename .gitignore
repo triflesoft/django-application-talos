@@ -9,3 +9,4 @@ applications/dist/
 obj/
 static/
 venv/
+.idea/

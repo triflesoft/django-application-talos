@@ -889,7 +889,7 @@ class EmailChangeInsecureSerializer(SMSOtpSerializerMixin, ValidatePasswordMixin
         self.principal = self.request.principal
         super(EmailChangeInsecureSerializer, self).__init__(*args, **kwargs)
 
-    def save(self, **kwargs):
+    def save(self):
         from talos.models import BasicIdentity
         self.token.principal.email = self.token.identifier_value
         self.token.principal.save()
@@ -919,7 +919,7 @@ class EmailChangeSecureSerializer(GoogleOtpSerializerMixin, ValidateSecretWhenLo
         self.principal = self.request.principal
         super(EmailChangeSecureSerializer, self).__init__(*args, **kwargs)
 
-    def save(self, **kwargs):
+    def save(self):
         from talos.models import BasicIdentity
         self.token.principal.email = self.token.identifier_value
         self.token.principal.save()
@@ -1044,7 +1044,7 @@ class EmailResetInsecureSerializer(SMSOtpSerializerMixin, ValidatePasswordMixin,
             self.principal = self.token.principal
         return self.token
 
-    def save(self, **kwargs):
+    def save(self):
         from talos.models import BasicIdentity
         self.token.principal.email = self.token.identifier_value
         self.token.principal.save()
@@ -1093,7 +1093,7 @@ class EmailResetSecureSerializer(SMSOtpSerializerMixin, GoogleOtpSerializerMixin
         else:
             self.principal = self.token.principal
 
-    def save(self, **kwargs):
+    def save(self):
         from talos.models import BasicIdentity
         self.token.principal.email = self.token.identifier_value
         self.token.principal.save()
@@ -1169,7 +1169,7 @@ class PhoneChangeSecureSerializer(GoogleOtpSerializerMixin, ValidateSecretWhenLo
         self.principal = self.request.principal
         super(PhoneChangeSecureSerializer, self).__init__(*args, **kwargs)
 
-    def save(self, **kwargs):
+    def save(self):
         self.token.principal.phone = self.token.identifier_value
         self.token.principal.save()
         self.token.is_active = False
@@ -1188,7 +1188,7 @@ class PhoneChangeInsecureSerializer(SMSOtpSerializerMixin, ValidateSecretWhenLog
         self.principal = self.request.principal
         super(PhoneChangeInsecureSerializer, self).__init__(*args, **kwargs)
 
-    def save(self, **kwargs):
+    def save(self):
         self.token.principal.phone = self.token.identifier_value
         self.token.principal.save()
         self.token.is_active = False
@@ -1290,7 +1290,7 @@ class PhoneResetInsecureSerializer(SMSOtpSerializerMixin, ValidatePasswordMixin,
         else:
             self.principal = self.token.principal
 
-    def save(self, **kwargs):
+    def save(self):
         self.token.principal.phone = self.token.identifier_value
         self.token.principal.save()
         self.token.is_active = False
@@ -1326,7 +1326,7 @@ class PhoneResetSecureSerializer(GoogleOtpSerializerMixin, ValidatePasswordMixin
         else:
             self.principal = self.token.principal
 
-    def save(self, **kwargs):
+    def save(self):
         self.token.principal.phone = self.token.identifier_value
         self.token.principal.save()
         self.token.is_active = False
