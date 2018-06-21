@@ -1,6 +1,8 @@
 from rest_framework import serializers
 from re import compile
-from talos.models import Principal, ValidationToken, _tznow
+from talos.models import Principal
+from talos.models import ValidationToken
+from talos.models import _tznow
 from rest_framework import status
 from talos_rest import constants
 
@@ -261,8 +263,6 @@ class GoogleAuthenticatorDeleteRequestSerializer(serializers.Serializer):
         super(GoogleAuthenticatorDeleteRequestSerializer, self).__init__(*args, **kwargs)
 
     def save(self):
-        from talos.models import ValidationToken
-
         validation_token = ValidationToken()
         validation_token.identifier = 'email'
         validation_token.identifier_value = self.principal.email
@@ -292,7 +292,6 @@ class GoogleAuthenticatorDeleteSerializer(GoogleOtpSerializerMixin, SMSOtpSerial
         super(GoogleAuthenticatorDeleteSerializer, self).__init__(*args, **kwargs)
 
     def validate_token(self, token):
-        from talos.models import ValidationToken
         try:
             self.validation_token = ValidationToken.objects.get(identifier='email',
                                                                 identifier_value=self.principal.email,
@@ -616,7 +615,6 @@ class GeneratePhoneCodeForUnAuthorizedUserSerializer(BasicSerializer):
         return phone
 
     def save(self):
-        from talos.models import ValidationToken
         from talos.contrib.sms_sender import SMSSender
         import pyotp
 
@@ -646,7 +644,6 @@ class VerifyPhoneCodeForUnAuthorizedUserSerializer(BasicSerializer):
         super(VerifyPhoneCodeForUnAuthorizedUserSerializer, self).__init__(*args, **kwargs)
 
     def validate_phone(self, phone):
-        from talos.models import ValidationToken
         try:
             ValidationToken.objects.get(identifier='phone',
                                         identifier_value=phone,
@@ -659,7 +656,6 @@ class VerifyPhoneCodeForUnAuthorizedUserSerializer(BasicSerializer):
         return phone
 
     def validate_code(self, code):
-        from talos.models import ValidationToken
         import pyotp
         try:
             validation_token = ValidationToken.objects.filter(identifier='phone',
@@ -680,7 +676,6 @@ class VerifyPhoneCodeForUnAuthorizedUserSerializer(BasicSerializer):
         return code
 
     def validate(self, attrs):
-        from talos.models import ValidationToken
         import pyotp
 
         phone = attrs['phone']
@@ -766,7 +761,6 @@ class BasicRegistrationSerializer(BasicSerializer):
         return phone
 
     def validate_token(self, token):
-        from talos.models import ValidationToken
         try:
             ValidationToken.objects.get(uuid=token,
                                         is_active=True,
@@ -784,7 +778,6 @@ class BasicRegistrationSerializer(BasicSerializer):
         return password
 
     def validate(self, attrs):
-        from talos.models import ValidationToken
 
         token = attrs['token']
         phone = attrs['phone']
@@ -831,8 +824,6 @@ class EmailChangeRequestSerializer(BasicSerializer):
         super(EmailChangeRequestSerializer, self).__init__(*args, **kwargs)
 
     def validate_new_email(self, value):
-        from talos.models import Principal
-
         new_email = value
 
         if not email_regex.match(new_email):
@@ -945,8 +936,6 @@ class EmailResetRequestSerializer(BasicSerializer):
         super(EmailResetRequestSerializer, self).__init__(*args, **kwargs)
 
     def validate_new_email(self, value):
-        from talos.models import Principal
-
         new_email = value
 
         if not email_regex.match(new_email):
@@ -964,8 +953,6 @@ class EmailResetRequestSerializer(BasicSerializer):
         return new_email
 
     def validate_old_email(self, email):
-        from talos.models import Principal
-
         if not email_regex.match(email):
             raise serializers.ValidationError(
                 'E-mail address is ill-formed.',
@@ -981,8 +968,6 @@ class EmailResetRequestSerializer(BasicSerializer):
         return email
 
     def save(self):
-        from talos.models import Principal
-
         new_email = self.validated_data['new_email']
         old_email = self.validated_data['old_email']
 
@@ -1118,8 +1103,6 @@ class PhoneChangeRequestSerializer(BasicSerializer):
         super(PhoneChangeRequestSerializer, self).__init__(*args, **kwargs)
 
     def validate_new_phone(self, new_phone):
-        from talos.models import Principal
-
         try:
             raise serializers.ValidationError(
                 'Principal with provided phone is already registered.',
@@ -1206,8 +1189,6 @@ class PhoneResetRequestSerializer(BasicSerializer):
         super(PhoneResetRequestSerializer, self).__init__(*args, **kwargs)
 
     def validate_new_phone(self, new_phone):
-        from talos.models import Principal
-
         try:
             Principal.objects.get(phone=new_phone)
             raise serializers.ValidationError(
@@ -1219,8 +1200,6 @@ class PhoneResetRequestSerializer(BasicSerializer):
         return new_phone
 
     def validate_email(self, email):
-        from talos.models import Principal
-
         if not email_regex.match(email):
             raise serializers.ValidationError(
                 'E-mail address is ill-formed.',
@@ -1236,7 +1215,6 @@ class PhoneResetRequestSerializer(BasicSerializer):
         return email
 
     def save(self):
-        from talos.models import Principal
         new_phone = self.validated_data['new_phone']
         email = self.validated_data['email']
 
@@ -1355,8 +1333,6 @@ class PasswordResetRequestSerializer(BasicSerializer):
         return email
 
     def save(self):
-        from talos.models import ValidationToken
-
         validation_token = ValidationToken()
         validation_token.identifier = 'email'
         validation_token.identifier_value = self.validated_data['email']
