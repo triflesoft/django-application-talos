@@ -103,7 +103,7 @@ class SessionAPIView(SecureAPIViewBaseView):
 
     serializer_class = SessionSerializer
 
-    def get(self, request, *args, **kwargs):
+    def get(self, request):
 
         if str(self.request.user) == 'Anonymous':
 
@@ -115,7 +115,7 @@ class SessionAPIView(SecureAPIViewBaseView):
         return Response(data=response.data,
                         status=response.status)
 
-    def post(self, request, *args, **kwargs):
+    def post(self, request):
 
         kwargs = super(SessionAPIView, self).get_serializer_context()
         data = request.data
@@ -127,7 +127,7 @@ class SessionAPIView(SecureAPIViewBaseView):
         else:
             raise APIValidationError(detail=serializer.errors)
 
-    def delete(self, reqest, *args, **kwargs):
+    def delete(self):
 
         if str(self.request.user) == 'Anonymous':
             reseponse = ErrorResponse(status=status.HTTP_404_NOT_FOUND)
@@ -143,7 +143,7 @@ class LdapSessionAPIView(SecureAPIViewBaseView):
 
     serializer_class = LdapLoginSerializer
 
-    def get(self, request, *args, **kwargs):
+    def get(self, request):
 
         if str(self.request.user) == 'Anonymous':
 
@@ -155,7 +155,7 @@ class LdapSessionAPIView(SecureAPIViewBaseView):
         return Response(data=response.data,
                         status=response.status)
 
-    def post(self, request, *args, **kwargs):
+    def post(self, request):
 
         kwargs = super(LdapSessionAPIView, self).get_serializer_context()
         data = request.data
@@ -167,7 +167,7 @@ class LdapSessionAPIView(SecureAPIViewBaseView):
         else:
             raise APIValidationError(detail=serializer.errors)
 
-    def delete(self, reqest, *args, **kwargs):
+    def delete(self):
 
         if str(self.request.user) == 'Anonymous':
             reseponse = ErrorResponse(status=status.HTTP_404_NOT_FOUND)
@@ -185,7 +185,7 @@ class GoogleAuthenticationActivateRequestView(SecureAPIViewBaseView):
     identity_directory_code = 'basic_internal'
 
 
-    def post(self, request, *args, **kwargs):
+    def post(self, request):
         kwargs = super(GoogleAuthenticationActivateRequestView, self).get_serializer_context()
         serializer = GoogleAuthenticatorActivateRequestSerializer(data=request.data, context=kwargs)
         if serializer.is_valid(raise_exception=False):
@@ -201,7 +201,7 @@ class GoogleAuthenticatorActivateConfirmView(SecureAPIViewBaseView):
     permission_classes = (IsAuthenticated,)
     serializer_class = GoogleAuthenticatorActivateConfirmSerializer
 
-    def post(self, request, *args, **kwargs):
+    def post(self, request):
         kwargs = super(GoogleAuthenticatorActivateConfirmView, self).get_serializer_context()
         serializer = GoogleAuthenticatorActivateConfirmSerializer(data=request.data, context=kwargs)
         if serializer.is_valid(raise_exception=False):
@@ -218,7 +218,7 @@ class GoogleAuthenticatorDeleteRequestView(SecureAPIViewBaseView):
     permission_classes = (IsAuthenticated, IsSecureLevelOn, )
     serializer_class = GoogleAuthenticatorDeleteRequestSerializer
 
-    def post(self, request, *args, **kwargs):
+    def post(self, request):
         kwargs = super(GoogleAuthenticatorDeleteRequestView, self).get_serializer_context()
         serializer = GoogleAuthenticatorDeleteRequestSerializer(data=request.data, context=kwargs)
         if serializer.is_valid(raise_exception=False):
@@ -234,7 +234,7 @@ class GoogleAuthenticatorDeleteView(SecureAPIViewBaseView):
     serializer_class = GoogleAuthenticatorDeleteSerializer
     identity_directory_code = 'basic_internal'
 
-    def post(self, request, *args, **kwargs):
+    def post(self, request):
         kwargs = super(GoogleAuthenticatorDeleteView, self).get_serializer_context()
         serializer = GoogleAuthenticatorDeleteSerializer(data=request.data, context=kwargs)
         if serializer.is_valid(raise_exception=False):
@@ -248,7 +248,7 @@ class GoogleAuthenticatorChangeRequestView(SecureAPIViewBaseView):
     permission_classes = (IsAuthenticated,)
     serializer_class = GoogleAuthenticatorChangeRequestSerializer
 
-    def post(self, request, *args, **kwargs):
+    def post(self, request):
         kwargs = super(GoogleAuthenticatorChangeRequestView, self).get_serializer_context()
         serializer = GoogleAuthenticatorChangeRequestSerializer(data=request.data, context=kwargs)
         if serializer.is_valid(raise_exception=False):
@@ -263,7 +263,7 @@ class GoogleAuthenticatorChangeConfirmView(SecureAPIViewBaseView):
     serializer_class = GoogleAuthenticatorChangeConfirmSerializer
     identity_directory_code = 'basic_internal'
 
-    def post(self, request, *args, **kwargs):
+    def post(self, request):
         kwargs = super(GoogleAuthenticatorChangeConfirmView, self).get_serializer_context()
         serializer = GoogleAuthenticatorChangeConfirmSerializer(data=request.data, context=kwargs)
         if serializer.is_valid(raise_exception=False):
@@ -279,7 +279,7 @@ class GoogleAuthenticatorChangeDoneView(SecureAPIViewBaseView):
     permission_classes = (IsAuthenticated,)
     serializer_class = GoogleAuthenticatorChangeDoneSerializer
 
-    def post(self, request, *args, **kwargs):
+    def post(self, request):
         kwargs = super(GoogleAuthenticatorChangeDoneView, self).get_serializer_context()
         serializer = GoogleAuthenticatorChangeDoneSerializer(data=request.data, context=kwargs)
         if serializer.is_valid(raise_exception=False):
@@ -292,7 +292,7 @@ class GoogleAuthenticatorChangeDoneView(SecureAPIViewBaseView):
 class PrincipalSecurityLevelView(SecureAPIViewBaseView):
     permission_classes = (IsAuthenticated,)
 
-    def get(self, request, *args, **kwargs):
+    def get(self, request):
         success_response = SuccessResponse()
 
         if request.principal.profile.is_secure:
@@ -304,7 +304,7 @@ class PrincipalSecurityLevelView(SecureAPIViewBaseView):
 
 class PrincipalSecurityLevelByTokenView(SecureAPIViewBaseView):
 
-    def get(self, request, *args, **kwargs):
+    def get(self, **kwargs):
         from talos.models import ValidationToken
         from talos.models import PrincipalProfile
         success_response = SuccessResponse()
@@ -325,7 +325,7 @@ class GeneratePhoneCodeForAuthorizedUserView(SecureAPIViewBaseView):
     permission_classes = (IsAuthenticated,)
     serializer_class = GeneratePhoneCodeForAuthorizedUserSerializer
 
-    def post(self, request, *args, **kwargs):
+    def post(self, request):
         kwargs = super(GeneratePhoneCodeForAuthorizedUserView, self).get_serializer_context()
         serializer = GeneratePhoneCodeForAuthorizedUserSerializer(data=request.data, context=kwargs)
         if serializer.is_valid():
@@ -338,7 +338,7 @@ class VerifyPhoneCodeForAuthorizedUserView(SecureAPIViewBaseView):
     permission_classes = (IsAuthenticated,)
     serializer_class = VerifyPhoneCodeForAuthorizedUserSerializer
 
-    def post(self, request, *args, **kwargs):
+    def post(self, request):
         kwargs = super(VerifyPhoneCodeForAuthorizedUserView, self).get_serializer_context()
         serializer = VerifyPhoneCodeForAuthorizedUserSerializer(data=request.data, context=kwargs)
         if serializer.is_valid(raise_exception=True):
@@ -358,7 +358,7 @@ class ChangePasswordInsecureView(SecureAPIViewBaseView):
 
     identity_directory_code = 'basic_internal'
 
-    def post(self, request, *args, **kwargs):
+    def post(self, request):
         kwargs = super(ChangePasswordInsecureView, self).get_serializer_context()
         serializer = ChangePasswordInsecureSerializer(data=request.data, context=kwargs)
         if serializer.is_valid(raise_exception=True):
@@ -374,7 +374,7 @@ class ChangePasswordSecureView(SecureAPIViewBaseView):
 
     identity_directory_code = 'basic_internal'
 
-    def post(self, request, *args, **kwargs):
+    def post(self, request):
         kwargs = super(ChangePasswordSecureView, self).get_serializer_context()
         serializer = ChangePasswordSecureSerializer(data=request.data, context=kwargs)
         if serializer.is_valid(raise_exception=False):
@@ -388,7 +388,7 @@ class AddSMSEvidenceView(SecureAPIViewBaseView):
     permission_classes = (IsBasicAuthenticated,)
     serializer_class = AddSMSEvidenceSerializer
 
-    def post(self, request, *args, **kwargs):
+    def post(self, request):
         kwargs = super(AddSMSEvidenceView, self).get_serializer_context()
         serializer = AddSMSEvidenceSerializer(data=request.data, context=kwargs)
 
@@ -404,7 +404,7 @@ class AddGoogleEvidenceView(SecureAPIViewBaseView):
     permission_classes = (IsBasicAuthenticated,)
     serializer_class = AddGoogleEvidenceSerializer
 
-    def post(self, request, *args, **kwargs):
+    def post(self, request):
         kwargs = super(AddGoogleEvidenceView, self).get_serializer_context()
         serializer = AddGoogleEvidenceSerializer(data=request.data,
                                                  context=kwargs)
@@ -445,7 +445,7 @@ class GeneratePhoneCodeForUnAuthorizedUserView(SecureAPIViewBaseView):
 class VerifyPhoneCodeForUnAuthorizedUserView(SecureAPIViewBaseView):
     serializer_class = VerifyPhoneCodeForUnAuthorizedUserSerializer
 
-    def post(self, request, *args, **kwargs):
+    def post(self, request):
         kwargs = super(VerifyPhoneCodeForUnAuthorizedUserView, self).get_serializer_context()
         serializer = VerifyPhoneCodeForUnAuthorizedUserSerializer(data=request.data, context=kwargs)
 
@@ -462,7 +462,7 @@ class BasicRegistrationView(SecureAPIViewBaseView):
     identity_directory_code = 'basic_internal'
 
 
-    def post(self, request, *args, **kwargs):
+    def post(self, request):
         kwargs = super(BasicRegistrationView, self).get_serializer_context()
         serializer = BasicRegistrationSerializer(data=request.data, context=kwargs)
 
@@ -478,7 +478,7 @@ class EmailChangeRequestAPIView(SecureAPIViewBaseView):
     serializer_class = EmailChangeRequestSerializer
     permission_classes = (IsAuthenticated,)
 
-    def post(self, request, *args, **kwargs):
+    def post(self, request):
         kwargs = super(EmailChangeRequestAPIView, self).get_serializer_context()
         data = request.data
         serializer = EmailChangeRequestSerializer(data=data, context=kwargs)
@@ -496,7 +496,7 @@ class EmailChangeValidationTokenCheckerAPIView(SecureAPIViewBaseView):
     identity_directory_code = 'basic_internal'
     serializer_class = EmailChangeValidationTokenCheckerSerializer
 
-    def get(self, request, *args, **kwargs):
+    def get(self, request, **kwargs):
 
         serializer = EmailChangeValidationTokenCheckerSerializer(data=kwargs, context=request)
 
@@ -512,7 +512,7 @@ class EmailChangeInsecureAPIView(SecureAPIViewBaseView):
 
     identity_directory_code = 'basic_internal'
 
-    def put(self, request, *args, **kwargs):
+    def put(self, request):
         kwargs = super(EmailChangeInsecureAPIView, self).get_serializer_context()
         serializer = EmailChangeInsecureSerializer(data=request.data, context=kwargs)
         if serializer.is_valid(raise_exception=False):
@@ -528,7 +528,7 @@ class EmailChangeSecureAPIView(SecureAPIViewBaseView):
 
     identity_directory_code = 'basic_internal'
 
-    def put(self, request, *args, **kwargs):
+    def put(self, request):
         kwargs = super(EmailChangeSecureAPIView, self).get_serializer_context()
         serializer = EmailChangeSecureSerializer(data=request.data, context=kwargs)
         if serializer.is_valid(raise_exception=False):
@@ -541,7 +541,7 @@ class EmailChangeSecureAPIView(SecureAPIViewBaseView):
 class PasswordResetRequestView(SecureAPIViewBaseView):
     serializer_class = PasswordResetRequestSerializer
 
-    def post(self, request, *args, **kwargs):
+    def post(self, request):
         kwargs = super(PasswordResetRequestView, self).get_serializer_context()
         serializer = PasswordResetRequestSerializer(data=request.data, context=kwargs)
         if serializer.is_valid(raise_exception=False):
@@ -556,7 +556,7 @@ class PasswordResetInsecureView(SecureAPIViewBaseView):
     identity_directory_code = 'basic_internal'
     serializer_class = PasswordResetInsecureSerializer
 
-    def put(self, request, *args, **kwargs):
+    def put(self, request):
         kwargs = super(PasswordResetInsecureView, self).get_serializer_context()
         serializer = PasswordResetInsecureSerializer(data=request.data, context=kwargs)
         if serializer.is_valid(raise_exception=False):
@@ -571,7 +571,7 @@ class PasswordResetSecureView(SecureAPIViewBaseView):
     identity_directory_code = 'basic_internal'
     serializer_class = PasswordResetSecureSerializer
 
-    def put(self, request, *args, **kwargs):
+    def put(self, request):
         kwargs = super(PasswordResetSecureView, self).get_serializer_context()
         serializer = PasswordResetSecureSerializer(data=request.data, context=kwargs)
         if serializer.is_valid(raise_exception=False):
@@ -584,7 +584,7 @@ class PasswordResetSecureView(SecureAPIViewBaseView):
 class EmailResetRequestAPIView(SecureAPIViewBaseView):
     serializer_class = EmailResetRequestSerializer
 
-    def post(self, request, *args, **kwargs):
+    def post(self, request):
         kwargs = super(EmailResetRequestAPIView, self).get_serializer_context()
         data = request.data
         serializer = EmailResetRequestSerializer(data=data, context=kwargs)
@@ -600,7 +600,7 @@ class EmailResetValidationTokenCheckerAPIView(SecureAPIViewBaseView):
     identity_directory_code = 'basic_internal'
     serializer_class = EmailResetValidationTokenCheckerSerializer
 
-    def get(self, request, *args, **kwargs):
+    def get(self, **kwargs):
 
         serializer = EmailResetValidationTokenCheckerSerializer(data=kwargs)
 
@@ -616,7 +616,7 @@ class EmailResetInsecureAPIView(SecureAPIViewBaseView):
 
     identity_directory_code = 'basic_internal'
 
-    def put(self, request, *args, **kwargs):
+    def put(self, request):
         kwargs = super(EmailResetInsecureAPIView, self).get_serializer_context()
         serializer = EmailResetInsecureSerializer(data=request.data, context=kwargs)
         if serializer.is_valid(raise_exception=False):
@@ -631,7 +631,7 @@ class EmailResetSecureAPIView(SecureAPIViewBaseView):
 
     identity_directory_code = 'basic_internal'
 
-    def put(self, request, *args, **kwargs):
+    def put(self, request):
         kwargs = super(EmailResetSecureAPIView, self).get_serializer_context()
         serializer = EmailResetSecureSerializer(data=request.data, context=kwargs)
         if serializer.is_valid(raise_exception=False):
@@ -644,7 +644,7 @@ class EmailResetSecureAPIView(SecureAPIViewBaseView):
 class PhoneChangeRequestAPIView(SecureAPIViewBaseView):
     serializer_class = PhoneChangeRequestSerializer
 
-    def post(self, request, *args, **kwargs):
+    def post(self, request):
         kwargs = super(PhoneChangeRequestAPIView, self).get_serializer_context()
         data = request.data
         serializer = PhoneChangeRequestSerializer(data=data, context=kwargs)
@@ -661,7 +661,7 @@ class PhoneChangeValidationTokenCheckerAPIView(SecureAPIViewBaseView):
     identity_directory_code = 'basic_internal'
     serializer_class = PhoneChangeValidationTokenCheckerSerializer
 
-    def get(self, request, *args, **kwargs):
+    def get(self, request, **kwargs):
 
         serializer = PhoneChangeValidationTokenCheckerSerializer(data=kwargs, context=request)
 
@@ -677,7 +677,7 @@ class PhoneChangeSecureAPIView(SecureAPIViewBaseView):
 
     identity_directory_code = 'basic_internal'
 
-    def put(self, request, *args, **kwargs):
+    def put(self, request):
         kwargs = super(PhoneChangeSecureAPIView, self).get_serializer_context()
         serializer = PhoneChangeSecureSerializer(data=request.data, context=kwargs)
         if serializer.is_valid(raise_exception=False):
@@ -692,7 +692,7 @@ class PhoneChangeInsecureAPIView(SecureAPIViewBaseView):
 
     identity_directory_code = 'basic_internal'
 
-    def put(self, request, *args, **kwargs):
+    def put(self, request):
         kwargs = super(PhoneChangeInsecureAPIView, self).get_serializer_context()
         serializer = PhoneChangeInsecureSerializer(data=request.data, context=kwargs)
         if serializer.is_valid(raise_exception=False):
@@ -704,7 +704,7 @@ class PhoneChangeInsecureAPIView(SecureAPIViewBaseView):
 class PhoneResetRequestAPIView(SecureAPIViewBaseView):
     serializer_class = PhoneResetRequestSerializer
 
-    def post(self, request, *args, **kwargs):
+    def post(self, request):
         kwargs = super(PhoneResetRequestAPIView, self).get_serializer_context()
         data = request.data
         serializer = PhoneResetRequestSerializer(data=data, context=kwargs)
@@ -720,7 +720,7 @@ class PhoneResetValidationTokenCheckerAPIView(SecureAPIViewBaseView):
     identity_directory_code = 'basic_internal'
     serializer_class = PhoneResetValidationTokenCheckerSerializer
 
-    def get(self, request, *args, **kwargs):
+    def get(self, **kwargs):
 
         serializer = PhoneResetValidationTokenCheckerSerializer(data=kwargs)
 
@@ -734,7 +734,7 @@ class PhoneResetInsecureAPIView(SecureAPIViewBaseView):
 
     identity_directory_code = 'basic_internal'
 
-    def put(self, request, *args, **kwargs):
+    def put(self, request):
         kwargs = super(PhoneResetInsecureAPIView, self).get_serializer_context()
         serializer = PhoneResetInsecureSerializer(data=request.data, context=kwargs)
         if serializer.is_valid(raise_exception=False):
@@ -749,7 +749,7 @@ class PhoneResetSecureAPIView(SecureAPIViewBaseView):
 
     identity_directory_code = 'basic_internal'
 
-    def put(self, request, *args, **kwargs):
+    def put(self, request):
         kwargs = super(PhoneResetSecureAPIView, self).get_serializer_context()
         serializer = PhoneResetSecureSerializer(data=request.data, context=kwargs)
         if serializer.is_valid(raise_exception=False):
@@ -761,7 +761,7 @@ class PhoneResetSecureAPIView(SecureAPIViewBaseView):
 
 class ProvidedEvidencesView(SecureAPIViewBaseView):
 
-    def get(self, request, *args, **kwargs):
+    def get(self):
         evidences = list(dict(self.request.principal._evidences_effective).keys())
         success_response = SuccessResponse()
         success_response.set_result_pairs('provided-evidences', evidences)
@@ -772,7 +772,7 @@ class TestView(SecureAPIViewBaseView):
 
     permission_classes = (permissions.IsAuthenticated, )
 
-    def get(self, request, *args, **kwargs):
+    def get(self):
         return Response({"text" : "Test"})
 
 
@@ -781,7 +781,7 @@ class PasswordChangeInsecureView(SecureAPIViewBaseView):
     serializer_class = PasswordChangeInsecureSerializer
     identity_directory_code = 'basic_internal'
 
-    def put(self, request, *args, **kwargs):
+    def put(self, request):
         kwargs = super(PasswordChangeInsecureView, self).get_serializer_context()
         serializer = PasswordChangeInsecureSerializer(data=request.data, context=kwargs)
         if serializer.is_valid(raise_exception=False):
@@ -799,7 +799,7 @@ class PasswordChangeSecureView(SecureAPIViewBaseView):
     serializer_class = PasswordChangeSecureSerializer
     identity_directory_code = 'basic_internal'
 
-    def put(self, request, *args, **kwargs):
+    def put(self, request):
         kwargs = super(PasswordChangeSecureView, self).get_serializer_context()
         serializer = PasswordChangeSecureSerializer(data=request.data, context=kwargs)
         if serializer.is_valid(raise_exception=False):
