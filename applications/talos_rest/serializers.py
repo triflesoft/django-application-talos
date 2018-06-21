@@ -242,15 +242,13 @@ class GoogleAuthenticatorActivateConfirmSerializer(serializers.Serializer):
     def save(self):
         if self.otp_credential_directory:
             self.otp_credential_directory.create_credentials(self.principal,
-                                                                    {'salt': self.request.session[
-                                                                        'temp_otp_secret_key']})
+                                                             {'salt': self.request.session[
+                                                                 'temp_otp_secret_key']})
             self.salt = self.request.session['temp_otp_secret_key']
             self.principal.profile.is_secure = True
             self.principal.profile.save()
             del self.request.session['temp_otp_secret_key']
             del self.request.session['secret_key_activated']
-
-
 
 
 class GoogleAuthenticatorDeleteRequestSerializer(serializers.Serializer):
@@ -273,7 +271,8 @@ class GoogleAuthenticatorDeleteRequestSerializer(serializers.Serializer):
         validation_token.save()
 
 
-class GoogleAuthenticatorDeleteSerializer(GoogleOtpSerializerMixin, SMSOtpSerializerMixin,ValidatePasswordMixin, BasicSerializer):
+class GoogleAuthenticatorDeleteSerializer(GoogleOtpSerializerMixin, SMSOtpSerializerMixin, ValidatePasswordMixin,
+                                          BasicSerializer):
     token = serializers.CharField()
 
     def __init__(self, *args, **kwargs):
@@ -577,6 +576,7 @@ class AddSMSEvidenceSerializer(SMSOtpSerializerMixin, BasicSerializer):
 
         self.principal._load_authentication_context(provided_evidences)
 
+
 class AddGoogleEvidenceSerializer(GoogleOtpSerializerMixin, serializers.Serializer):
 
     def __init__(self, *args, **kwargs):
@@ -636,9 +636,6 @@ class GeneratePhoneCodeForUnAuthorizedUserSerializer(BasicSerializer):
                                               code=constants.PHONE_INVALID_CODE)
 
 
-
-
-
 class VerifyPhoneCodeForUnAuthorizedUserSerializer(BasicSerializer):
     phone = serializers.CharField()
     code = serializers.CharField()
@@ -666,9 +663,9 @@ class VerifyPhoneCodeForUnAuthorizedUserSerializer(BasicSerializer):
         import pyotp
         try:
             validation_token = ValidationToken.objects.filter(identifier='phone',
-                                                            identifier_value=self.phone,
-                                                            type='principal_registration',
-                                                            is_active=True).order_by('-id')
+                                                              identifier_value=self.phone,
+                                                              type='principal_registration',
+                                                              is_active=True).order_by('-id')
             if validation_token.count() > 0:
                 validation_token = validation_token[0]
             else:
@@ -691,9 +688,9 @@ class VerifyPhoneCodeForUnAuthorizedUserSerializer(BasicSerializer):
 
         try:
             phone_validation_token = ValidationToken.objects.filter(identifier='phone',
-                                                                  identifier_value=phone,
-                                                                  type='principal_registration',
-                                                                  is_active=True).order_by('-id')
+                                                                    identifier_value=phone,
+                                                                    type='principal_registration',
+                                                                    is_active=True).order_by('-id')
 
             if phone_validation_token.count() > 0:
                 phone_validation_token = phone_validation_token[0]
@@ -794,9 +791,9 @@ class BasicRegistrationSerializer(BasicSerializer):
 
         try:
             self.token = ValidationToken.objects.get(identifier='phone',
-                                           identifier_value=phone,
-                                           uuid=token,
-                                           is_active=True)
+                                                     identifier_value=phone,
+                                                     uuid=token,
+                                                     is_active=True)
         except ValidationToken.DoesNotExist:
             raise serializers.ValidationError('Token and phone is invalid',
                                               code=constants.TOKEN_INVALID_CODE)
@@ -1367,7 +1364,6 @@ class PasswordResetRequestSerializer(BasicSerializer):
         validation_token.type = self.token_type
         validation_token.save()
 
-
         # context = {
         #     'url': '{0}://{1}{2}'.format(
         #         self.request.scheme,
@@ -1468,14 +1464,12 @@ class PasswordResetSecureSerializer(GoogleOtpSerializerMixin, BasicSerializer):
             raise serializers.ValidationError("Token doesn't exits", code=constants.TOKEN_INVALID_CODE)
         return token
 
-
     def validate_password(self, password):
         from talos_rest.validators import validate_password
 
         validate_password(password)
 
         return password
-
 
     def save(self):
         password = self.validated_data['password']
@@ -1510,7 +1504,7 @@ class PasswordChangeInsecureSerializer(SMSOtpSerializerMixin, ValidatePasswordMi
         from django.db.models import Q
         from django.utils import timezone
 
-        #Delete every other active session user has
+        # Delete every other active session user has
         Session.objects.filter(Q(principal=self.request.principal),
                                ~Q(uuid=self.request.session._session.uuid),
                                Q(valid_till__gt=timezone.now())).update(evidences=None)
@@ -1518,7 +1512,6 @@ class PasswordChangeInsecureSerializer(SMSOtpSerializerMixin, ValidatePasswordMi
         return self.basic_credential_directory.update_credentials(self.principal,
                                                                   {'password': self.password},
                                                                   {'password': self.validated_data['new_password']})
-
 
 
 class PasswordChangeSecureSerializer(GoogleOtpSerializerMixin, ValidatePasswordMixin, BasicSerializer):
