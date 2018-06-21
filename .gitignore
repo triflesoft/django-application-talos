@@ -8,3 +8,4 @@ applications/build/
 applications/dist/
 obj/
 static/
+venv/
