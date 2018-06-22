@@ -11,10 +11,19 @@ https://docs.djangoproject.com/en/2.0/ref/settings/
 """
 
 import os
+import sys 
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+PROJECT_NAME = os.path.basename(BASE_DIR) 
+BASE_DIR = os.path.normpath(BASE_DIR) 
+
+APPLICATION_PATH = os.path.normpath(os.path.join(BASE_DIR, '../applications'))
+CONFIGUARTION_PATH = os.path.normpath(os.path.join(BASE_DIR, '../configuration')) 
+STATIC_PATH = os.path.normpath(os.path.join(BASE_DIR, '../static')) 
+
+sys.path.insert(0, APPLICATION_PATH) 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/2.0/howto/deployment/checklist/
@@ -89,7 +98,7 @@ MIDDLEWARE = [
 ]
 
 
-ROOT_URLCONF = 'untitled.urls'
+ROOT_URLCONF = 'talos_rest.urls'
 
 
 
@@ -110,7 +119,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'untitled.wsgi.application'
+WSGI_APPLICATION = 'wsgi.application'
 
 
 # Database
