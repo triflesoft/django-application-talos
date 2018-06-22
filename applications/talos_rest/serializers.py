@@ -19,6 +19,7 @@ class SMSOtpSerializerMixin():
 
     def __init__(self, *args, **kwargs):
         self.fields['sms_code'] = serializers.CharField(label='SMS Code')
+        self.sms_otp_directory = None
         super(SMSOtpSerializerMixin, self).__init__(*args, **kwargs)
 
     def validate_sms_code(self, sms_code):
@@ -73,6 +74,7 @@ class ValidatePasswordMixin():
 class ValidateSecretWhenLogedInMixin():
     def __init__(self, *args, **kwargs):
         self.fields['secret'] = serializers.CharField(label='Token', max_length=255)
+        self.token = None
         super(ValidateSecretWhenLogedInMixin, self).__init__(*args, **kwargs)
 
     token_type = None

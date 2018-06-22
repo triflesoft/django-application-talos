@@ -37,16 +37,12 @@ from .views import SessionAPIView, EmailChangeRequestAPIView, \
 
 from rest_framework.documentation import include_docs_urls
 
-
-
-
-
 urlpatterns = [
     path('docs/', include_docs_urls(title='My API title', public=False,
                                     description='Talos Rest API overview')),
 
     path('session', SessionAPIView.as_view(), name='talos-rest-sessions'),
-    path('ldap/session', LdapSessionAPIView.as_view(), name = 'talos-rest-ldap-sessions'),
+    path('ldap/session', LdapSessionAPIView.as_view(), name='talos-rest-ldap-sessions'),
 
     # Email Change
     path('principal/email/change-request', EmailChangeRequestAPIView.as_view(),
@@ -68,11 +64,11 @@ urlpatterns = [
     path('principal/reset-email-secure', EmailResetSecureAPIView.as_view(),
          name='email-reset-secure'),
 
-
-
     # Phone Change
-    path('principal/phone/change-request', PhoneChangeRequestAPIView.as_view(), name='phone-change-request'),
-    path('phone/phone_change_token/<slug:secret>', PhoneChangeValidationTokenCheckerAPIView.as_view(),
+    path('principal/phone/change-request', PhoneChangeRequestAPIView.as_view(),
+         name='phone-change-request'),
+    path('phone/phone_change_token/<slug:secret>',
+         PhoneChangeValidationTokenCheckerAPIView.as_view(),
          name='phone-change-token-validation'),
     path('principal/phone/insecure', PhoneChangeInsecureAPIView.as_view(),
          name='phone-change-insecure'),
@@ -147,14 +143,14 @@ urlpatterns = [
 
     path('basic-registration', BasicRegistrationView.as_view(), name='basic-registration'),
 
-
-
     path('provided-evidences', ProvidedEvidencesView.as_view(), name='provided-evidences'),
 
     path('test', TestView.as_view(), name='test'),
 
-    path('principal/password/insecure', PasswordChangeInsecureView.as_view(), name='password-change-insecure'),
+    path('principal/password/insecure', PasswordChangeInsecureView.as_view(),
+         name='password-change-insecure'),
 
-    path('principal/password/secure', PasswordChangeSecureView.as_view(), name='password-change-secure'),
+    path('principal/password/secure', PasswordChangeSecureView.as_view(),
+         name='password-change-secure'),
 
 ]
