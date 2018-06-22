@@ -186,7 +186,7 @@ class SessionSerializer(BasicSerializer):
         # return password
 
     def save(self):
-        self.principal.load_authentication_context(self.evidences)
+        self.principal._load_authentication_context(self.evidences)
         self.request.principal = self.principal
 
 
@@ -593,7 +593,7 @@ class AddSMSEvidenceSerializer(SMSOtpSerializerMixin, BasicSerializer):
 
         provided_evidences = Evidence.objects.filter(code__in=evidence_codes)
 
-        self.principal.load_authentication_context(provided_evidences)
+        self.principal._load_authentication_context(provided_evidences)
 
 
 class AddGoogleEvidenceSerializer(GoogleOtpSerializerMixin, serializers.Serializer):
@@ -615,7 +615,7 @@ class AddGoogleEvidenceSerializer(GoogleOtpSerializerMixin, serializers.Serializ
 
         provided_evidences = Evidence.objects.filter(code__in=evidence_codes)
 
-        self.principal.load_authentication_context(provided_evidences)
+        self.principal._load_authentication_context(provided_evidences)
 
 
 class GeneratePhoneCodeForUnAuthorizedUserSerializer(BasicSerializer):
@@ -1617,5 +1617,5 @@ class LdapLoginSerializer(BasicSerializer):
         # return password
 
     def save(self):
-        self.principal.load_authentication_context(self.evidences)
+        self.principal._load_authentication_context(self.evidences)
         self.request.principal = self.principal
