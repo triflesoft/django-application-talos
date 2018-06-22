@@ -15,7 +15,6 @@ class Internal(object):
         basic_identity.username = username
         basic_identity.save()
 
-
     def get_principal(self, credentials):
         from ..models import BasicIdentity
 

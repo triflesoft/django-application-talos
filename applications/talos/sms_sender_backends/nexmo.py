@@ -1,6 +1,7 @@
 from django.conf import settings
 import requests
 
+
 class Nexmo(object):
     def __init__(self):
         self.api_key = getattr(settings, 'NEXMO_API_KEY')
@@ -9,11 +10,11 @@ class Nexmo(object):
 
     def send_message(self, to, message):
         data = {
-            'from' : getattr(settings, 'NEXMO_PHONE'),
-            'text' : message,
-            'to' : to,
-            'api_key' : self.api_key,
-            'api_secret' : self.api_secret
+            'from': getattr(settings, 'NEXMO_PHONE'),
+            'text': message,
+            'to': to,
+            'api_key': self.api_key,
+            'api_secret': self.api_secret
         }
 
         response = requests.post(self.request_url,

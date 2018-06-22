@@ -1,19 +1,3 @@
-# from twilio.rest import Client
-#
-# # Your Account SID from twilio.com/console
-# account_sid = "AC705961ce26e39cba6946ddbdc52ccfe2"
-# # Your Auth Token from twilio.com/console
-# auth_token  = "811faf06afe584ed7220bb486e9ba1e4"
-#
-# client = Client(account_sid, auth_token)
-#
-#
-# def send_message(to, _from, body):
-#     message = client.messages.create(
-#         to=to,
-#         from_='bixtrim',
-#         body=body)
-#
 from talos.models import SMSProviders
 import re
 
@@ -43,7 +27,8 @@ class SMSSender(object):
 
         if not self.backend_object:
             # Choose default choice
-            self.backend_object = _create_class_by_name('talos.sms_sender_backends.twilio.TwilioSender')()
+            self.backend_object = _create_class_by_name(
+                'talos.sms_sender_backends.twilio.TwilioSender')()
 
     def send_message(self, number, message):
         self._ensure_backend(number)

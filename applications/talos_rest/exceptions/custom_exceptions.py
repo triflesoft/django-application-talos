@@ -1,28 +1,8 @@
-from django.core.handlers.exception import response_for_exception
-from rest_framework.exceptions import APIException, _get_error_details, MethodNotAllowed ,PermissionDenied
+from rest_framework.exceptions import APIException, _get_error_details, MethodNotAllowed, \
+    PermissionDenied
 from rest_framework.views import exception_handler
-from rest_framework import serializers, status
-from django.core.validators import ValidationError as django_validation_error
+from rest_framework import status
 from rest_framework.validators import ValidationError
-
-def generate_docs_url(context):
-    """ Generate docs urls based on request url and request method """
-
-    http_method_to_action = {
-        'GET': 'read',
-        'POST': 'create',
-        'DELETE': 'delete',
-        'PUT' : 'change'
-
-    }
-    # This part generates urls from document GUI
-    method = context['request']._request.method
-    action_for_tests = http_method_to_action[method]
-    absolute_url = (context['request'].build_absolute_uri())
-    position = (absolute_url.find('/api/')) + len('/api/')
-    absolute_url = absolute_url[:position] + 'docs/#' + absolute_url[position:].replace('/', '-') \
-                   + '-' + action_for_tests
-    return absolute_url
 
 
 class APIValidationError(APIException):
@@ -52,7 +32,6 @@ def custom_exception_handler(exc, context):
             'status': exc.status_code,
             "error": exc.get_codes(),
             'details': exc.detail,
-            'docs': generate_docs_url(context)
         }
         response.data = custom_response_data
 
@@ -61,7 +40,6 @@ def custom_exception_handler(exc, context):
             'status': exc.status_code,
             "error": exc.get_codes(),
             'details': exc.detail,
-            'docs': generate_docs_url(context)
         }
         response.data = custom_response_data
 
@@ -70,7 +48,6 @@ def custom_exception_handler(exc, context):
             'status': exc.status_code,
             "error": exc.get_codes(),
             'details': exc.detail,
-            'docs': generate_docs_url(context)
         }
         response.data = custom_response_data
 
@@ -79,7 +56,6 @@ def custom_exception_handler(exc, context):
             'status': exc.status_code,
             "error": exc.get_codes(),
             'details': exc.detail,
-            'docs': generate_docs_url(context)
         }
         response.data = custom_response_data
 

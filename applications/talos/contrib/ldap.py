@@ -1,5 +1,4 @@
-from ldap3 import Server, Connection, ALL, SUBTREE, ALL_ATTRIBUTES, ALL_OPERATIONAL_ATTRIBUTES, \
-    BASE, LEVEL, DEREF_NEVER, DEREF_SEARCH, DEREF_BASE, DEREF_ALWAYS
+from ldap3 import Server, Connection, ALL
 from ldap3.core.exceptions import *
 from talos.models import BasicIdentityDirectoryOption
 
@@ -7,10 +6,11 @@ basic_identity_directory_option = BasicIdentityDirectoryOption.objects.filter(
     directory__code='ldap')
 
 
-class LdapConnection():
+class LdapConnection:
 
     def __init__(self):
-        needful_items = ['host', 'username', 'password', 'port', 'user_search_base','cn_search_base']
+        needful_items = ['host', 'username', 'password', 'port', 'user_search_base',
+                         'cn_search_base']
         values = {}
 
         for item in needful_items:
@@ -98,9 +98,9 @@ class LdapConnection():
         if len(self.connection.entries) != 1:
             raise LDAPInvalidCredentialsResult('Username not found in LDAP')
 
-        userPrincipalName = str(self.connection.entries[0]['userPrincipalName'])
+        user_principal_name = str(self.connection.entries[0]['userPrincipalName'])
 
-        self.connection = Connection(self.server, user=userPrincipalName, password=password,
+        self.connection = Connection(self.server, user=user_principal_name, password=password,
                                      check_names=True,
                                      lazy=False, raise_exceptions=True, auto_bind=True)
         self.connection.open()

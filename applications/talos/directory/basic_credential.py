@@ -1,6 +1,5 @@
 from logging import getLogger
 
-
 logger = getLogger('talos')
 
 
@@ -95,6 +94,7 @@ class Internal(object):
         logger.debug('TALOS: Basic credential reset failed for "%s".', principal.email)
 
         return False
+
 
 class Ldap(object):
     def __init__(self, credential_directory, **kwargs):

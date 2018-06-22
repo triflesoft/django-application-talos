@@ -1,5 +1,6 @@
 from rest_framework import permissions
 
+
 class IsBasicAuthenticated(permissions.BasePermission):
     message = 'you do not have a permission'
 
@@ -8,9 +9,9 @@ class IsBasicAuthenticated(permissions.BasePermission):
             return True
 
         authentication_evidences = ('authenticated',
-                                   'knowledge_factor',
-                                   'knowledge_factor_password',
-                                   )
+                                    'knowledge_factor',
+                                    'knowledge_factor_password',
+                                    )
 
         provided_evidence = request.principal._evidences_effective
 

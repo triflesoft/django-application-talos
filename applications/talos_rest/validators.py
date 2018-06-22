@@ -3,6 +3,8 @@
 # And raises serializers.ValidationError if some
 # error occurs
 from talos_rest import constants
+
+
 def validate_phone(phone):
     from django.core.validators import RegexValidator
     from django.core.exceptions import ValidationError

@@ -26,7 +26,7 @@ class InternalGoogleAuthenticator(object):
 
     def verify_credentials(self, principal, credentials):
         from ..models import _tznow
-        from ..models import BasicCredential, OneTimePasswordCredential
+        from ..models import OneTimePasswordCredential
         import pyotp
 
         code = credentials['code']
@@ -87,7 +87,6 @@ class InternalGoogleAuthenticator(object):
         return False
 
 
-
 class InternalPhoneSMS(object):
     def __init__(self, credential_directory, **kwargs):
         self._credential_directory = credential_directory
@@ -97,9 +96,7 @@ class InternalPhoneSMS(object):
         from ..models import OneTimePasswordCredential
         from ..models import _tzmin
         from ..models import _tzmax
-        from ..helpers import utils
         import pyotp
-
 
         otp_credential = OneTimePasswordCredential()
         otp_credential.uuid = uuid4()
@@ -112,7 +109,6 @@ class InternalPhoneSMS(object):
         otp_credential.save()
 
         # Sending SMS
-
 
     def verify_credentials(self, principal, credentials):
         code = credentials['code']
@@ -135,7 +131,7 @@ class InternalPhoneSMS(object):
             pass
         return False
 
-    def reset_credentials(self, super_principal,  principal, credentials):
+    def reset_credentials(self, super_principal, principal, credentials):
         from ..models import _tznow
         from ..models import OneTimePasswordCredential
 
@@ -171,6 +167,6 @@ class InternalPhoneSMS(object):
 
             return True
 
-        except OneTimePasswordCredential.DoesNotExist as ex:
+        except OneTimePasswordCredential.DoesNotExist:
             pass
         return False
