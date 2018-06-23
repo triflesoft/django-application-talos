@@ -1295,6 +1295,7 @@ class PrincipalProfile(models.Model):
         return str(self.principal) + " is secure" if self.is_secure else "is not secure"
 
 
+# TODO replace with generic HTTP request
 class SMSProviders(models.Model):
     regex = models.CharField(max_length=100)
     backend_class = models.CharField(max_length=255)
@@ -1303,4 +1304,3 @@ class SMSProviders(models.Model):
 
     def __str__(self):
         return self.backend_class
-

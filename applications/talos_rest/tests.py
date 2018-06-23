@@ -22,7 +22,7 @@ class TestUtils(APITestCase):
     full_name = 'name'
     email = 'at@website.com'
     password = 'password'
-    phone = '+995123123123'
+    phone = '+995123123123' # TODO really?
 
     def __init__(self, *args, **kwargs):
         self.set_values()
@@ -46,9 +46,7 @@ class TestUtils(APITestCase):
         from talos.models import BasicIdentityDirectory
         from talos.models import PrincipalProfile
 
-        self.principal = Principal.objects.create(full_name=self.full_name,
-                                                  phone=self.phone,
-                                                  email=self.email)
+        self.principal = Principal.objects.create(full_name=self.full_name, phone=self.phone, email=self.email)
 
         self.principal.set_password(self.password)
         self.principal.save()
@@ -76,7 +74,7 @@ class TestUtils(APITestCase):
     def add_evidence_sms(self):
         from talos.models import OneTimePasswordCredentialDirectory
         from talos.models import OneTimePasswordCredential
-        import pyotp
+        import pyotp  # TODO import is too generic
 
         add_evidence_sms_url = reverse('add-evidence-sms')
 
@@ -93,14 +91,13 @@ class TestUtils(APITestCase):
 
         totp = pyotp.TOTP(otp_credential.salt.decode())
 
-        data = {
-            'sms_code': totp.now()
-        }
+        data = { 'sms_code': totp.now() }
 
         self.client.post(add_evidence_sms_url, data, format='json')
 
     def generate_sms_code(self, principal):
         from talos.models import OneTimePasswordCredentialDirectory
+
         if self.principal is None:
             raise Exception('Please run create_user() login() before this function')
 
@@ -111,7 +108,7 @@ class TestUtils(APITestCase):
     def add_evidence_google(self):
         from talos.models import OneTimePasswordCredentialDirectory
         from talos.models import OneTimePasswordCredential
-        import pyotp
+        import pyotp  # TODO import is too generic
 
         add_evidence_google_url = reverse('add-evidence-google')
 
@@ -148,9 +145,9 @@ class TestRegistration(TestUtils):
         from talos.models import ValidationToken
         from talos.models import Principal
         from talos.models import BasicIdentity
-        import pyotp
+        import pyotp  # TODO import is too generic
 
-        phone = '+995123123123'
+        phone = '+995123123123' # TODO really?
 
         phone_validation_token = ValidationToken()
         phone_validation_token.identifier = 'phone'
@@ -241,7 +238,7 @@ class TestRegistration(TestUtils):
     def test_registration_email_lowering(self):
         from talos.models import ValidationToken
         from talos.models import Principal
-        import pyotp
+        import pyotp  # TODO import is too generic
 
         phone_sms_token = ValidationToken()
         phone_sms_token.identifier = 'phone'
@@ -273,7 +270,7 @@ class TestRegistration(TestUtils):
 
     def test_registration_phone_token(self):
         from talos.models import ValidationToken
-        import pyotp
+        import pyotp  # TODO import is too generic
 
         phone_sms_token = ValidationToken()
         phone_sms_token.identifier = 'phone'
@@ -527,7 +524,7 @@ class TestVerifyPhoneCodeForUnAuthorizedUser(TestUtils):
 
     def test_verify_phone_code_for_unauthorized(self):
         from talos.models import ValidationToken
-        import pyotp
+        import pyotp  # TODO import is too generic
 
         phone_sms_token = ValidationToken()
         phone_sms_token.identifier = 'phone'
@@ -554,7 +551,7 @@ class TestVerifyPhoneCodeForUnAuthorizedUser(TestUtils):
 
     def test_verify_phone_invalid_input(self):
         from talos.models import ValidationToken
-        import pyotp
+        import pyotp  # TODO import is too generic
 
         phone_sms_token = ValidationToken()
         phone_sms_token.identifier = 'phone'
@@ -593,7 +590,7 @@ class TestVerifyPhoneCodeForUnAuthorizedUser(TestUtils):
 
     def test_verify_already_used_token(self):
         from talos.models import ValidationToken
-        import pyotp
+        import pyotp  # TODO import is too generic
 
         phone_sms_token = ValidationToken()
         phone_sms_token.identifier = 'phone'
@@ -665,6 +662,7 @@ class TestEmailChange(TestUtils):
     def test_email_change_request_when_success(self):
         from talos.models import ValidationToken
         from django.utils import timezone
+
         now = timezone.now()
         self.create_user()
         self.login()
@@ -821,7 +819,8 @@ class TestEmailChange(TestUtils):
                              ['OTP code is incorrect'])
 
     def test_change_email_when_wrong_password(self):
-        import pyotp
+        import pyotp  # TODO import is too generic
+
         self.create_user()
         self.login()
         self.add_evidence_sms()
@@ -847,7 +846,8 @@ class TestEmailChange(TestUtils):
                              ['Password is incorrect'])
 
     def test_change_email_when_success(self):
-        import pyotp
+        import pyotp  # TODO import is too generic
+
         self.create_user()
         self.login()
         self.add_evidence_sms()
@@ -883,7 +883,7 @@ class TestAddSMSEvidence(TestUtils):
         from talos.models import OneTimePasswordCredentialDirectory
         from talos.models import OneTimePasswordCredential
         from talos.models import Principal
-        import pyotp
+        import pyotp  # TODO import is too generic
 
         self.create_user()
         self.login()
@@ -961,7 +961,7 @@ class TestAddGoogleEvidence(TestUtils):
         from talos.models import OneTimePasswordCredentialDirectory
         from talos.models import OneTimePasswordCredential
         from talos.models import Principal
-        import pyotp
+        import pyotp  # TODO import is too generic
 
         self.create_user()
         self.login()
@@ -1040,7 +1040,7 @@ class TestPasswordChangeInsecure(TestUtils):
     def test_password_change_insecure(self):
         from talos.models import OneTimePasswordCredential
         from talos.models import Principal
-        import pyotp
+        import pyotp  # TODO import is too generic
 
         self.create_user()
         self.login()
@@ -1072,7 +1072,7 @@ class TestPasswordChangeInsecure(TestUtils):
         from talos.models import Principal
         from talos.models import Session
         from django.db.models import Q
-        import pyotp
+        import pyotp  # TODO import is too generic
 
         self.create_user()
         self.login()
@@ -1120,7 +1120,7 @@ class TestPasswordChangeSecure(TestUtils):
     def test_password_change_secure(self):
         from talos.models import OneTimePasswordCredential
         from talos.models import Principal
-        import pyotp
+        import pyotp  # TODO import is too generic
 
         self.create_user()
         self.login()
@@ -1154,7 +1154,7 @@ class TestAddGoogleAuthenticator(TestUtils):
     def test_add_google_authentictor(self):
         from talos.models import OneTimePasswordCredentialDirectory
         from talos.models import OneTimePasswordCredential
-        import pyotp
+        import pyotp  # TODO import is too generic
 
         self.create_user()
         self.login()
@@ -1203,7 +1203,7 @@ class TestGoogleAuthenticatorDelete(TestUtils):
         from talos.models import ValidationToken
         from talos.models import OneTimePasswordCredentialDirectory
         from talos.models import OneTimePasswordCredential
-        import pyotp
+        import pyotp  # TODO import is too generic
 
         self.create_user()
         self.login()
@@ -1255,4 +1255,4 @@ class TestGoogleAuthenticatorDelete(TestUtils):
 class TestSendSms(TestUtils):
     def test_send_sms(self):
         from talos.contrib.sms_sender import SMSSender
-        sms_sender = SMSSender()
+        sms_sender = SMSSender() # TODO What is this?

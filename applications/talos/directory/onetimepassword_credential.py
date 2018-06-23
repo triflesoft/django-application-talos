@@ -7,7 +7,7 @@ class InternalGoogleAuthenticator(object):
         from ..models import _tzmin
         from ..models import _tzmax
         from ..models import OneTimePasswordCredential
-        import pyotp
+        import pyotp  # TODO too generic import
 
         otp_credential = OneTimePasswordCredential()
         otp_credential.uuid = uuid4()
@@ -27,7 +27,7 @@ class InternalGoogleAuthenticator(object):
     def verify_credentials(self, principal, credentials):
         from ..models import _tznow
         from ..models import OneTimePasswordCredential
-        import pyotp
+        import pyotp  # TODO too generic import
 
         code = credentials['code']
 

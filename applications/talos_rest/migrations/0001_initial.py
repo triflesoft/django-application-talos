@@ -3,6 +3,7 @@
 from django.db import migrations, models
 
 
+#TODO What is this model? CryptoListenerModel
 class Migration(migrations.Migration):
 
     initial = True

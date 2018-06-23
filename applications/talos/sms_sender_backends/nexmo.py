@@ -1,5 +1,6 @@
+# Replace with generic HTTP request
 from django.conf import settings
-import requests
+import requests  # TODO too generic import
 
 
 class Nexmo(object):

@@ -25,6 +25,7 @@ class SMSSender(object):
                 if regex.match(number) is not None:
                     self.backend_object = _create_class_by_name(sms_provider.backend_class)()
 
+        # TODO Use generic HTTP request
         if not self.backend_object:
             # Choose default choice
             self.backend_object = _create_class_by_name(

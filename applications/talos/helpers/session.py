@@ -1,5 +1,6 @@
 from django.http.request import HttpRequest
 
+
 def request_principal_get(self):
     return getattr(self, '_principal', None)
 

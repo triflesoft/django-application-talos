@@ -1,5 +1,5 @@
 from ldap3 import Server, Connection, ALL
-from ldap3.core.exceptions import *
+from ldap3.core.exceptions import *  # TODO too generic import
 from talos.models import BasicIdentityDirectoryOption
 
 basic_identity_directory_option = BasicIdentityDirectoryOption.objects.filter(
@@ -9,8 +9,7 @@ basic_identity_directory_option = BasicIdentityDirectoryOption.objects.filter(
 class LdapConnection:
 
     def __init__(self):
-        needful_items = ['host', 'username', 'password', 'port', 'user_search_base',
-                         'cn_search_base']
+        needful_items = ['host', 'username', 'password', 'port', 'user_search_base', 'cn_search_base']
         values = {}
 
         for item in needful_items:
@@ -40,8 +39,7 @@ class LdapConnection:
     def create_connection(self):
         if not self.server:
             raise Exception("Please run connect()")
-        connection = Connection(self.server, user=self.username, password=self.password,
-                                raise_exceptions=True)
+        connection = Connection(self.server, user=self.username, password=self.password, raise_exceptions=True)
         connection.open()
 
         try:
@@ -64,10 +62,10 @@ class LdapConnection:
             net_bios_name = username.split('\\')[0]
             username = username.split('\\')[1]
 
-            self.connection.search(search_base=self.cn_search_base,
-                                   search_filter='(netbiosname=*)',
-                                   attributes=['*']
-                                   )
+            self.connection.search(
+                search_base=self.cn_search_base,
+                search_filter='(netbiosname=*)',
+                attributes=['*'])
             net_bios_name_entries = self.connection.entries
 
             if len(net_bios_name_entries) == 0:
@@ -88,21 +86,26 @@ class LdapConnection:
             search_value = username
             search_filter = "sAMAccountName"
 
-        self.connection.search(search_base=self.user_search_base,
-                               search_filter='({search_filter}={search_value})'.format(
-                                   search_filter=search_filter,
-                                   search_value=search_value),
-                               attributes='userPrincipalName'
-                               )
+        self.connection.search(
+            search_base=self.user_search_base,
+            search_filter='({search_filter}={search_value})'.format(
+                    search_filter=search_filter,
+                    search_value=search_value),
+                    attributes='userPrincipalName')
         # If no user found
         if len(self.connection.entries) != 1:
             raise LDAPInvalidCredentialsResult('Username not found in LDAP')
 
         user_principal_name = str(self.connection.entries[0]['userPrincipalName'])
 
-        self.connection = Connection(self.server, user=user_principal_name, password=password,
-                                     check_names=True,
-                                     lazy=False, raise_exceptions=True, auto_bind=True)
+        self.connection = Connection(
+            self.server,
+            user=user_principal_name,
+            password=password,
+            check_names=True,
+            lazy=False,
+            raise_exceptions=True,
+            auto_bind=True)
         self.connection.open()
 
         try:

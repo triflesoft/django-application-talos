@@ -65,8 +65,6 @@ class ModelInfo(object):
         return 'Can modify "{0}" of "{1}" ({2})'.format(action.capitalize(), self.model._meta.verbose_name, self.model._meta.app_config.label.capitalize())
 
     def _get_direct_action_infos_for_descriptor(self, descriptor, messages):
-        from django.core.exceptions import ImproperlyConfigured
-
         code = None
         name = None
 

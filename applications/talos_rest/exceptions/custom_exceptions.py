@@ -1,10 +1,10 @@
-from rest_framework.exceptions import APIException, _get_error_details, MethodNotAllowed, \
-    PermissionDenied
+from rest_framework.exceptions import _get_error_details, APIException, MethodNotAllowed, PermissionDenied
 from rest_framework.views import exception_handler
 from rest_framework import status
 from rest_framework.validators import ValidationError
 
 
+# TODO move this class to separate file
 class APIValidationError(APIException):
     status_code = status.HTTP_400_BAD_REQUEST
 

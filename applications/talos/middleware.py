@@ -40,6 +40,7 @@ class SessionMiddleware(object):
 
         return response
 
+# TODO do we need this AuthenticationMiddleware?
 """
 class AuthenticationMiddleware(object):
     def __init__(self, get_response):

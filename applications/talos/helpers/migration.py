@@ -1,7 +1,8 @@
+from django.db import DEFAULT_DB_ALIAS
+
+
 INVALID_PERMISSION_NAME_MESSAGE = (
     'Permissions name "{0}" is not unique.')
-
-from django.db import DEFAULT_DB_ALIAS
 
 
 def _can_migrate(self, db_alias=DEFAULT_DB_ALIAS, **kwargs):
