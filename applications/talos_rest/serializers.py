@@ -872,6 +872,7 @@ class EmailChangeRequestSerializer(BasicSerializer):
                 code=constants.EMAIL_INVALID_CODE)
 
         try:
+            Principal.objects.get(email=new_email)
             raise serializers.ValidationError(
                 'Principal with provided e-mail is already registered.',
                 code=constants.EMAIL_USED_CODE)
@@ -986,6 +987,7 @@ class EmailResetRequestSerializer(BasicSerializer):
                 code=constants.EMAIL_INVALID_CODE)
 
         try:
+            Principal.objects.get(email=new_email)
             raise serializers.ValidationError(
                 'Principal with provided e-mail is already registered.',
                 code=constants.EMAIL_USED_CODE)
@@ -1145,6 +1147,7 @@ class PhoneChangeRequestSerializer(BasicSerializer):
 
     def validate_new_phone(self, new_phone):
         try:
+            Principal.objects.get(phone=new_phone)
             raise serializers.ValidationError(
                 'Principal with provided phone is already registered.',
                 code=constants.PHONE_USED_CODE)
