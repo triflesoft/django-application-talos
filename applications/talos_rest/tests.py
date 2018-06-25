@@ -22,7 +22,7 @@ class TestUtils(APITestCase):
     full_name = 'name'
     email = 'at@website.com'
     password = 'password'
-    phone = '+995123123123' # TODO really?
+    phone = '+995000000000'
 
     def __init__(self, *args, **kwargs):
         self.set_values()
@@ -149,7 +149,7 @@ class TestRegistration(TestUtils):
         from pyotp import TOTP
         from pyotp import random_base32
 
-        phone = '+995123123123' # TODO really?
+        phone = '+995000000000'
 
         phone_validation_token = ValidationToken()
         phone_validation_token.identifier = 'phone'
@@ -179,7 +179,7 @@ class TestRegistration(TestUtils):
         self.assertIsNotNone(principal)
         self.assertEqual(principal.phone, phone)
         self.assertEqual(principal.full_name, 'Name Surname')
-        self.assertTrue(principal.check_password('123456'))
+        self.assertTrue(principal.check_password('password'))
         self.assertEqual(principal.email, 'at@website.com')
 
         basic_identity = BasicIdentity.objects.last()
@@ -438,6 +438,7 @@ class TestPermissionDeniedPermission(TestUtils):
         self.assertListEqual(response.data.get('details'),
                              ['ownership_factor', 'ownership_factor_otp_token',
                               'ownership_factor_google_authenticator'])
+
 
     def test_login_added_correct_evidences(self):
         self.create_user()
@@ -927,6 +928,7 @@ class TestAddSMSEvidence(TestUtils):
         self.assertTrue(response.data.get('error').get('sms_code', False))
         self.assertEqual(response.data.get('error').get('sms_code')[0],
                          constants.SMS_OTP_INVALID_CODE)
+
 
     def test_added_provided_evidences(self):
         self.create_user()

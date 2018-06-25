@@ -12,7 +12,7 @@ from rest_framework.generics import GenericAPIView
 from rest_framework import status
 # Serializer classes
 from .exceptions.custom_exceptions import APIValidationError
-from talos_rest.serializers import SessionSerializer, \
+from .serializers import SessionSerializer, \
     GoogleAuthenticatorActivateRequestSerializer, \
     GoogleAuthenticatorDeleteSerializer, GeneratePhoneCodeForAuthorizedUserSerializer, \
     VerifyPhoneCodeForAuthorizedUserSerializer, ChangePasswordInsecureSerializer, \
@@ -127,8 +127,8 @@ class SessionAPIView(SecureAPIViewBaseView):
         else:
             raise APIValidationError(detail=serializer.errors)
 
-    def delete(self):
-
+    def delete(self, request):
+        print('Delete method')
         if str(self.request.user) == 'Anonymous':
             reseponse = ErrorResponse(status=status.HTTP_404_NOT_FOUND)
         else:
@@ -167,7 +167,7 @@ class LdapSessionAPIView(SecureAPIViewBaseView):
         else:
             raise APIValidationError(detail=serializer.errors)
 
-    def delete(self):
+    def delete(self, request):
 
         if str(self.request.user) == 'Anonymous':
             reseponse = ErrorResponse(status=status.HTTP_404_NOT_FOUND)
@@ -764,7 +764,7 @@ class PhoneResetSecureAPIView(SecureAPIViewBaseView):
 
 class ProvidedEvidencesView(SecureAPIViewBaseView):
 
-    def get(self):
+    def get(self, request):
         evidences = list(dict(self.request.principal._evidences_effective).keys())
         success_response = SuccessResponse()
         success_response.set_result_pairs('provided-evidences', evidences)

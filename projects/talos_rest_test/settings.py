@@ -49,7 +49,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'rest_framework',
     'talos',
-    'talos_rest',
+    #'talos_rest',
 ]
 
 AUTH_USER_MODEL = 'talos.Principal'
@@ -62,7 +62,6 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'talos_rest.authentication.CsrfExemptSessionAuthentication',
     ),
-    # TODO VERSIONING
     # 'DEFAULT_VERSIONING_CLASS': 'rest_framework.versioning.URLPathVersioning'
     'EXCEPTION_HANDLER': 'talos_rest.exceptions.custom_exceptions.custom_exception_handler'
 
@@ -98,7 +97,7 @@ MIDDLEWARE = [
 ]
 
 
-ROOT_URLCONF = 'talos_rest.urls'
+ROOT_URLCONF = 'urls'
 
 
 
