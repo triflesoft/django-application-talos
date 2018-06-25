@@ -7,7 +7,7 @@ class InternalGoogleAuthenticator(object):
         from ..models import _tzmin
         from ..models import _tzmax
         from ..models import OneTimePasswordCredential
-        import pyotp  # TODO too generic import
+        from pyotp import random_base32
 
         otp_credential = OneTimePasswordCredential()
         otp_credential.uuid = uuid4()
@@ -19,7 +19,7 @@ class InternalGoogleAuthenticator(object):
             base32_secret = credentials['salt']
             otp_credential.is_activated = True
         else:
-            base32_secret = pyotp.random_base32()
+            base32_secret = random_base32()
         otp_credential.salt = base32_secret.encode()
         otp_credential.save()
         return otp_credential.salt
@@ -27,7 +27,7 @@ class InternalGoogleAuthenticator(object):
     def verify_credentials(self, principal, credentials):
         from ..models import _tznow
         from ..models import OneTimePasswordCredential
-        import pyotp  # TODO too generic import
+        from pyotp import TOTP
 
         code = credentials['code']
 
@@ -38,11 +38,11 @@ class InternalGoogleAuthenticator(object):
                 valid_till__gte=_tznow())
 
             secret_key = otp_credential.salt.decode()
-            totp = pyotp.TOTP(secret_key)
+            totp = TOTP(secret_key)
 
             if totp.verify(code):
                 return True
-        except OneTimePasswordCredential.DoesNotExist as ex:
+        except OneTimePasswordCredential.DoesNotExist:
             pass
 
         return False
@@ -96,7 +96,7 @@ class InternalPhoneSMS(object):
         from ..models import OneTimePasswordCredential
         from ..models import _tzmin
         from ..models import _tzmax
-        import pyotp
+        from pyotp import random_base32
 
         otp_credential = OneTimePasswordCredential()
         otp_credential.uuid = uuid4()
@@ -104,7 +104,7 @@ class InternalPhoneSMS(object):
         otp_credential.principal = principal
         otp_credential.valid_from = _tzmin()
         otp_credential.valid_till = _tzmax()
-        base32_secret = pyotp.random_base32()
+        base32_secret = random_base32()
         otp_credential.salt = base32_secret.encode()
         otp_credential.save()
 
@@ -114,7 +114,7 @@ class InternalPhoneSMS(object):
         code = credentials['code']
         from ..models import _tznow
         from ..models import OneTimePasswordCredential
-        import pyotp
+        from pyotp import TOTP
 
         try:
             otp_credential = self._credential_directory.credentials.get(
@@ -123,11 +123,11 @@ class InternalPhoneSMS(object):
                 valid_till__gte=_tznow())
 
             secret_key = otp_credential.salt.decode()
-            totp = pyotp.TOTP(secret_key)
+            totp = TOTP(secret_key)
 
             if totp.verify(code):
                 return True
-        except OneTimePasswordCredential.DoesNotExist as ex:
+        except OneTimePasswordCredential.DoesNotExist:
             pass
         return False
 
@@ -149,7 +149,7 @@ class InternalPhoneSMS(object):
 
     def generate_credentials(self, principal, credentials):
         from ..models import _tznow
-        import pyotp
+        from pyotp import TOTP
         from talos.models import OneTimePasswordCredential
         from ..contrib.sms_sender import SMSSender
 
@@ -160,7 +160,7 @@ class InternalPhoneSMS(object):
                 valid_till__gte=_tznow())
 
             secret_key = otp_credential.salt.decode()
-            totp = pyotp.TOTP(secret_key)
+            totp = TOTP(secret_key)
 
             sms_sender = SMSSender()
             sms_sender.send_message(principal.phone, 'Your registraion code is %s' % totp.now())

@@ -74,7 +74,8 @@ class TestUtils(APITestCase):
     def add_evidence_sms(self):
         from talos.models import OneTimePasswordCredentialDirectory
         from talos.models import OneTimePasswordCredential
-        import pyotp  # TODO import is too generic
+        from pyotp import TOTP
+
 
         add_evidence_sms_url = reverse('add-evidence-sms')
 
@@ -89,7 +90,7 @@ class TestUtils(APITestCase):
 
         self.assertIsNotNone(otp_credential)
 
-        totp = pyotp.TOTP(otp_credential.salt.decode())
+        totp = TOTP(otp_credential.salt.decode())
 
         data = { 'sms_code': totp.now() }
 
@@ -108,7 +109,7 @@ class TestUtils(APITestCase):
     def add_evidence_google(self):
         from talos.models import OneTimePasswordCredentialDirectory
         from talos.models import OneTimePasswordCredential
-        import pyotp  # TODO import is too generic
+        from pyotp import TOTP
 
         add_evidence_google_url = reverse('add-evidence-google')
 
@@ -124,7 +125,7 @@ class TestUtils(APITestCase):
         self.assertIsNotNone(otp_credential)
 
         secret = otp_credential.salt
-        totp = pyotp.TOTP(secret)
+        totp = TOTP(secret)
         google_otp_code = totp.now()
 
         data = {
@@ -145,7 +146,8 @@ class TestRegistration(TestUtils):
         from talos.models import ValidationToken
         from talos.models import Principal
         from talos.models import BasicIdentity
-        import pyotp  # TODO import is too generic
+        from pyotp import TOTP
+        from pyotp import random_base32
 
         phone = '+995123123123' # TODO really?
 
@@ -153,11 +155,11 @@ class TestRegistration(TestUtils):
         phone_validation_token.identifier = 'phone'
         phone_validation_token.identifier_value = phone
         phone_validation_token.type = 'principal_registration'
-        secret_key = pyotp.random_base32()
+        secret_key = random_base32()
         phone_validation_token.secret = secret_key
         phone_validation_token.save()
 
-        totp = pyotp.TOTP(secret_key)
+        totp = TOTP(secret_key)
 
         data = {
             'full_name': 'Name Surname',
@@ -238,17 +240,18 @@ class TestRegistration(TestUtils):
     def test_registration_email_lowering(self):
         from talos.models import ValidationToken
         from talos.models import Principal
-        import pyotp  # TODO import is too generic
+        from pyotp import random_base32
+        from pyotp import TOTP
 
         phone_sms_token = ValidationToken()
         phone_sms_token.identifier = 'phone'
         phone_sms_token.type = 'principal_registration'
         phone_sms_token.identifier_value = self.phone
-        secret_key = pyotp.random_base32()
+        secret_key = random_base32()
         phone_sms_token.secret = secret_key
         phone_sms_token.save()
 
-        totp = pyotp.TOTP(secret_key)
+        totp = TOTP(secret_key)
 
         data = {
             'full_name': self.full_name,
@@ -270,17 +273,18 @@ class TestRegistration(TestUtils):
 
     def test_registration_phone_token(self):
         from talos.models import ValidationToken
-        import pyotp  # TODO import is too generic
+        from pyotp import random_base32
+        from pyotp import TOTP
 
         phone_sms_token = ValidationToken()
         phone_sms_token.identifier = 'phone'
         phone_sms_token.identifier_value = self.phone
         phone_sms_token.type = 'principal_registration'
-        secret_key = pyotp.random_base32()
+        secret_key = random_base32()
         phone_sms_token.secret = secret_key
         phone_sms_token.save()
 
-        totp = pyotp.TOTP(secret_key)
+        totp = TOTP(secret_key)
 
         data = {
             'full_name': self.full_name,
@@ -524,17 +528,18 @@ class TestVerifyPhoneCodeForUnAuthorizedUser(TestUtils):
 
     def test_verify_phone_code_for_unauthorized(self):
         from talos.models import ValidationToken
-        import pyotp  # TODO import is too generic
+        from pyotp import random_base32
+        from pyotp import TOTP
 
         phone_sms_token = ValidationToken()
         phone_sms_token.identifier = 'phone'
         phone_sms_token.identifier_value = self.phone
         phone_sms_token.type = 'principal_registration'
-        secret_key = pyotp.random_base32()
+        secret_key = random_base32()
         phone_sms_token.secret = secret_key
         phone_sms_token.save()
 
-        totp = pyotp.TOTP(secret_key)
+        totp = TOTP(secret_key)
 
         data = {
             'phone': self.phone,
@@ -551,12 +556,13 @@ class TestVerifyPhoneCodeForUnAuthorizedUser(TestUtils):
 
     def test_verify_phone_invalid_input(self):
         from talos.models import ValidationToken
-        import pyotp  # TODO import is too generic
+        from pyotp import random_base32
+        from pyotp import TOTP
 
         phone_sms_token = ValidationToken()
         phone_sms_token.identifier = 'phone'
         phone_sms_token.identifier_value = self.phone
-        secret_key = pyotp.random_base32()
+        secret_key = random_base32()
         phone_sms_token.secret = secret_key
         phone_sms_token.save()
 
@@ -573,7 +579,7 @@ class TestVerifyPhoneCodeForUnAuthorizedUser(TestUtils):
         self.assertTrue(response.data.get('error').get('code', False))
         self.assertEqual(response.data.get('error').get('code')[0], constants.SMS_OTP_INVALID_CODE)
 
-        totp = pyotp.TOTP(secret_key)
+        totp = TOTP(secret_key)
 
         data = {
             'phone': 'phone_valid',
@@ -590,17 +596,18 @@ class TestVerifyPhoneCodeForUnAuthorizedUser(TestUtils):
 
     def test_verify_already_used_token(self):
         from talos.models import ValidationToken
-        import pyotp  # TODO import is too generic
+        from pyotp import random_base32
+        from pyotp import TOTP
 
         phone_sms_token = ValidationToken()
         phone_sms_token.identifier = 'phone'
         phone_sms_token.identifier_value = self.phone
         phone_sms_token.is_active = False
-        secret_key = pyotp.random_base32()
+        secret_key = random_base32()
         phone_sms_token.secret = secret_key
         phone_sms_token.save()
 
-        totp = pyotp.TOTP(secret_key)
+        totp = TOTP(secret_key)
 
         data = {
             'phone': self.phone,
@@ -819,7 +826,7 @@ class TestEmailChange(TestUtils):
                              ['OTP code is incorrect'])
 
     def test_change_email_when_wrong_password(self):
-        import pyotp  # TODO import is too generic
+        from pyotp import TOTP
 
         self.create_user()
         self.login()
@@ -832,7 +839,7 @@ class TestEmailChange(TestUtils):
                                                           type='email_change', )
         code = (OneTimePasswordCredential.objects.last())
 
-        totp = pyotp.TOTP(code.salt.decode())
+        totp = TOTP(code.salt.decode())
 
         data = {'sms_code': totp.now(),
                 'password': '1234',
@@ -846,7 +853,7 @@ class TestEmailChange(TestUtils):
                              ['Password is incorrect'])
 
     def test_change_email_when_success(self):
-        import pyotp  # TODO import is too generic
+        from pyotp import TOTP
 
         self.create_user()
         self.login()
@@ -860,7 +867,7 @@ class TestEmailChange(TestUtils):
                                                           type='email_change', )
         code = (OneTimePasswordCredential.objects.last())
 
-        totp = pyotp.TOTP(code.salt.decode())
+        totp = TOTP(code.salt.decode())
 
         data = {
             'sms_code': totp.now(),
@@ -883,7 +890,7 @@ class TestAddSMSEvidence(TestUtils):
         from talos.models import OneTimePasswordCredentialDirectory
         from talos.models import OneTimePasswordCredential
         from talos.models import Principal
-        import pyotp  # TODO import is too generic
+        from pyotp import TOTP
 
         self.create_user()
         self.login()
@@ -898,7 +905,7 @@ class TestAddSMSEvidence(TestUtils):
 
         otp_credential = OneTimePasswordCredential.objects.last()
 
-        totp = pyotp.TOTP(otp_credential.salt.decode())
+        totp = TOTP(otp_credential.salt.decode())
 
         data = {
             'sms_code': totp.now()
@@ -961,7 +968,7 @@ class TestAddGoogleEvidence(TestUtils):
         from talos.models import OneTimePasswordCredentialDirectory
         from talos.models import OneTimePasswordCredential
         from talos.models import Principal
-        import pyotp  # TODO import is too generic
+        from pyotp import TOTP
 
         self.create_user()
         self.login()
@@ -978,7 +985,7 @@ class TestAddGoogleEvidence(TestUtils):
 
         secret = otp_credential.salt
 
-        totp = pyotp.TOTP(secret)
+        totp = TOTP(secret)
         code = totp.now()
 
         data = {
@@ -1040,7 +1047,7 @@ class TestPasswordChangeInsecure(TestUtils):
     def test_password_change_insecure(self):
         from talos.models import OneTimePasswordCredential
         from talos.models import Principal
-        import pyotp  # TODO import is too generic
+        from pyotp import TOTP
 
         self.create_user()
         self.login()
@@ -1049,7 +1056,7 @@ class TestPasswordChangeInsecure(TestUtils):
         self.assertEqual(OneTimePasswordCredential.objects.all().count(), 1)
         sms_otp_credential = OneTimePasswordCredential.objects.last()
 
-        totp = pyotp.TOTP(sms_otp_credential.salt.decode())
+        totp = TOTP(sms_otp_credential.salt.decode())
         sms_code = totp.now()
 
         data = {
@@ -1072,7 +1079,7 @@ class TestPasswordChangeInsecure(TestUtils):
         from talos.models import Principal
         from talos.models import Session
         from django.db.models import Q
-        import pyotp  # TODO import is too generic
+        from pyotp import TOTP
 
         self.create_user()
         self.login()
@@ -1081,7 +1088,7 @@ class TestPasswordChangeInsecure(TestUtils):
         self.assertEqual(OneTimePasswordCredential.objects.all().count(), 1)
         sms_otp_credential = OneTimePasswordCredential.objects.last()
 
-        totp = pyotp.TOTP(sms_otp_credential.salt.decode())
+        totp = TOTP(sms_otp_credential.salt.decode())
         sms_code = totp.now()
 
         data = {
@@ -1120,7 +1127,7 @@ class TestPasswordChangeSecure(TestUtils):
     def test_password_change_secure(self):
         from talos.models import OneTimePasswordCredential
         from talos.models import Principal
-        import pyotp  # TODO import is too generic
+        from pyotp import TOTP
 
         self.create_user()
         self.login()
@@ -1129,7 +1136,7 @@ class TestPasswordChangeSecure(TestUtils):
         self.assertEqual(OneTimePasswordCredential.objects.all().count(), 1)
         google_otp_credential = OneTimePasswordCredential.objects.last()
         secret = google_otp_credential.salt
-        totp = pyotp.TOTP(secret)
+        totp = TOTP(secret)
         google_otp_code = totp.now()
 
         data = {
@@ -1154,7 +1161,7 @@ class TestAddGoogleAuthenticator(TestUtils):
     def test_add_google_authentictor(self):
         from talos.models import OneTimePasswordCredentialDirectory
         from talos.models import OneTimePasswordCredential
-        import pyotp  # TODO import is too generic
+        from pyotp import TOTP
 
         self.create_user()
         self.login()
@@ -1170,7 +1177,7 @@ class TestAddGoogleAuthenticator(TestUtils):
         self.assertTrue(response.data.get('result').get('secret', False))
         secret = response.data.get('result').get('secret')
 
-        totp = pyotp.TOTP(secret)
+        totp = TOTP(secret)
         code = totp.now()
 
         data = {
@@ -1203,7 +1210,7 @@ class TestGoogleAuthenticatorDelete(TestUtils):
         from talos.models import ValidationToken
         from talos.models import OneTimePasswordCredentialDirectory
         from talos.models import OneTimePasswordCredential
-        import pyotp  # TODO import is too generic
+        from pyotp import TOTP
 
         self.create_user()
         self.login()
@@ -1233,9 +1240,9 @@ class TestGoogleAuthenticatorDelete(TestUtils):
         google_otp_credential = OneTimePasswordCredential.objects.get(principal=self.principal,
                                                                       directory=google_otp_directory)
 
-        totp = pyotp.TOTP(sms_otp_credential.salt.decode())
+        totp = TOTP(sms_otp_credential.salt.decode())
         sms_code = totp.now()
-        totp = pyotp.TOTP(google_otp_credential.salt)
+        totp = TOTP(google_otp_credential.salt)
         google_code = totp.now()
 
         data = {
@@ -1250,9 +1257,3 @@ class TestGoogleAuthenticatorDelete(TestUtils):
         self.assertResponseStatus(response, status.HTTP_200_OK)
         self.assertEqual(
             OneTimePasswordCredential.objects.filter(directory=google_otp_directory).count(), 0)
-
-
-class TestSendSms(TestUtils):
-    def test_send_sms(self):
-        from talos.contrib.sms_sender import SMSSender
-        sms_sender = SMSSender() # TODO What is this?

@@ -215,8 +215,9 @@ class GoogleAuthenticatorActivateRequestSerializer(ValidatePasswordMixin, BasicS
         return attrs
 
     def save(self):
-        import pyotp
-        secret = pyotp.random_base32()
+        from pyotp import random_base32
+
+        secret = random_base32()
         self.request.session['temp_otp_secret_key'] = secret
         self.request.session['secret_key_activated'] = True
         self.secret = secret
@@ -236,13 +237,13 @@ class GoogleAuthenticatorActivateConfirmSerializer(serializers.Serializer):
         super(GoogleAuthenticatorActivateConfirmSerializer, self).__init__(*args, **kwargs)
 
     def validate_code(self, code):
-        import pyotp
+        from pyotp import TOTP
 
         if not self.request.session.get('secret_key_activated', False):
             raise serializers.ValidationError('You did not activated google authenticator',
                                               code=constants.GOOGLE_OTP_NOT_ACTIVATED_CODE)
 
-        totp = pyotp.TOTP(self.request.session['temp_otp_secret_key'])
+        totp = TOTP(self.request.session['temp_otp_secret_key'])
         if not totp.verify(code):
             raise serializers.ValidationError('Code is incorrect',
                                               code=constants.GOOGLE_OTP_INVALID_CODE)
@@ -397,9 +398,10 @@ class GoogleAuthenticatorChangeConfirmSerializer(BasicSerializer):
         return sms_code
 
     def save(self):
-        import pyotp
+        from pyotp import random_base32
+
         self.request.session['otp_verified'] = True
-        self.request.session['temp_otp_token'] = pyotp.random_base32()
+        self.request.session['temp_otp_token'] = random_base32()
         self.salt = self.request.session['temp_otp_token']
 
 
@@ -419,13 +421,14 @@ class GoogleAuthenticatorChangeDoneSerializer(BasicSerializer):
         super(GoogleAuthenticatorChangeDoneSerializer, self).__init__(*args, **kwargs)
 
     def validate_otp_code(self, otp_code):
-        import pyotp
+        from pyotp import TOTP
+
         if not self.request.session.get('otp_verified', None) \
                 or not self.request.session.get('temp_otp_token', None):
             raise serializers.ValidationError('OTP credentials is not verified',
                                               code=constants.GOOGLE_OTP_NOT_REQUESTED_CODE)
 
-        totp = pyotp.TOTP(self.request.session.get('temp_otp_token', None))
+        totp = TOTP(self.request.session.get('temp_otp_token', None))
         if not totp.verify(otp_code):
             raise serializers.ValidationError('OTP Code is incorrect',
                                               code=constants.GOOGLE_OTP_INVALID_CODE)
@@ -638,18 +641,19 @@ class GeneratePhoneCodeForUnAuthorizedUserSerializer(BasicSerializer):
 
     def save(self):
         from talos.contrib.sms_sender import SMSSender
-        import pyotp  # TODO import is too generic
+        from pyotp import random_base32
+        from pyotp import TOTP
 
         phone = self.validated_data['phone']
         phone_validation_token = ValidationToken()
         phone_validation_token.identifier = 'phone'
         phone_validation_token.identifier_value = phone
         phone_validation_token.type = 'principal_registration'
-        secret_key = pyotp.random_base32()
+        secret_key = random_base32()
         phone_validation_token.secret = secret_key
         phone_validation_token.save()
 
-        totp = pyotp.TOTP(secret_key)
+        totp = TOTP(secret_key)
         sms_sender = SMSSender()
         if not sms_sender.send_message(phone, 'You registration code is {}'.format(totp.now())):
             raise serializers.ValidationError('This mobile phone is invalid',
@@ -679,7 +683,7 @@ class VerifyPhoneCodeForUnAuthorizedUserSerializer(BasicSerializer):
         return phone
 
     def validate_code(self, code):
-        import pyotp  # TODO import is too generic
+        from pyotp import TOTP
 
         try:
             validation_token = ValidationToken.objects.filter(
@@ -694,7 +698,7 @@ class VerifyPhoneCodeForUnAuthorizedUserSerializer(BasicSerializer):
                 raise serializers.ValidationError('Code is incorrect',
                                                   code=constants.SMS_OTP_INVALID_CODE)
             secret_key = validation_token.secret
-            totp = pyotp.TOTP(secret_key)
+            totp = TOTP(secret_key)
 
             if not totp.verify(code):
                 raise serializers.ValidationError('Code is incorrect',
@@ -705,7 +709,7 @@ class VerifyPhoneCodeForUnAuthorizedUserSerializer(BasicSerializer):
         return code
 
     def validate(self, attrs):
-        import pyotp
+        from pyotp import TOTP
 
         phone = attrs['phone']
         code = attrs['code']
@@ -725,7 +729,7 @@ class VerifyPhoneCodeForUnAuthorizedUserSerializer(BasicSerializer):
                     code=constants.TOKEN_INVALID_CODE)
 
             secret_key = phone_validation_token.secret
-            totp = pyotp.TOTP(secret_key)
+            totp = TOTP(secret_key)
 
             if not totp.verify(code):
                 raise serializers.ValidationError(

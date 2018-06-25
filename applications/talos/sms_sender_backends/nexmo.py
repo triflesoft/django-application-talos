@@ -1,7 +1,5 @@
 # Replace with generic HTTP request
 from django.conf import settings
-import requests  # TODO too generic import
-
 
 class Nexmo(object):
     def __init__(self):
@@ -10,6 +8,8 @@ class Nexmo(object):
         self.request_url = getattr(settings, 'NEXMO_API_SECRET')
 
     def send_message(self, to, message):
+        from requests import post
+
         data = {
             'from': getattr(settings, 'NEXMO_PHONE'),
             'text': message,
@@ -18,7 +18,7 @@ class Nexmo(object):
             'api_secret': self.api_secret
         }
 
-        response = requests.post(self.request_url,
+        response = post(self.request_url,
                                  data=data).json()
 
         return response
