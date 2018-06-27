@@ -2,7 +2,8 @@ from django import forms
 from django.contrib import admin
 from django.contrib.contenttypes.models import ContentType
 
-from .models import _tznow
+from .models import _tznow, MessagingProviderDirectory, MessagingRoute, \
+    MessagingProviderDirectoryOption
 from .models import Evidence
 from .models import Privilege
 from .models import ModelAction
@@ -966,6 +967,47 @@ class ValidationTokenAdmin(AbstractReplicatableAdmin):
         'type'
     ]
 
+@admin.register(MessagingProviderDirectory)
+class MessaginProviderDirectoryAdmin(AbstractReplicatableAdmin, PermissionAdminMixin):
+    fieldsets = [
+        ('General',  {
+            'classes': ('wide',),
+            'fields': [('backend_class',), ('priority',), ('is_active',), ('name',), ('code',)]
+        }),
+    ]
+    list_display = ['uuid', 'backend_class', 'is_active', 'name', 'code']
+    list_filter = ['is_active']
+    ordering = ['name']
+    search_fields = [
+        'backend_class',
+        'name'
+    ]
+    prepopulated_fields = {'code': ('name',)}
+
+@admin.register(MessagingRoute)
+class MessagingRouteAdmin(AbstractReplicatableAdmin):
+    fieldsets = [
+        ('General',  {
+            'classes': ('wide',),
+            'fields': [('directory',), ('prefix',)]
+        }),
+    ]
+    list_display = ['uuid', 'directory', 'prefix']
+    ordering = ['prefix']
+    search_fields = ['directory', 'prefix']
+
+
+@admin.register(MessagingProviderDirectoryOption)
+class MessagingProviderDirectoryOptionAdmin(AbstractReplicatableAdmin):
+    fieldsets = [
+        ('General',  {
+            'classes': ('wide',),
+            'fields': [('directory',), ('name',), ('value',)]
+        }),
+    ]
+    list_display = ['uuid', 'directory', 'name', 'value']
+    ordering = ['name']
+    search_fields = ['directory', 'name', 'value']
 
 from django.contrib.admin.sites import site
 from django.contrib.auth.models import Group

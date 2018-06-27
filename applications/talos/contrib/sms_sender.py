@@ -1,5 +1,4 @@
-from talos.models import SMSProviders
-import re
+from talos.models import MessagingRoute
 
 
 def _create_class_by_name(class_name):
@@ -19,17 +18,13 @@ class SMSSender(object):
 
     def _ensure_backend(self, number):
         if not self.backend_object:
-            sms_providers = SMSProviders.objects.all()
+            sms_providers = MessagingRoute.objects.all()
             for sms_provider in sms_providers:
-                regex = re.compile(sms_provider.regex)
-                if regex.match(number) is not None:
-                    self.backend_object = _create_class_by_name(sms_provider.backend_class)()
-
-        # TODO Use generic HTTP request
-        if not self.backend_object:
-            # Choose default choice
-            self.backend_object = _create_class_by_name(
-                'talos.sms_sender_backends.twilio.TwilioSender')()
+                if number.startswith(sms_provider.prefix):
+                    self.backend_object = _create_class_by_name(
+                        sms_provider.directory.backend_class)()
+                else:
+                    raise Exception("Number has no match")
 
     def send_message(self, number, message):
         self._ensure_backend(number)
@@ -39,3 +34,5 @@ class SMSSender(object):
         if str(response.get('status', '')) == '400':
             return False
         return True
+
+

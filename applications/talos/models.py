@@ -66,9 +66,11 @@ class AbstractReplicatableModel(models.Model):
     uuid = models.UUIDField(unique=True, default=uuid4, editable=False)
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     modified_at = models.DateTimeField(auto_now=True, editable=False)
-    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, related_name='+',
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True,
+                                   related_name='+',
                                    on_delete=models.CASCADE, editable=False)
-    modified_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, related_name='+',
+    modified_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True,
+                                    related_name='+',
                                     on_delete=models.CASCADE, editable=False)
     created_on = models.CharField(max_length=255, default=_default_hostname)
     modified_on = models.CharField(max_length=255, default=_default_hostname)
@@ -245,7 +247,8 @@ class ObjectAction(AbstractReplicatableModel):
 
 
 class RoleDirectory(AbstractRoleDirectory):
-    required_evidences = models.ManyToManyField(Evidence, related_name='+', through='RoleDirectoryRequiredEvidence')
+    required_evidences = models.ManyToManyField(Evidence, related_name='+',
+                                                through='RoleDirectoryRequiredEvidence')
 
     class Meta:
         model_permissions = '__all__'
@@ -291,7 +294,8 @@ class Role(AbstractReplicatableModel):
     directory = models.ForeignKey(RoleDirectory, related_name='roles', on_delete=models.CASCADE)
     code = models.SlugField(unique=True, max_length=255, allow_unicode=True)
     name = models.CharField(unique=True, max_length=255)
-    parent = models.ForeignKey('self', blank=True, null=True, related_name='children', on_delete=models.CASCADE)
+    parent = models.ForeignKey('self', blank=True, null=True, related_name='children',
+                               on_delete=models.CASCADE)
     privilege_permissions_granted = models.ManyToManyField(Privilege, related_name='+',
                                                            through='RolePrivilegePermissionGranted')
     privilege_permissions_revoked = models.ManyToManyField(Privilege, related_name='+',
@@ -321,12 +325,16 @@ class Role(AbstractReplicatableModel):
             parent_model_action_effective_ids = set()
         else:
             parent_privilege_effective_ids = set(
-                id for id in self.parent.privilege_permissions_effective.all().values_list('id', flat=True))
+                id for id in
+                self.parent.privilege_permissions_effective.all().values_list('id', flat=True))
             parent_model_action_effective_ids = set(
-                id for id in self.parent.model_action_permissions_effective.all().values_list('id', flat=True))
+                id for id in
+                self.parent.model_action_permissions_effective.all().values_list('id', flat=True))
 
-        granted_privilege_ids = set(id for id in self.privilege_permissions_granted.all().values_list('id', flat=True))
-        revoked_privilege_ids = set(id for id in self.privilege_permissions_revoked.all().values_list('id', flat=True))
+        granted_privilege_ids = set(
+            id for id in self.privilege_permissions_granted.all().values_list('id', flat=True))
+        revoked_privilege_ids = set(
+            id for id in self.privilege_permissions_revoked.all().values_list('id', flat=True))
         old_effective_privilege_ids = set(
             id for id in self.privilege_permissions_effective.all().values_list('id', flat=True))
 
@@ -337,7 +345,8 @@ class Role(AbstractReplicatableModel):
         create_effective_privilege_ids = new_effective_privilege_ids - old_effective_privilege_ids
         delete_effective_privilege_ids = old_effective_privilege_ids - new_effective_privilege_ids
 
-        RolePrivilegePermissionEffective.objects.filter(privilege__id__in=delete_effective_privilege_ids).delete()
+        RolePrivilegePermissionEffective.objects.filter(
+            privilege__id__in=delete_effective_privilege_ids).delete()
         RolePrivilegePermissionEffective.objects.bulk_create([
             RolePrivilegePermissionEffective(
                 role=self,
@@ -370,7 +379,8 @@ class Role(AbstractReplicatableModel):
 
     def update_effective_permission_sets(self):
         all_privileges = {privilege.id: privilege for privilege in Privilege.objects.all()}
-        all_model_actions = {model_action.id: model_action for model_action in ModelAction.objects.all()}
+        all_model_actions = {model_action.id: model_action for model_action in
+                             ModelAction.objects.all()}
 
         self._update_effective_permission_sets(all_privileges, all_model_actions)
 
@@ -505,9 +515,11 @@ class Realm(AbstractReplicatableModel):
 
 
 class BasicIdentityDirectory(AbstractIdentityDirectory):
-    realm = models.ForeignKey(Realm, null=True, blank=True, related_name='+', on_delete=models.CASCADE)
+    realm = models.ForeignKey(Realm, null=True, blank=True, related_name='+',
+                              on_delete=models.CASCADE)
     credential_directory = models.ForeignKey('BasicCredentialDirectory', null=True, blank=True,
-                                             related_name='identity_directories', on_delete=models.CASCADE)
+                                             related_name='identity_directories',
+                                             on_delete=models.CASCADE)
 
     class Meta:
         model_permissions = '__all__'
@@ -540,11 +552,13 @@ class BasicIdentityDirectory(AbstractIdentityDirectory):
 
 
 class BasicIdentityDirectoryObjectPermission(AbstractObjectPermission):
-    target = models.ForeignKey(BasicIdentityDirectory, related_name='permissions', on_delete=models.CASCADE)
+    target = models.ForeignKey(BasicIdentityDirectory, related_name='permissions',
+                               on_delete=models.CASCADE)
 
 
 class BasicIdentityDirectoryOption(AbstractReplicatableModel):
-    directory = models.ForeignKey(BasicIdentityDirectory, related_name='options', on_delete=models.CASCADE)
+    directory = models.ForeignKey(BasicIdentityDirectory, related_name='options',
+                                  on_delete=models.CASCADE)
     name = models.CharField(max_length=255)
     value = models.TextField()
 
@@ -556,9 +570,9 @@ class BasicIdentityDirectoryOption(AbstractReplicatableModel):
 
 
 class BasicIdentity(AbstractIdentity):
-    directory = models.ForeignKey(BasicIdentityDirectory, related_name='identities', on_delete=models.CASCADE)
+    directory = models.ForeignKey(BasicIdentityDirectory, related_name='identities',
+                                  on_delete=models.CASCADE)
     username = models.CharField(max_length=255)
-
 
     class Meta:
         unique_together = [
@@ -623,11 +637,13 @@ class BasicCredentialDirectory(AbstractCredentialDirectory):
 
 
 class BasicCredentialDirectoryObjectPermission(AbstractObjectPermission):
-    target = models.ForeignKey(BasicCredentialDirectory, related_name='permissions', on_delete=models.CASCADE)
+    target = models.ForeignKey(BasicCredentialDirectory, related_name='permissions',
+                               on_delete=models.CASCADE)
 
 
 class BasicCredentialDirectoryProvidedEvidence(AbstractReplicatableModel):
-    directory = models.ForeignKey(BasicCredentialDirectory, related_name='+', on_delete=models.CASCADE)
+    directory = models.ForeignKey(BasicCredentialDirectory, related_name='+',
+                                  on_delete=models.CASCADE)
     evidence = models.ForeignKey(Evidence, related_name='+', on_delete=models.CASCADE)
 
     class Meta:
@@ -640,7 +656,8 @@ class BasicCredentialDirectoryProvidedEvidence(AbstractReplicatableModel):
 
 
 class BasicCredentialDirectoryOption(AbstractReplicatableModel):
-    directory = models.ForeignKey(BasicCredentialDirectory, related_name='options', on_delete=models.CASCADE)
+    directory = models.ForeignKey(BasicCredentialDirectory, related_name='options',
+                                  on_delete=models.CASCADE)
     name = models.CharField(max_length=255)
     value = models.TextField()
 
@@ -657,8 +674,10 @@ class BasicCredential(AbstractCredential):
         ('bcrypt', 'bcrypt'),
         ('scrypt', 'scrypt'))
 
-    directory = models.ForeignKey(BasicCredentialDirectory, related_name='credentials', on_delete=models.CASCADE)
-    algorithm_name = models.CharField(max_length=255, choices=ALGORITHM_NAME_CHOICES, default='pbkdf2')
+    directory = models.ForeignKey(BasicCredentialDirectory, related_name='credentials',
+                                  on_delete=models.CASCADE)
+    algorithm_name = models.CharField(max_length=255, choices=ALGORITHM_NAME_CHOICES,
+                                      default='pbkdf2')
     algorithm_rounds = models.PositiveIntegerField(default=100000)
     salt = models.BinaryField()
     password_hmac = models.BinaryField()
@@ -677,13 +696,15 @@ class BasicCredential(AbstractCredential):
         from os import urandom
 
         self.salt = urandom(64)
-        self.password_hmac = pbkdf2_hmac('sha256', new_password.encode('utf-8'), self.salt, self.algorithm_rounds)
+        self.password_hmac = pbkdf2_hmac('sha256', new_password.encode('utf-8'), self.salt,
+                                         self.algorithm_rounds)
 
     def verify_password(self, password):
         from hashlib import pbkdf2_hmac
         from hmac import compare_digest
 
-        password_hmac = pbkdf2_hmac('sha256', password.encode('utf-8'), self.salt, self.algorithm_rounds)
+        password_hmac = pbkdf2_hmac('sha256', password.encode('utf-8'), self.salt,
+                                    self.algorithm_rounds)
 
         return compare_digest(self.password_hmac, password_hmac)
 
@@ -706,11 +727,13 @@ class SubnetCredentialDirectory(AbstractCredentialDirectory):
 
 
 class SubnetCredentialDirectoryObjectPermission(AbstractObjectPermission):
-    target = models.ForeignKey(SubnetCredentialDirectory, related_name='permissions', on_delete=models.CASCADE)
+    target = models.ForeignKey(SubnetCredentialDirectory, related_name='permissions',
+                               on_delete=models.CASCADE)
 
 
 class SubnetCredentialDirectoryProvidedEvidence(AbstractReplicatableModel):
-    directory = models.ForeignKey(SubnetCredentialDirectory, related_name='+', on_delete=models.CASCADE)
+    directory = models.ForeignKey(SubnetCredentialDirectory, related_name='+',
+                                  on_delete=models.CASCADE)
     evidence = models.ForeignKey(Evidence, related_name='+', on_delete=models.CASCADE)
 
     class Meta:
@@ -723,7 +746,8 @@ class SubnetCredentialDirectoryProvidedEvidence(AbstractReplicatableModel):
 
 
 class SubnetCredentialDirectoryOption(AbstractReplicatableModel):
-    directory = models.ForeignKey(SubnetCredentialDirectory, related_name='options', on_delete=models.CASCADE)
+    directory = models.ForeignKey(SubnetCredentialDirectory, related_name='options',
+                                  on_delete=models.CASCADE)
     name = models.CharField(max_length=255)
     value = models.TextField()
 
@@ -735,7 +759,8 @@ class SubnetCredentialDirectoryOption(AbstractReplicatableModel):
 
 
 class SubnetCredential(AbstractCredential):
-    directory = models.ForeignKey(SubnetCredentialDirectory, related_name='credentials', on_delete=models.CASCADE)
+    directory = models.ForeignKey(SubnetCredentialDirectory, related_name='credentials',
+                                  on_delete=models.CASCADE)
     address = models.GenericIPAddressField()
     network = models.PositiveIntegerField()
 
@@ -803,18 +828,19 @@ class OneTimePasswordCredentialDirectory(AbstractCredentialDirectory):
 
         return self.backend_object.generate_credentials(principal, credentials)
 
-
     def save(self, *args, **kwargs):
         super(OneTimePasswordCredentialDirectory, self).save(*args, **kwargs)
         self.backend_object = None
 
 
 class OneTimePasswordCredentialDirectoryObjectPermission(AbstractObjectPermission):
-    target = models.ForeignKey(OneTimePasswordCredentialDirectory, related_name='permissions', on_delete=models.CASCADE)
+    target = models.ForeignKey(OneTimePasswordCredentialDirectory, related_name='permissions',
+                               on_delete=models.CASCADE)
 
 
 class OneTimePasswordCredentialDirectoryProvidedEvidence(AbstractReplicatableModel):
-    directory = models.ForeignKey(OneTimePasswordCredentialDirectory, related_name='+', on_delete=models.CASCADE)
+    directory = models.ForeignKey(OneTimePasswordCredentialDirectory, related_name='+',
+                                  on_delete=models.CASCADE)
     evidence = models.ForeignKey(Evidence, related_name='+', on_delete=models.CASCADE)
 
     class Meta:
@@ -827,7 +853,8 @@ class OneTimePasswordCredentialDirectoryProvidedEvidence(AbstractReplicatableMod
 
 
 class OneTimePasswordCredentialDirectoryOption(AbstractReplicatableModel):
-    directory = models.ForeignKey(OneTimePasswordCredentialDirectory, related_name='options', on_delete=models.CASCADE)
+    directory = models.ForeignKey(OneTimePasswordCredentialDirectory, related_name='options',
+                                  on_delete=models.CASCADE)
     name = models.CharField(max_length=255)
     value = models.TextField()
 
@@ -867,11 +894,13 @@ class TokenCredentialDirectory(AbstractCredentialDirectory):
 
 
 class TokenCredentialDirectoryObjectPermission(AbstractObjectPermission):
-    target = models.ForeignKey(TokenCredentialDirectory, related_name='permissions', on_delete=models.CASCADE)
+    target = models.ForeignKey(TokenCredentialDirectory, related_name='permissions',
+                               on_delete=models.CASCADE)
 
 
 class TokenCredentialDirectoryProvidedEvidence(AbstractReplicatableModel):
-    directory = models.ForeignKey(TokenCredentialDirectory, related_name='+', on_delete=models.CASCADE)
+    directory = models.ForeignKey(TokenCredentialDirectory, related_name='+',
+                                  on_delete=models.CASCADE)
     evidence = models.ForeignKey(Evidence, related_name='+', on_delete=models.CASCADE)
 
     class Meta:
@@ -884,7 +913,8 @@ class TokenCredentialDirectoryProvidedEvidence(AbstractReplicatableModel):
 
 
 class TokenCredentialDirectoryOption(AbstractReplicatableModel):
-    directory = models.ForeignKey(TokenCredentialDirectory, related_name='options', on_delete=models.CASCADE)
+    directory = models.ForeignKey(TokenCredentialDirectory, related_name='options',
+                                  on_delete=models.CASCADE)
     name = models.CharField(max_length=255)
     value = models.TextField()
 
@@ -896,7 +926,8 @@ class TokenCredentialDirectoryOption(AbstractReplicatableModel):
 
 
 class TokenCredential(AbstractCredential):
-    directory = models.ForeignKey(TokenCredentialDirectory, related_name='credentials', on_delete=models.CASCADE)
+    directory = models.ForeignKey(TokenCredentialDirectory, related_name='credentials',
+                                  on_delete=models.CASCADE)
     public_value = models.CharField(max_length=255)
     secret_value = models.CharField(max_length=255)
 
@@ -965,7 +996,8 @@ class Principal(AbstractReplicatableModel):
     is_active = models.BooleanField(default=True)
     last_login = models.DateTimeField(blank=True, null=True)
     salt = models.BinaryField()
-    roles = models.ManyToManyField(Role, through='PrincipalRoleMembership', through_fields=('principal', 'role'))
+    roles = models.ManyToManyField(Role, through='PrincipalRoleMembership',
+                                   through_fields=('principal', 'role'))
 
     class Meta:
         model_permissions = ('__all__')
@@ -997,7 +1029,6 @@ class Principal(AbstractReplicatableModel):
             self._model_actions_effective_application.add(model_action.application)
             self._model_actions_effective_model_action[model_action.model].add(model_action.action)
 
-
     def _extract_authentication_context(self):
         from django.core import serializers
 
@@ -1024,7 +1055,8 @@ class Principal(AbstractReplicatableModel):
 
         return evidences, roles, privileges, model_actions
 
-    def _inject_authentication_context(self, evidences_json=None, roles_json=None, privileges_json=None,
+    def _inject_authentication_context(self, evidences_json=None, roles_json=None,
+                                       privileges_json=None,
                                        model_actions_json=None):
         from collections import OrderedDict
         from django.core import serializers
@@ -1058,7 +1090,8 @@ class Principal(AbstractReplicatableModel):
     def _load_authentication_context(self, provided_evidences):
         from collections import OrderedDict
 
-        provided_evidence_ids = set(provided_evidence.id for provided_evidence in provided_evidences)
+        provided_evidence_ids = set(
+            provided_evidence.id for provided_evidence in provided_evidences)
         possible_roles = list(
             membership.role for membership in PrincipalRoleMembership
                 .objects
@@ -1255,10 +1288,12 @@ class PrincipalObjectPermission(AbstractObjectPermission):
 
 
 class ValidationToken(AbstractReplicatableModel):
-    principal = models.ForeignKey(Principal, null=True, blank=True, related_name='+', on_delete=models.CASCADE,
+    principal = models.ForeignKey(Principal, null=True, blank=True, related_name='+',
+                                  on_delete=models.CASCADE,
                                   editable=False)
     # email = models.EmailField(max_length=255, editable=False)
-    identifier = models.CharField(max_length= 255, choices= VALIDATION_TOKEN_IDENTIFIER_CHOICES, editable=False, default='undefined')
+    identifier = models.CharField(max_length=255, choices=VALIDATION_TOKEN_IDENTIFIER_CHOICES,
+                                  editable=False, default='undefined')
     identifier_value = models.CharField(max_length=255, null=True)
     type = models.CharField(max_length=255, choices=VALIDATION_TOKEN_TYPE_CHOICES, editable=False)
     secret = models.CharField(max_length=64, unique=True, editable=False)
@@ -1272,7 +1307,6 @@ class ValidationToken(AbstractReplicatableModel):
 
     def save(self, *args, **kwargs):
         from binascii import hexlify
-        from datetime import datetime
         from datetime import timedelta
         from os import urandom
 
@@ -1286,6 +1320,7 @@ class ValidationToken(AbstractReplicatableModel):
 
     def __str__(self):
         return self.secret
+
 
 class PrincipalProfile(models.Model):
     principal = models.OneToOneField(Principal, related_name='profile', on_delete=models.CASCADE)
@@ -1304,3 +1339,25 @@ class SMSProviders(models.Model):
 
     def __str__(self):
         return self.backend_class
+
+
+class MessagingProviderDirectory(AbstractDirectory):
+    def __str__(self):
+        return self.backend_class
+
+
+class MessagingProviderDirectoryOption(AbstractReplicatableModel):
+    directory = models.ForeignKey(MessagingProviderDirectory, related_name='options', on_delete=models.CASCADE)
+    name = models.CharField(max_length=255)
+    value = models.TextField()
+
+    def __str__(self):
+        return self.name
+
+
+class MessagingRoute(AbstractReplicatableModel):
+    directory = models.ForeignKey(MessagingProviderDirectory, related_name='+', on_delete=models.CASCADE)
+    prefix = models.CharField(max_length=15)
+
+    def __str__(self):
+        return self.prefix
