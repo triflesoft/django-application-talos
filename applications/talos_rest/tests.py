@@ -44,7 +44,6 @@ class TestUtils(APITestCase):
         from talos.models import Principal
         from talos.models import BasicIdentity
         from talos.models import BasicIdentityDirectory
-        from talos.models import PrincipalProfile
 
         self.principal = Principal.objects.create(full_name=self.full_name, phone=self.phone, email=self.email)
 
@@ -56,11 +55,6 @@ class TestUtils(APITestCase):
         basic_identity.username = self.email
         basic_identity.directory = BasicIdentityDirectory.objects.get(code='basic_internal')
         basic_identity.save()
-
-        principal_profile = PrincipalProfile()
-        principal_profile.principal = self.principal
-        principal_profile.is_secure = False
-        principal_profile.save()
 
     def login(self):
         data = {
@@ -117,8 +111,6 @@ class TestUtils(APITestCase):
             code='onetimepassword_internal_google_authenticator')
         otp_directory.create_credentials(self.principal, {})
 
-        self.principal.profile.is_secure = True
-        self.principal.profile.save()
 
         otp_credential = OneTimePasswordCredential.objects.last()
 
@@ -425,12 +417,18 @@ class TestPermissionDeniedPermission(TestUtils):
                               'ownership_factor_phone'])
 
     def test_permission_error_message_when_user_secure(self):
+        from talos.models import OneTimePasswordCredentialDirectory
+
         self.create_user()
-        self.principal.profile.is_secure = True
-        self.principal.profile.save()
         self.login()
 
+        directory = OneTimePasswordCredentialDirectory.objects.get(code='onetimepassword_internal_google_authenticator')
+        google_otp = OneTimePasswordCredential(principal=self.principal, directory=directory)
+        google_otp.save()
+
         response = self.client.post(self.url)
+
+
 
         self.assertResponseStatus(response, status.HTTP_403_FORBIDDEN)
         self.assertListEqual(response.data.get('error'),
@@ -1186,7 +1184,7 @@ class TestAddGoogleAuthenticator(TestUtils):
             'code': code
         }
 
-        self.assertFalse(self.principal.profile.is_secure)
+        #self.assertFalse(self.principal.profile.is_secure)
 
         response = self.client.post(self.confirm_url, data, format='json')
 
@@ -1201,8 +1199,6 @@ class TestAddGoogleAuthenticator(TestUtils):
         self.assertEqual(otp_credential.salt.decode(), secret)
 
         principal = Principal.objects.get(pk=self.principal.pk)
-        self.assertTrue(principal.profile.is_secure)
-
 
 class TestGoogleAuthenticatorDelete(TestUtils):
     request_url = reverse('google-authenticator-delete-request')

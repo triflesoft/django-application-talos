@@ -293,11 +293,17 @@ class PrincipalSecurityLevelView(SecureAPIViewBaseView):
     permission_classes = (IsAuthenticated,)
 
     def get(self, request):
-        success_response = SuccessResponse()
+        from talos.models import OneTimePasswordCredential
+        from talos.models import OneTimePasswordCredentialDirectory
 
-        if request.principal.profile.is_secure:
+        directory = OneTimePasswordCredentialDirectory.objects.get(
+            code='onetimepassword_internal_google_authenticator')
+        success_response = SuccessResponse()
+        try:
+
+            OneTimePasswordCredential(principal=self.principal, directory=directory)
             success_response.set_result_pairs('secure', 'True')
-        else:
+        except OneTimePasswordCredential.DoesNotExist:
             success_response.set_result_pairs('secure', 'False')
         return Response(data=success_response.data)
 
@@ -306,14 +312,20 @@ class PrincipalSecurityLevelByTokenView(SecureAPIViewBaseView):
 
     def get(self, **kwargs):
         from talos.models import ValidationToken
-        from talos.models import PrincipalProfile
+        #from talos.models import PrincipalProfile
+        from talos.models import OneTimePasswordCredential
+        from talos.models import OneTimePasswordCredentialDirectory
+
         success_response = SuccessResponse()
         try:
             validation_token = ValidationToken.objects.get(secret=kwargs.get('secret'))
-            profile = PrincipalProfile.objects.get(principal=validation_token.principal)
-            if profile.is_secure:
+            directory = OneTimePasswordCredentialDirectory.objects.get(
+                code='onetimepassword_internal_google_authenticator')
+
+            try:
+                OneTimePasswordCredential(principal=self.principal, directory=directory)
                 success_response.set_result_pairs('secure', 'True')
-            else:
+            except OneTimePasswordCredential.DoesNotExist:
                 success_response.set_result_pairs('secure', 'False')
         except ValidationToken.DoesNotExist:
             error_response = ErrorResponse()

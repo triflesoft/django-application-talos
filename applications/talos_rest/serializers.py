@@ -255,8 +255,6 @@ class GoogleAuthenticatorActivateConfirmSerializer(serializers.Serializer):
                                                              {'salt': self.request.session[
                                                                  'temp_otp_secret_key']})
             self.salt = self.request.session['temp_otp_secret_key']
-            self.principal.profile.is_secure = True
-            self.principal.profile.save()
             del self.request.session['temp_otp_secret_key']
             del self.request.session['secret_key_activated']
 
@@ -831,16 +829,12 @@ class BasicRegistrationSerializer(BasicSerializer):
         return attrs
 
     def save(self):
-        from talos.models import PrincipalProfile
-
         self.principal = Principal()
         self.principal.email = self.validated_data['email']
         self.principal.phone = self.validated_data['phone']
         self.principal.full_name = self.validated_data['full_name']
 
         self.principal.save()
-
-        PrincipalProfile.objects.create(principal=self.principal)
 
         self.identity_directory.create_credentials(self.principal,
                                                    {'username': self.validated_data['email']})

@@ -1,5 +1,6 @@
 from rest_framework import permissions
-
+from talos.models import OneTimePasswordCredentialDirectory
+from talos.models import OneTimePasswordCredential
 
 class IsBasicAuthenticated(permissions.BasePermission):
     message = 'you do not have a permission'
@@ -51,12 +52,13 @@ class IsAuthenticated(permissions.BasePermission):
 
         if len(result) > 0:
             if str(request.principal) != 'Anonymous':
-                is_secure = request.principal.profile.is_secure
-                if is_secure:
+                try:
+                    directory = OneTimePasswordCredentialDirectory.objects.get(code='onetimepassword_internal_google_authenticator')
+                    OneTimePasswordCredential.objects.get(principal=request.principal,
+                                                          directory=directory)
                     result.append("ownership_factor_google_authenticator")
-                else:
+                except OneTimePasswordCredential.DoesNotExist:
                     result.append("ownership_factor_phone")
-
             self.message = result
 
             return False
@@ -67,5 +69,11 @@ class IsSecureLevelOn(permissions.BasePermission):
     message = 'you do not have a permission, please turn Google OTP'
 
     def has_permission(self, request, view):
-        is_secure = request.principal.profile.is_secure
-        return is_secure
+        directory = OneTimePasswordCredentialDirectory.objects.get(
+            code='onetimepassword_internal_google_authenticator')
+        try:
+            OneTimePasswordCredential.objects.get(principal=request.principal,
+                                                  directory=directory)
+        except OneTimePasswordCredential.DoesNotExist:
+            return False
+        return True
