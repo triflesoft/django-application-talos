@@ -1287,6 +1287,12 @@ class ValidationToken(AbstractReplicatableModel):
     def __str__(self):
         return self.secret
 
+class PrincipalProfile(models.Model):
+    principal = models.OneToOneField(Principal, related_name='profile', on_delete=models.CASCADE)
+    is_secure = models.BooleanField(default=False)
+
+    def __str__(self):
+        return str(self.principal) + " is secure" if self.is_secure else "is not secure"
 
 
 # TODO replace with generic HTTP request
@@ -1298,3 +1304,25 @@ class SMSProviders(models.Model):
 
     def __str__(self):
         return self.backend_class
+
+
+class MessagingProviderDirectory(AbstractDirectory):
+    def __str__(self):
+        return self.backend_class
+
+
+class MessagingProviderDirectoryOption(AbstractReplicatableModel):
+    directory = models.ForeignKey(MessagingProviderDirectory, related_name='options', on_delete=models.CASCADE)
+    name = models.CharField(max_length=255)
+    value = models.TextField()
+
+    def __str__(self):
+        return self.name
+
+
+class MessagingRoute(AbstractReplicatableModel):
+    directory = models.ForeignKey(MessagingProviderDirectory, related_name='+', on_delete=models.CASCADE)
+    prefix = models.CharField(max_length=15)
+
+    def __str__(self):
+        return self.prefix

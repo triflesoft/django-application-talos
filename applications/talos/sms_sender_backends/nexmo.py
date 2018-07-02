@@ -1,17 +1,19 @@
-# Replace with generic HTTP request
-from django.conf import settings
+from talos.models import MessagingProviderDirectoryOption
+
 
 class Nexmo(object):
     def __init__(self):
-        self.api_key = getattr(settings, 'NEXMO_API_KEY')
-        self.api_secret = getattr(settings, 'NEXMO_API_SECRET')
-        self.request_url = getattr(settings, 'NEXMO_API_SECRET')
+        self.message_options = MessagingProviderDirectoryOption.objects.filter(
+            directory__code="nexmo")
+        self.api_key = self.message_options.get(name="NEXMO_API_KEY").value
+        self.api_secret = self.message_options.get(name="NEXMO_API_SECRET").value
+        self.request_url = self.message_options.get(name="NEXMO_API_SECRET").value
 
     def send_message(self, to, message):
         from requests import post
 
         data = {
-            'from': getattr(settings, 'NEXMO_PHONE'),
+            'from': self.message_options.get(name="NEXMO_PHONE").value,
             'text': message,
             'to': to,
             'api_key': self.api_key,
@@ -19,6 +21,6 @@ class Nexmo(object):
         }
 
         response = post(self.request_url,
-                                 data=data).json()
+                        data=data).json()
 
         return response
