@@ -1,0 +1,1 @@
+E-mail change confirmation for {{ recipient_name }}

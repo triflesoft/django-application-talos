@@ -1,1 +1,1 @@
-E-mail change for {{ principal.full_name }}
+E-mail change for {{ recipient_name }}

@@ -128,7 +128,6 @@ class SessionAPIView(SecureAPIViewBaseView):
             raise APIValidationError(detail=serializer.errors)
 
     def delete(self, request):
-        print('Delete method')
         if str(self.request.user) == 'Anonymous':
             reseponse = ErrorResponse(status=status.HTTP_404_NOT_FOUND)
         else:
@@ -334,7 +333,7 @@ class PrincipalSecurityLevelByTokenView(SecureAPIViewBaseView):
 
 
 class GeneratePhoneCodeForAuthorizedUserView(SecureAPIViewBaseView):
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsBasicAuthenticated,)
     serializer_class = GeneratePhoneCodeForAuthorizedUserSerializer
 
     def post(self, request):
@@ -347,7 +346,7 @@ class GeneratePhoneCodeForAuthorizedUserView(SecureAPIViewBaseView):
 
 
 class VerifyPhoneCodeForAuthorizedUserView(SecureAPIViewBaseView):
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsBasicAuthenticated,)
     serializer_class = VerifyPhoneCodeForAuthorizedUserSerializer
 
     def post(self, request):
@@ -355,11 +354,9 @@ class VerifyPhoneCodeForAuthorizedUserView(SecureAPIViewBaseView):
         serializer = VerifyPhoneCodeForAuthorizedUserSerializer(data=request.data, context=kwargs)
         if serializer.is_valid(raise_exception=True):
             serializer.save()
-            context = {
-                'code': '200',
-                'text': 'Your code is correct'
-            }
-            return Response(context)
+            success_response = SuccessResponse()
+            success_response.set_result_pairs('text', 'your code is correct')
+            return Response(success_response.data)
 
 
 class ChangePasswordInsecureView(SecureAPIViewBaseView):

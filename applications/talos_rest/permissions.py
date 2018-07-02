@@ -65,6 +65,8 @@ class IsAuthenticated(permissions.BasePermission):
         return True
 
 
+
+
 class IsSecureLevelOn(permissions.BasePermission):
     message = 'you do not have a permission, please turn Google OTP'
 

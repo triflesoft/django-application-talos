@@ -674,7 +674,7 @@ class TestEmailChange(TestUtils):
         self.login()
         self.add_evidence_sms()
 
-        data = {'new_email': 'correct@website.ge'}
+        data = {'new_email': 'giorgi.fafa@gmail.com'}
         response = self.client.post(self.email_change_request_url, data)
 
         self.assertResponseStatus(response)

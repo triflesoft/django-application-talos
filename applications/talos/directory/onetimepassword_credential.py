@@ -97,6 +97,7 @@ class InternalPhoneSMS(object):
         from ..models import _tzmin
         from ..models import _tzmax
         from pyotp import random_base32
+        from talos.contrib.sms_sender import SMSSender
 
         otp_credential = OneTimePasswordCredential()
         otp_credential.uuid = uuid4()
@@ -108,7 +109,9 @@ class InternalPhoneSMS(object):
         otp_credential.salt = base32_secret.encode()
         otp_credential.save()
 
-        # Sending SMS
+        # TODO: Sending SMS
+        sms_sender = SMSSender()
+        sms_sender.send_message(principal.phone, 'Your code is {}'.format(otp_credential.salt))
 
     def verify_credentials(self, principal, credentials):
         code = credentials['code']
