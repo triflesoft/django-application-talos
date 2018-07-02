@@ -1287,12 +1287,7 @@ class ValidationToken(AbstractReplicatableModel):
     def __str__(self):
         return self.secret
 
-class PrincipalProfile(models.Model):
-    principal = models.OneToOneField(Principal, related_name='profile', on_delete=models.CASCADE)
-    is_secure = models.BooleanField(default=False)
 
-    def __str__(self):
-        return str(self.principal) + " is secure" if self.is_secure else "is not secure"
 
 
 # TODO replace with generic HTTP request
