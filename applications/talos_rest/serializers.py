@@ -1613,34 +1613,56 @@ class PasswordResetRequestSerializer(BasicSerializer):
         return email
 
     def save(self):
+        from django.urls import reverse
+        from django.template.loader import render_to_string
+        from django.core.mail import send_mail
+
+        email = self.validated_data['email']
+
         validation_token = ValidationToken()
         validation_token.identifier = 'email'
-        validation_token.identifier_value = self.validated_data['email']
+        validation_token.identifier_value = email
         validation_token.principal = self.principal
         validation_token.type = self.token_type
         validation_token.save()
 
-        # context = {
-        #     'url': '{0}://{1}{2}'.format(
-        #         self.request.scheme,
-        #         self.request.META['HTTP_HOST'],
-        #         reverse('talos-email-change-confirm-edit', args=[validation_token.secret])),
-        #     'principal': validation_token.principal,
-        #     'new_email': new_email}
+        # TODO: Send email
+        url = '{0}://{1}{2}'.format(
+            self.request.scheme,
+            self.request.META.get('HTTP_HOST', 'test_host'),
+            reverse('password-reset-validation', args=[self.token.secret])
+        )
 
-        #
-        # mail_subject = render_to_string('talos/email_change/request_email_subject.txt', context)
-        # mail_body_text = render_to_string('talos/email_change/request_email_body.txt', context)
-        # mail_body_html = render_to_string('talos/email_change/request_email_body.html', context)
-        #
-        # send_mail(
-        #     subject=mail_subject,
-        #     message=mail_body_text,
-        #     html_message=mail_body_html,
-        #     from_email=None,
-        #     recipient_list=[new_email],
-        #     fail_silently=True)
 
+        context = {
+            'email': email,
+            'url': url,
+            'recipient_name': validation_token.principal.full_name,
+        }
+
+
+        mail_subject = render_to_string('talos/email_change/request_email_subject.txt', context)
+        mail_body_text = render_to_string('talos/email_change/request_email_body.txt', context)
+        mail_body_html = render_to_string('talos/email_change/request_email_body.html', context)
+
+        send_mail(
+            subject=mail_subject,
+            message=mail_body_text,
+            html_message=mail_body_html,
+            from_email=None,
+            recipient_list=[email],
+            fail_silently=True)
+
+
+
+class PasswordResetValidationTokenSerializer(ValidateSecretWhenLoggedOutMixin,
+                                            BasicSerializer):
+    token_type = 'password_reset'
+
+    def __init__(self, *args, **kwargs):
+        passed_kwargs_from_view = kwargs.get('context')
+        self.request = passed_kwargs_from_view
+        super(PasswordResetValidationTokenSerializer, self).__init__(*args, **kwargs)
 
 class PasswordResetInsecureSerializer(SMSOtpSerializerMixin, BasicSerializer):
     token = serializers.CharField()

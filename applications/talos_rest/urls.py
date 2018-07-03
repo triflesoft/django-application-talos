@@ -33,7 +33,8 @@ from .views import SessionAPIView, EmailChangeRequestAPIView, \
     PhoneResetInsecureAPIView, PhoneResetSecureAPIView, PrincipalSecurityLevelByTokenView, \
     EmailResetInsecureAPIView, \
     EmailResetSecureAPIView, ProvidedEvidencesView, TestView, PasswordChangeInsecureView, \
-    PasswordChangeSecureView, PasswordResetInsecureView, PasswordResetSecureView, LdapSessionAPIView
+    PasswordChangeSecureView, PasswordResetInsecureView, PasswordResetSecureView, LdapSessionAPIView, \
+    PasswordResetTokenCheckerAPIView
 
 from rest_framework.documentation import include_docs_urls
 
@@ -89,6 +90,9 @@ urlpatterns = [
     # Password reset
     path('principal/password/reset-request', PasswordResetRequestView.as_view(),
          name='password-reset-request'),
+
+    path('principal/password/reset-token/<slug:secret>', PasswordResetTokenCheckerAPIView.as_view(),
+         name='password-reset-validation'),
 
     path('principal/password/reset/insecure', PasswordResetInsecureView.as_view(),
          name='password-reset-insecure'),

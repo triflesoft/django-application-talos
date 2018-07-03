@@ -30,7 +30,8 @@ from .serializers import SessionSerializer, \
     PhoneChangeInsecureSerializer, PhoneResetRequestSerializer, \
     PhoneResetValidationTokenCheckerSerializer, PhoneResetInsecureSerializer, \
     PhoneResetSecureSerializer, PasswordChangeInsecureSerializer, PasswordChangeSecureSerializer, \
-    LdapLoginSerializer, PasswordResetInsecureSerializer, PasswordResetSecureSerializer
+    LdapLoginSerializer, PasswordResetInsecureSerializer, PasswordResetSecureSerializer, \
+    PasswordResetValidationTokenSerializer
 
 from talos_rest.permissions import IsAuthenticated, IsBasicAuthenticated, IsSecureLevelOn
 
@@ -558,6 +559,20 @@ class PasswordResetRequestView(SecureAPIViewBaseView):
             return Response(success_response.data, success_response.status)
         else:
             raise APIValidationError(serializer.errors)
+
+
+class PasswordResetTokenCheckerAPIView(SecureAPIViewBaseView):
+    identity_directory_code = 'basic_internal'
+    serializer_class = PasswordResetValidationTokenSerializer
+
+    def get(self, **kwargs):
+
+        serializer = PasswordResetValidationTokenSerializer(data=kwargs)
+
+        if serializer.is_valid(raise_exception=False):
+            return Response(serializer.data)
+        else:
+            raise APIValidationError(detail=serializer.errors)
 
 
 class PasswordResetInsecureView(SecureAPIViewBaseView):
