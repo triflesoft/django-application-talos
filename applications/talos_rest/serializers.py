@@ -11,10 +11,6 @@ email_regex = compile(r'^[^@]+@[^@]+\.[^@]+$')
 PHONE_SMS_CREDENTIAL_DIRECTORY_CODE = 'onetimepassword_internal_phone_sms_authenticator'
 GOOGLE_OTP_CREDENTIAL_DIRECTORY_CODE = 'onetimepassword_internal_google_authenticator'
 
-
-###
-### Start of mixins
-###
 class SMSOtpSerializerMixin():
 
     def __init__(self, *args, **kwargs):
@@ -75,9 +71,9 @@ class ValidateSecretWhenLogedInMixin():
     def __init__(self, *args, **kwargs):
         self.fields['secret'] = serializers.CharField(label='Token', max_length=255)
         self.token = None
+
         super(ValidateSecretWhenLogedInMixin, self).__init__(*args, **kwargs)
 
-    token_type = None
 
     def validate_secret(self, token):
         """ Validate token"""
@@ -104,7 +100,6 @@ class ValidateSecretWhenLoggedOutMixin():
         self.token = None
         super(ValidateSecretWhenLoggedOutMixin, self).__init__(*args, **kwargs)
 
-    token_type = None
 
     def validate_secret(self, token):
         """ Validate token"""
@@ -126,9 +121,6 @@ class ValidateSecretWhenLoggedOutMixin():
         return self.token
 
 
-####
-#### Endof the mixins
-####
 
 class BasicSerializer(serializers.Serializer):
     BASIC_SUCCESS_CODE = status.HTTP_200_OK
@@ -441,7 +433,7 @@ class GoogleAuthenticatorChangeDoneSerializer(BasicSerializer):
                                                              new_credentials=new_credentials)
 
 
-class GeneratePhoneCodeForAuthorizedUserSerializer(serializers.Serializer):
+class GeneratePhoneCodeForAuthorizedUserSerializer(BasicSerializer):
 
     def __init__(self, *args, **kwargs):
         from talos.models import OneTimePasswordCredentialDirectory
@@ -458,7 +450,7 @@ class GeneratePhoneCodeForAuthorizedUserSerializer(serializers.Serializer):
             self.sms_otp_directory.create_credentials(self.principal, {})
 
 
-class VerifyPhoneCodeForAuthorizedUserSerializer(serializers.Serializer):
+class VerifyPhoneCodeForAuthorizedUserSerializer(BasicSerializer):
     code = serializers.CharField()
 
     def __init__(self, *args, **kwargs):
@@ -483,137 +475,17 @@ class VerifyPhoneCodeForAuthorizedUserSerializer(serializers.Serializer):
         for sms_otp_evidence in self.sms_otp_evidences:
             self.principal._evidences_effective[sms_otp_evidence.code] = sms_otp_evidence
 
-
-class ChangePasswordInsecureSerializer(BasicSerializer):
-    old_password = serializers.CharField()
-    new_password = serializers.CharField()
-    sms_code = serializers.CharField()
-
+class AddEvidenceBaseSerialize(BasicSerializer):
     def __init__(self, *args, **kwargs):
         from talos.models import OneTimePasswordCredentialDirectory
-        from talos.models import BasicIdentityDirectory
-
-        passed_kwargs_from_view = kwargs.get('context')
-        self.request = passed_kwargs_from_view['request']
-        self.principal = self.request.principal
-        self.sms_otp_directory = OneTimePasswordCredentialDirectory.objects.get(
-            code=PHONE_SMS_CREDENTIAL_DIRECTORY_CODE)
-        self.basic_identity_directory = BasicIdentityDirectory.objects.get(
-            code=passed_kwargs_from_view['identity_directory_code'])
-        self.basic_credential_directory = self.basic_identity_directory.credential_directory
-        super(ChangePasswordInsecureSerializer, self).__init__(*args, **kwargs)
-
-    def validate_full_name(self, full_name):
-        return full_name
-
-    def validate_sms_code(self, sms_code):
-        if not self.sms_otp_directory.verify_credentials(self.principal,
-                                                         {'code': sms_code}):
-            raise serializers.ValidationError('Sms Code is incorrect',
-                                              code=constants.SMS_OTP_INVALID_CODE)
-        return sms_code
-
-    def validate_old_password(self, old_password):
-        if not self.basic_credential_directory.verify_credentials(self.principal,
-                                                                  {'password': old_password}):
-            raise serializers.ValidationError('Password is incorrect',
-                                              code=constants.PASSWORD_INVALID_CODE)
-        return old_password
-
-    def validate(self, attrs):
-        if attrs['old_password'] == attrs['new_password']:
-            raise serializers.ValidationError('Passwords must be different',
-                                              code=constants.PASSWORD_NOT_MATCH)
-        return attrs
-
-    def save(self):
-        old_credentials = {'password': self.validated_data['old_password']}
-        new_credentials = {'password': self.validated_data['new_password']}
-        self.basic_credential_directory.update_credentials(self.principal,
-                                                           old_credentials=old_credentials,
-                                                           new_credentials=new_credentials)
-
-
-class ChangePasswordSecureSerializer(BasicSerializer):
-    old_password = serializers.CharField()
-    new_password = serializers.CharField()
-    otp_code = serializers.CharField()
-
-    def __init__(self, *args, **kwargs):
-        from talos.models import OneTimePasswordCredentialDirectory
-        from talos.models import BasicIdentityDirectory
 
         passed_kwargs_from_view = kwargs.get('context')
         self.request = passed_kwargs_from_view['request']
         self.principal = self.request.principal
         self.otp_directory = OneTimePasswordCredentialDirectory.objects.get(
-            code=GOOGLE_OTP_CREDENTIAL_DIRECTORY_CODE)
-        self.basic_identity_directory = BasicIdentityDirectory.objects.get(
-            code=passed_kwargs_from_view['identity_directory_code'])
-        self.basic_credential_directory = self.basic_identity_directory.credential_directory
-        super(ChangePasswordSecureSerializer, self).__init__(*args, **kwargs)
-
-    def validate_old_password(self, old_password):
-        if not self.basic_credential_directory.verify_credentials(self.principal,
-                                                                  {'password': old_password}):
-            raise serializers.ValidationError('Password is incorrect',
-                                              code=constants.PASSWORD_INVALID_CODE)
-        return old_password
-
-    def validate(self, attrs):
-        if attrs['old_password'] == attrs['new_password']:
-            raise serializers.ValidationError('Passwords must be different',
-                                              code=constants.PASSWORD_NOT_MATCH)
-        return attrs
-
-    def validate_otp_code(self, otp_code):
-        if not self.otp_directory.verify_credentials(self.principal,
-                                                     {'code': otp_code}):
-            raise serializers.ValidationError('Sms Code is incorrect',
-                                              code=constants.SMS_OTP_INVALID_CODE)
-        return otp_code
-
-    def save(self):
-        old_credentials = {'password': self.validated_data['old_password']}
-        new_credentials = {'password': self.validated_data['new_password']}
-        self.basic_credential_directory.update_credentials(self.principal,
-                                                           old_credentials=old_credentials,
-                                                           new_credentials=new_credentials)
-
-
-class AddSMSEvidenceSerializer(SMSOtpSerializerMixin, BasicSerializer):
-    def __init__(self, *args, **kwargs):
-        from talos.models import OneTimePasswordCredentialDirectory
-
-        passed_kwargs_from_view = kwargs.get('context')
-        self.request = passed_kwargs_from_view['request']
-        self.principal = self.request.principal
-        self.sms_otp_directory = OneTimePasswordCredentialDirectory.objects.get(
-            code=PHONE_SMS_CREDENTIAL_DIRECTORY_CODE)
-        self.sms_otp_evidences = self.sms_otp_directory.provided_evidences.all().order_by('-id')
-        super(AddSMSEvidenceSerializer, self).__init__(*args, **kwargs)
-
-    def save(self):
-        from talos.models import Evidence
-
-        evidence_codes = [evidence.code for evidence in self.sms_otp_evidences]
-        evidence_codes.extend(self.principal.get_current_evidence_code_list())
-        provided_evidences = Evidence.objects.filter(code__in=evidence_codes)
-        self.principal._load_authentication_context(provided_evidences)
-
-
-class AddGoogleEvidenceSerializer(GoogleOtpSerializerMixin, serializers.Serializer):
-
-    def __init__(self, *args, **kwargs):
-        from talos.models import OneTimePasswordCredentialDirectory
-
-        passed_kwargs_from_view = kwargs.get('context')
-        self.request = passed_kwargs_from_view['request']
-        self.principal = self.request.principal
-        self.otp_credential_directory = OneTimePasswordCredentialDirectory.objects.get(
-            code=GOOGLE_OTP_CREDENTIAL_DIRECTORY_CODE)
-        self.otp_evidences = self.otp_credential_directory.provided_evidences.all().order_by('id')
-        super(AddGoogleEvidenceSerializer, self).__init__(*args, **kwargs)
+            code=self.directory_code)
+        self.otp_evidences = self.otp_directory.provided_evidences.all().order_by('-id')
+        super(AddEvidenceBaseSerialize, self).__init__(*args, **kwargs)
 
     def save(self):
         from talos.models import Evidence
@@ -622,6 +494,15 @@ class AddGoogleEvidenceSerializer(GoogleOtpSerializerMixin, serializers.Serializ
         evidence_codes.extend(self.principal.get_current_evidence_code_list())
         provided_evidences = Evidence.objects.filter(code__in=evidence_codes)
         self.principal._load_authentication_context(provided_evidences)
+
+class AddSMSEvidenceSerializer(SMSOtpSerializerMixin, AddEvidenceBaseSerialize):
+    directory_code = PHONE_SMS_CREDENTIAL_DIRECTORY_CODE
+    pass
+
+
+class AddGoogleEvidenceSerializer(GoogleOtpSerializerMixin, AddEvidenceBaseSerialize):
+    directory_code = GOOGLE_OTP_CREDENTIAL_DIRECTORY_CODE
+    pass
 
 
 class GeneratePhoneCodeForUnAuthorizedUserSerializer(BasicSerializer):
@@ -922,17 +803,14 @@ class EmailChangeValidationTokenCheckerSerializer(ValidateSecretWhenLogedInMixin
         super(EmailChangeValidationTokenCheckerSerializer, self).__init__(*args, **kwargs)
 
 
-class EmailChangeInsecureSerializer(SMSOtpSerializerMixin,
-                                    ValidatePasswordMixin,
-                                    ValidateSecretWhenLogedInMixin,
-                                    BasicSerializer):
+class EmailChangeBaseSerialize(BasicSerializer):
     token_type = 'email_change'
 
     def __init__(self, *args, **kwargs):
         passed_kwargs_from_view = kwargs.get('context')
         self.request = passed_kwargs_from_view['request']
         self.principal = self.request.principal
-        super(EmailChangeInsecureSerializer, self).__init__(*args, **kwargs)
+        super(EmailChangeBaseSerialize, self).__init__(*args, **kwargs)
 
     def save(self):
         from talos.models import BasicIdentity
@@ -952,70 +830,6 @@ class EmailChangeInsecureSerializer(SMSOtpSerializerMixin,
         basic_identity.username = self.token.identifier_value
         basic_identity.save()
         # Remove session to logout
-        self.request.session.flush()
-
-        # TODO Send link to new email
-        url = '{0}://{1}{2}'.format(
-            self.request.scheme,
-            self.request.META.get('HTTP_HOST', 'test_host'),
-            reverse('email-change-token-validation', args=[self.token.secret])
-        )
-
-        context = {
-            'email': self.token.principal.email,
-            'url': url,
-            'recipient_name' : self.request.principal.full_name
-        }
-
-        mail_subject = render_to_string('talos/email_change/confirmed_email_subject.txt', context)
-        mail_body_text = render_to_string('talos/email_change/confirmed_email_body.txt', context)
-        mail_body_html = render_to_string('talos/email_change/confirmed_email_body.html', context)
-
-        send_mail(
-            subject=mail_subject,
-            message=mail_body_text,
-            html_message=mail_body_html,
-            from_email=None,
-            recipient_list=[self.token.principal.email, old_email], # Send email to both new and old emails
-            fail_silently=True
-        )
-
-
-
-        # TODO Send sms to old phone
-        mail_change_text = render_to_string('talos/email_change/confirmed_email_body_mobile.txt')
-        sms_sender = SMSSender()
-        sms_sender.send_message(self.token.principal.phone, mail_change_text)
-
-
-class EmailChangeSecureSerializer(GoogleOtpSerializerMixin,
-                                  ValidateSecretWhenLogedInMixin,
-                                  ValidatePasswordMixin,
-                                  BasicSerializer):
-    token_type = 'email_change'
-
-    def __init__(self, *args, **kwargs):
-        passed_kwargs_from_view = kwargs.get('context')
-        self.request = passed_kwargs_from_view['request']
-        self.principal = self.request.principal
-        super(EmailChangeSecureSerializer, self).__init__(*args, **kwargs)
-
-    def save(self):
-        from talos.models import BasicIdentity
-        from django.template.loader import render_to_string
-        from django.core.mail import send_mail
-        from talos.contrib.sms_sender import SMSSender
-
-        old_email = self.token.principal.email
-
-        self.token.principal.email = self.token.identifier_value
-        self.token.principal.save()
-        self.token.is_active = False
-        self.token.save()
-
-        basic_identity = BasicIdentity.objects.get(principal=self.principal)
-        basic_identity.username = self.token.identifier_value
-        basic_identity.save()
         self.request.session.flush()
 
         # TODO Send link to new email
@@ -1040,6 +854,19 @@ class EmailChangeSecureSerializer(GoogleOtpSerializerMixin,
         mail_change_text = render_to_string('talos/email_change/confirmed_email_body_mobile.txt')
         sms_sender = SMSSender()
         sms_sender.send_message(self.token.principal.phone, mail_change_text)
+
+class EmailChangeInsecureSerializer(SMSOtpSerializerMixin,
+                                    ValidatePasswordMixin,
+                                    ValidateSecretWhenLogedInMixin,
+                                    EmailChangeBaseSerialize):
+    pass
+
+
+class EmailChangeSecureSerializer(GoogleOtpSerializerMixin,
+                                  ValidateSecretWhenLogedInMixin,
+                                  ValidatePasswordMixin,
+                                  EmailChangeBaseSerialize):
+    pass
 
 
 
@@ -1140,7 +967,7 @@ class EmailResetValidationTokenCheckerSerializer(ValidateSecretWhenLoggedOutMixi
         super(EmailResetValidationTokenCheckerSerializer, self).__init__(*args, **kwargs)
 
 
-class EmailResetInsecureSerializer(SMSOtpSerializerMixin, ValidatePasswordMixin, BasicSerializer):
+class EmailResetBaseSerializer(BasicSerializer):
     token_type = 'email_reset'
     token = serializers.CharField(label='Token')
 
@@ -1149,7 +976,7 @@ class EmailResetInsecureSerializer(SMSOtpSerializerMixin, ValidatePasswordMixin,
         self.request = passed_kwargs_from_view['request']
         self.principal = None
 
-        super(EmailResetInsecureSerializer, self).__init__(*args, **kwargs)
+        super(EmailResetBaseSerializer, self).__init__(*args, **kwargs)
 
     def validate_token(self, token):
         """ Validate token"""
@@ -1210,78 +1037,16 @@ class EmailResetInsecureSerializer(SMSOtpSerializerMixin, ValidatePasswordMixin,
         sms_sender = SMSSender()
         sms_sender.send_message(self.token.principal.phone, phone_text)
 
+class EmailResetInsecureSerializer(SMSOtpSerializerMixin, ValidatePasswordMixin, BasicSerializer):
+    pass
+
 
 
 class EmailResetSecureSerializer(SMSOtpSerializerMixin,
                                  GoogleOtpSerializerMixin,
                                  ValidatePasswordMixin,
-                                 BasicSerializer):
-    token_type = 'email_reset'
-    token = serializers.CharField(label='Token')
-
-    def __init__(self, *args, **kwargs):
-        passed_kwargs_from_view = kwargs.get('context')
-        self.request = passed_kwargs_from_view['request']
-        self.principal = None
-
-        super(EmailResetSecureSerializer, self).__init__(*args, **kwargs)
-
-    def validate_token(self, token):
-        """ Validate token"""
-        try:
-            self.token = ValidationToken.objects.get(
-                secret=token,
-                type=self.token_type,
-                expires_at__gt=_tznow(),
-                is_active=True)
-
-        except ValidationToken.DoesNotExist:
-            self.token = None
-
-        if not self.token:
-            raise serializers.ValidationError(
-                'Token is not valid.',
-                code=constants.TOKEN_INVALID_CODE)
-        else:
-            self.principal = self.token.principal
-
-    def save(self):
-        from talos.models import BasicIdentity
-        from talos.contrib.sms_sender import SMSSender
-        from django.template.loader import render_to_string
-        from django.core.mail import send_mail
-
-        self.token.principal.email = self.token.identifier_value
-        self.token.principal.save()
-        self.token.is_active = False
-        self.token.save()
-
-        basic_identity = BasicIdentity.objects.get(principal=self.principal)
-        basic_identity.username = self.token.identifier_value
-        basic_identity.save()
-
-        # TODO Send link to new email
-        context = {
-            'email': self.principal.email
-        }
-
-        mail_subject = render_to_string('talos/email_reset/confirmed_email_reset_subject.txt', context)
-        mail_body_text = render_to_string('talos/email_reset/confirmed_email_reset_body.txt', context)
-        mail_body_html = render_to_string('talos/email_reset/confirmed_email_reset_body.html', context)
-
-        send_mail(
-            subject=mail_subject,
-            message=mail_body_text,
-            html_message=mail_body_html,
-            from_email=None,
-            recipient_list=[self.token.principal.email],
-            fail_silently=True
-        )
-
-        # TODO Send sms to old phone
-        phone_text = render_to_string('talos/email_reset/confirmed_email_reset_mobile.txt')
-        sms_sender = SMSSender()
-        sms_sender.send_message(self.token.principal.phone, phone_text)
+                                 EmailResetBaseSerializer):
+    pass
 
 
 
@@ -1360,17 +1125,14 @@ class PhoneChangeValidationTokenCheckerSerializer(ValidateSecretWhenLogedInMixin
         super(PhoneChangeValidationTokenCheckerSerializer, self).__init__(*args, **kwargs)
 
 
-class PhoneChangeSecureSerializer(GoogleOtpSerializerMixin,
-                                  ValidateSecretWhenLogedInMixin,
-                                  ValidatePasswordMixin,
-                                  BasicSerializer):
+class PhoneChangeBaseSerialize(BasicSerializer):
     token_type = 'phone_change'
 
     def __init__(self, *args, **kwargs):
         passed_kwargs_from_view = kwargs.get('context')
         self.request = passed_kwargs_from_view['request']
         self.principal = self.request.principal
-        super(PhoneChangeSecureSerializer, self).__init__(*args, **kwargs)
+        super(PhoneChangeBaseSerialize, self).__init__(*args, **kwargs)
 
     def save(self):
         from talos.contrib.sms_sender import SMSSender
@@ -1385,33 +1147,20 @@ class PhoneChangeSecureSerializer(GoogleOtpSerializerMixin,
         phone_text = render_to_string('talos/phone_change/confirmed_phone_change.txt')
         sms_sender = SMSSender()
         sms_sender.send_message(self.token.principal.phone, phone_text)
+
+
+class PhoneChangeSecureSerializer(GoogleOtpSerializerMixin,
+                                  ValidateSecretWhenLogedInMixin,
+                                  ValidatePasswordMixin,
+                                  PhoneChangeBaseSerialize):
+    pass
 
 
 class PhoneChangeInsecureSerializer(SMSOtpSerializerMixin,
                                     ValidateSecretWhenLogedInMixin,
                                     ValidatePasswordMixin,
-                                    BasicSerializer):
-    token_type = 'phone_change'
-
-    def __init__(self, *args, **kwargs):
-        passed_kwargs_from_view = kwargs.get('context')
-        self.request = passed_kwargs_from_view['request']
-        self.principal = self.request.principal
-        super(PhoneChangeInsecureSerializer, self).__init__(*args, **kwargs)
-
-    def save(self):
-        from talos.contrib.sms_sender import SMSSender
-        from django.template.loader import render_to_string
-
-        self.token.principal.phone = self.token.identifier_value
-        self.token.principal.save()
-        self.token.is_active = False
-        self.token.save()
-
-        # TODO Send sms to new phone
-        phone_text = render_to_string('talos/phone_change/confirmed_phone_change.txt')
-        sms_sender = SMSSender()
-        sms_sender.send_message(self.token.principal.phone, phone_text)
+                                    PhoneChangeBaseSerialize):
+    pass
 
 
 
@@ -1503,13 +1252,13 @@ class PhoneResetValidationTokenCheckerSerializer(ValidateSecretWhenLoggedOutMixi
         super(PhoneResetValidationTokenCheckerSerializer, self).__init__(*args, **kwargs)
 
 
-class PhoneResetInsecureSerializer(SMSOtpSerializerMixin, ValidatePasswordMixin, BasicSerializer):
+class PhoneResetBaseSerialize(BasicSerializer):
     token_type = 'phone_reset'
     token = serializers.CharField(label='Token')
 
     def __init__(self, *args, **kwargs):
         self.principal = None
-        super(PhoneResetInsecureSerializer, self).__init__(*args, **kwargs)
+        super(PhoneResetBaseSerialize, self).__init__(*args, **kwargs)
 
     def validate_token(self, token):
         """ Validate token"""
@@ -1545,48 +1294,12 @@ class PhoneResetInsecureSerializer(SMSOtpSerializerMixin, ValidatePasswordMixin,
         sms_sender = SMSSender()
         sms_sender.send_message(self.token.principal.phone, phone_text)
 
+class PhoneResetInsecureSerializer(SMSOtpSerializerMixin, ValidatePasswordMixin, PhoneResetBaseSerialize):
+    pass
 
-class PhoneResetSecureSerializer(GoogleOtpSerializerMixin, ValidatePasswordMixin, BasicSerializer):
-    token_type = 'phone_reset'
-    token = serializers.CharField(label='Token')
 
-    def __init__(self, *args, **kwargs):
-        self.principal = None
-        super(PhoneResetSecureSerializer, self).__init__(*args, **kwargs)
-
-    def validate_token(self, token):
-        """ Validate token"""
-        try:
-            self.token = ValidationToken.objects.get(
-                secret=token,
-                type=self.token_type,
-                expires_at__gt=_tznow(),
-                is_active=True
-            )
-
-        except ValidationToken.DoesNotExist:
-            self.token = None
-
-        if not self.token:
-            raise serializers.ValidationError(
-                'Token is not valid.',
-                code=constants.TOKEN_INVALID_CODE)
-        else:
-            self.principal = self.token.principal
-
-    def save(self):
-        from talos.contrib.sms_sender import SMSSender
-        from django.template.loader import render_to_string
-
-        self.token.principal.phone = self.token.identifier_value
-        self.token.principal.save()
-        self.token.is_active = False
-        self.token.save()
-
-        # TODO Send sms to new phone
-        phone_text = render_to_string('talos/phone_reset/confirmed_phone_reset_phone.txt')
-        sms_sender = SMSSender()
-        sms_sender.send_message(self.token.principal.phone, phone_text)
+class PhoneResetSecureSerializer(GoogleOtpSerializerMixin, ValidatePasswordMixin, PhoneResetBaseSerialize):
+    pass
 
 class PasswordResetRequestSerializer(BasicSerializer):
     email = serializers.CharField()
@@ -1767,10 +1480,7 @@ class PasswordResetSecureSerializer(GoogleOtpSerializerMixin,
             self.validation_token.is_active = False
             self.validation_token.save()
 
-
-class PasswordChangeInsecureSerializer(SMSOtpSerializerMixin,
-                                       ValidatePasswordMixin,
-                                       BasicSerializer):
+class PasswordChangeBaseSerialize(BasicSerializer):
     new_password = serializers.CharField()
 
     def __init__(self, *args, **kwargs):
@@ -1778,7 +1488,7 @@ class PasswordChangeInsecureSerializer(SMSOtpSerializerMixin,
         self.request = passed_kwargs_from_view['request']
         self.principal = self.request.principal
 
-        super(PasswordChangeInsecureSerializer, self).__init__(*args, **kwargs)
+        super(PasswordChangeBaseSerialize, self).__init__(*args, **kwargs)
 
     def validate_new_password(self, new_password):
         from talos_rest.validators import validate_password
@@ -1801,39 +1511,18 @@ class PasswordChangeInsecureSerializer(SMSOtpSerializerMixin,
         return self.basic_credential_directory.update_credentials(self.principal,
                                                                   {'password': self.password},
                                                                   {'password': new_password})
+
+
+class PasswordChangeInsecureSerializer(SMSOtpSerializerMixin,
+                                       ValidatePasswordMixin,
+                                       PasswordChangeBaseSerialize):
+    pass
 
 
 class PasswordChangeSecureSerializer(GoogleOtpSerializerMixin,
                                      ValidatePasswordMixin,
-                                     BasicSerializer):
-    new_password = serializers.CharField()
-
-    def __init__(self, *args, **kwargs):
-        passed_kwargs_from_view = kwargs.get('context')
-        self.request = passed_kwargs_from_view['request']
-        self.principal = self.request.principal
-        super(PasswordChangeSecureSerializer, self).__init__(self, *args, **kwargs)
-
-    def validate_new_password(self, new_password):
-        from talos_rest.validators import validate_password
-
-        validate_password(new_password)
-
-        return new_password
-
-    def save(self):
-        from talos.models import Session
-        from django.db.models import Q
-        from django.utils import timezone
-
-        # Delete every other active session user has
-        Session.objects.filter(Q(principal=self.request.principal),
-                               ~Q(uuid=self.request.session._session.uuid),
-                               Q(valid_till__gt=timezone.now())).update(evidences=None)
-        new_password = self.validated_data['new_password']
-        return self.basic_credential_directory.update_credentials(self.principal,
-                                                                  {'password': self.password},
-                                                                  {'password': new_password})
+                                     PasswordChangeBaseSerialize):
+    pass
 
 
 class LdapLoginSerializer(BasicSerializer):

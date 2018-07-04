@@ -15,8 +15,8 @@ from .exceptions.custom_exceptions import APIValidationError
 from .serializers import SessionSerializer, \
     GoogleAuthenticatorActivateRequestSerializer, \
     GoogleAuthenticatorDeleteSerializer, GeneratePhoneCodeForAuthorizedUserSerializer, \
-    VerifyPhoneCodeForAuthorizedUserSerializer, ChangePasswordInsecureSerializer, \
-    ChangePasswordSecureSerializer, AddSMSEvidenceSerializer, \
+    VerifyPhoneCodeForAuthorizedUserSerializer,  \
+    AddSMSEvidenceSerializer, \
     AddGoogleEvidenceSerializer, GeneratePhoneCodeForUnAuthorizedUserSerializer, \
     BasicRegistrationSerializer, PasswordResetRequestSerializer, \
     GoogleAuthenticatorDeleteRequestSerializer, GoogleAuthenticatorActivateConfirmSerializer, \
@@ -359,39 +359,6 @@ class VerifyPhoneCodeForAuthorizedUserView(SecureAPIViewBaseView):
             success_response.set_result_pairs('text', 'your code is correct')
             return Response(success_response.data)
 
-
-class ChangePasswordInsecureView(SecureAPIViewBaseView):
-    permission_classes = (IsAuthenticated,)
-    serializer_class = ChangePasswordInsecureSerializer
-
-    identity_directory_code = 'basic_internal'
-
-    def post(self, request):
-        kwargs = super(ChangePasswordInsecureView, self).get_serializer_context()
-        serializer = ChangePasswordInsecureSerializer(data=request.data, context=kwargs)
-        if serializer.is_valid(raise_exception=True):
-            serializer.save()
-            success_response = SuccessResponse()
-            return Response(success_response.data, success_response.status)
-        else:
-            raise APIValidationError(serializer.errors)
-
-
-class ChangePasswordSecureView(SecureAPIViewBaseView):
-    permission_classes = (IsAuthenticated,)
-    serializer_class = ChangePasswordSecureSerializer
-
-    identity_directory_code = 'basic_internal'
-
-    def post(self, request):
-        kwargs = super(ChangePasswordSecureView, self).get_serializer_context()
-        serializer = ChangePasswordSecureSerializer(data=request.data, context=kwargs)
-        if serializer.is_valid(raise_exception=False):
-            serializer.save()
-            success_response = SuccessResponse()
-            return Response(success_response.data, success_response.status)
-        else:
-            raise APIValidationError(serializer.errors)
 
 
 class AddSMSEvidenceView(SecureAPIViewBaseView):
