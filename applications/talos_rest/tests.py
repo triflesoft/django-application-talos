@@ -86,7 +86,7 @@ class TestUtils(APITestCase):
 
         totp = TOTP(otp_credential.salt.decode())
 
-        data = { 'sms_code': totp.now() }
+        data = { 'otp_code': totp.now() }
 
         self.client.post(add_evidence_sms_url, data, format='json')
 
@@ -121,7 +121,7 @@ class TestUtils(APITestCase):
         google_otp_code = totp.now()
 
         data = {
-            'google_otp_code': google_otp_code
+            'otp_code': google_otp_code
         }
 
         self.client.post(add_evidence_google_url, data, format='json')
@@ -779,12 +779,13 @@ class TestEmailChange(TestUtils):
         self.login()
         self.add_evidence_sms()
         response = self.client.put(self.email_change_insecure_url)
+        print(response.data)
         self.assertResponseStatus(response, status.HTTP_400_BAD_REQUEST)
         self.assertDictEqual(response.data.get('error'),
-                             {'sms_code': ['required'], 'password': ['required'],
+                             {'otp_code': ['required'], 'password': ['required'],
                               'secret': ['required']})
         self.assertDictEqual(response.data.get('details'),
-                             {'sms_code': ['This field is required.'],
+                             {'otp_code': ['This field is required.'],
                               'password': ['This field is required.'],
                               'secret': ['This field is required.']})
 
@@ -798,7 +799,7 @@ class TestEmailChange(TestUtils):
 
         code = (OneTimePasswordCredential.objects.last())
         response = self.client.put(self.email_change_insecure_url,
-                                   data={'sms_code': code.salt.decode(),
+                                   data={'otp_code': code.salt.decode(),
                                          'password': self.password,
                                          'secret': '1234'})
         self.assertResponseStatus(response, status.HTTP_400_BAD_REQUEST)
@@ -816,12 +817,13 @@ class TestEmailChange(TestUtils):
                                                           principal=self.principal,
                                                           type='email_change', )
         secret = validation_token.secret
-        response = self.client.put(self.email_change_insecure_url, data={'sms_code': '1234',
+        response = self.client.put(self.email_change_insecure_url, data={'otp_code': '1234',
                                                                          'password': self.password,
                                                                          'secret': secret})
         self.assertResponseStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertListEqual(response.data.get('error').get('sms_code'), ['sms_otp_invalid'])
-        self.assertListEqual(response.data.get('details').get('sms_code'),
+
+        self.assertListEqual(response.data.get('error').get('otp_code'), ['phone_invalid'])
+        self.assertListEqual(response.data.get('details').get('otp_code'),
                              ['OTP code is incorrect'])
 
     def test_change_email_when_wrong_password(self):
@@ -869,7 +871,7 @@ class TestEmailChange(TestUtils):
         totp = TOTP(code.salt.decode())
 
         data = {
-            'sms_code': totp.now(),
+            'otp_code': totp.now(),
             'password': self.password,
             'secret': validation_token.secret
         }
@@ -907,7 +909,7 @@ class TestAddSMSEvidence(TestUtils):
         totp = TOTP(otp_credential.salt.decode())
 
         data = {
-            'sms_code': totp.now()
+            'otp_code': totp.now()
         }
 
         response = self.client.post(self.url, data, format='json')
@@ -917,14 +919,14 @@ class TestAddSMSEvidence(TestUtils):
         # Test on incorrect input
 
         data = {
-            'sms_code': 'aaaa'
+            'otp_code': 'aaaa'
         }
 
         response = self.client.post(self.url, data, format='json')
 
         self.assertResponseStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertTrue(response.data.get('error').get('sms_code', False))
-        self.assertEqual(response.data.get('error').get('sms_code')[0],
+        self.assertTrue(response.data.get('error').get('otp_code', False))
+        self.assertEqual(response.data.get('error').get('otp_code')[0],
                          constants.SMS_OTP_INVALID_CODE)
 
 
@@ -989,7 +991,7 @@ class TestAddGoogleEvidence(TestUtils):
         code = totp.now()
 
         data = {
-            'google_otp_code': code
+            'otp_code': code
         }
 
         response = self.client.post(self.url, data, format='json')
@@ -999,14 +1001,14 @@ class TestAddGoogleEvidence(TestUtils):
         # Try incorrect data
 
         data = {
-            'google_otp_code': 'aaaa'
+            'otp_code': 'aaaa'
         }
 
         response = self.client.post(self.url, data, format='json')
 
         self.assertResponseStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertTrue(response.data.get('error').get('google_otp_code', False))
-        self.assertEqual(response.data.get('error').get('google_otp_code')[0],
+        self.assertTrue(response.data.get('error').get('otp_code', False))
+        self.assertEqual(response.data.get('error').get('otp_code')[0],
                          constants.GOOGLE_OTP_INVALID_CODE)
 
     def test_add_evidence_google_check_provided_evidences(self):
@@ -1062,7 +1064,7 @@ class TestPasswordChangeInsecure(TestUtils):
         data = {
             'password': self.password,
             'new_password': '1234567',
-            'sms_code': sms_code
+            'otp_code': sms_code
         }
 
         response = self.client.put(self.url, data, format='json')
@@ -1094,7 +1096,7 @@ class TestPasswordChangeInsecure(TestUtils):
         data = {
             'password': self.password,
             'new_password': '1234567',
-            'sms_code': sms_code
+            'otp_code': sms_code
         }
 
         Session.objects.create(principal=self.principal, evidences='evidences')
@@ -1142,7 +1144,7 @@ class TestPasswordChangeSecure(TestUtils):
         data = {
             'password': self.password,
             'new_password': '1234567',
-            'google_otp_code': google_otp_code
+            'otp_code': google_otp_code
         }
 
         response = self.client.put(self.url, data, format='json')
@@ -1244,7 +1246,7 @@ class TestGoogleAuthenticatorDelete(TestUtils):
         google_code = totp.now()
 
         data = {
-            'sms_code': sms_code,
+            'otp_code': sms_code,
             'google_otp_code': google_code,
             'password': self.password,
             'token': validation_token.secret

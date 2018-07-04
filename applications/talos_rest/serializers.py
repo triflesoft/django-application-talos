@@ -11,44 +11,34 @@ email_regex = compile(r'^[^@]+@[^@]+\.[^@]+$')
 PHONE_SMS_CREDENTIAL_DIRECTORY_CODE = 'onetimepassword_internal_phone_sms_authenticator'
 GOOGLE_OTP_CREDENTIAL_DIRECTORY_CODE = 'onetimepassword_internal_google_authenticator'
 
-class SMSOtpSerializerMixin():
-
+class OTPBaserSerializeMixin():
     def __init__(self, *args, **kwargs):
-        self.fields['sms_code'] = serializers.CharField(label='SMS Code')
+        self.fields['otp_code'] = serializers.CharField(label='SMS Code')
         self.sms_otp_directory = None
-        super(SMSOtpSerializerMixin, self).__init__(*args, **kwargs)
+        super(OTPBaserSerializeMixin, self).__init__(*args, **kwargs)
 
-    def validate_sms_code(self, sms_code):
+    def validate_otp_code(self, otp_code):
         from talos.models import OneTimePasswordCredentialDirectory
 
-        self.sms_otp_directory = OneTimePasswordCredentialDirectory.objects.get(
-            code=PHONE_SMS_CREDENTIAL_DIRECTORY_CODE)
-
-        if not self.sms_otp_directory.verify_credentials(self.principal,
-                                                         {'code': sms_code}):
-            raise serializers.ValidationError('OTP code is incorrect',
-                                              code=constants.SMS_OTP_INVALID_CODE)
-
-
-class GoogleOtpSerializerMixin():
-    def __init__(self, *args, **kwargs):
-        self.fields['google_otp_code'] = serializers.CharField(label='Google OTP Code',
-                                                               max_length=255)
-        self.otp_directory = None
-        super(GoogleOtpSerializerMixin, self).__init__(*args, **kwargs)
-
-    def validate_google_otp_code(self, google_otp_code):
-        from talos.models import OneTimePasswordCredentialDirectory
         self.otp_directory = OneTimePasswordCredentialDirectory.objects.get(
-            code=GOOGLE_OTP_CREDENTIAL_DIRECTORY_CODE)
+            code=self.directory_code)
+
         if not self.otp_directory.verify_credentials(self.principal,
-                                                     {'code': google_otp_code}):
+                                                         {'code': otp_code}):
             raise serializers.ValidationError('OTP code is incorrect',
-                                              code=constants.GOOGLE_OTP_INVALID_CODE)
+                                              code=self.error_code)
+
+class SMSOtpSerializerMixin(OTPBaserSerializeMixin):
+    error_code = constants.SMS_OTP_INVALID_CODE
+    directory_code = PHONE_SMS_CREDENTIAL_DIRECTORY_CODE
+
+
+class GoogleOtpSerializerMixin(OTPBaserSerializeMixin):
+    error_code = constants.GOOGLE_OTP_INVALID_CODE
+    directory_code = GOOGLE_OTP_CREDENTIAL_DIRECTORY_CODE
 
 
 class ValidatePasswordMixin():
-
     def __init__(self, *args, **kwargs):
         from talos.models import BasicIdentityDirectory
         self.fields['password'] = serializers.CharField(label='Password', max_length=255)
@@ -475,16 +465,24 @@ class VerifyPhoneCodeForAuthorizedUserSerializer(BasicSerializer):
         for sms_otp_evidence in self.sms_otp_evidences:
             self.principal._evidences_effective[sms_otp_evidence.code] = sms_otp_evidence
 
-class AddEvidenceBaseSerialize(BasicSerializer):
+class AddEvidenceBaseSerialize(OTPBaserSerializeMixin, BasicSerializer):
     def __init__(self, *args, **kwargs):
         from talos.models import OneTimePasswordCredentialDirectory
 
         passed_kwargs_from_view = kwargs.get('context')
         self.request = passed_kwargs_from_view['request']
         self.principal = self.request.principal
+
+        self.directory_code = passed_kwargs_from_view.get('directory_code', 'default_directory_code')
+        self.error_code = passed_kwargs_from_view.get('error_code', 'default_error_code')
+
+
         self.otp_directory = OneTimePasswordCredentialDirectory.objects.get(
             code=self.directory_code)
         self.otp_evidences = self.otp_directory.provided_evidences.all().order_by('-id')
+
+
+
         super(AddEvidenceBaseSerialize, self).__init__(*args, **kwargs)
 
     def save(self):
@@ -494,15 +492,6 @@ class AddEvidenceBaseSerialize(BasicSerializer):
         evidence_codes.extend(self.principal.get_current_evidence_code_list())
         provided_evidences = Evidence.objects.filter(code__in=evidence_codes)
         self.principal._load_authentication_context(provided_evidences)
-
-class AddSMSEvidenceSerializer(SMSOtpSerializerMixin, AddEvidenceBaseSerialize):
-    directory_code = PHONE_SMS_CREDENTIAL_DIRECTORY_CODE
-    pass
-
-
-class AddGoogleEvidenceSerializer(GoogleOtpSerializerMixin, AddEvidenceBaseSerialize):
-    directory_code = GOOGLE_OTP_CREDENTIAL_DIRECTORY_CODE
-    pass
 
 
 class GeneratePhoneCodeForUnAuthorizedUserSerializer(BasicSerializer):
@@ -524,6 +513,7 @@ class GeneratePhoneCodeForUnAuthorizedUserSerializer(BasicSerializer):
         from pyotp import TOTP
 
         phone = self.validated_data['phone']
+
         phone_validation_token = ValidationToken()
         phone_validation_token.identifier = 'phone'
         phone_validation_token.identifier_value = phone
@@ -803,13 +793,20 @@ class EmailChangeValidationTokenCheckerSerializer(ValidateSecretWhenLogedInMixin
         super(EmailChangeValidationTokenCheckerSerializer, self).__init__(*args, **kwargs)
 
 
-class EmailChangeBaseSerialize(BasicSerializer):
+class EmailChangeBaseSerialize(OTPBaserSerializeMixin,
+                               ValidatePasswordMixin,
+                               ValidateSecretWhenLogedInMixin,
+                               BasicSerializer):
     token_type = 'email_change'
 
     def __init__(self, *args, **kwargs):
         passed_kwargs_from_view = kwargs.get('context')
         self.request = passed_kwargs_from_view['request']
         self.principal = self.request.principal
+
+        self.directory_code = passed_kwargs_from_view.get('directory_code', 'default_directory_code')
+        self.error_code = passed_kwargs_from_view.get('error_code', 'default_error_code')
+
         super(EmailChangeBaseSerialize, self).__init__(*args, **kwargs)
 
     def save(self):
@@ -854,20 +851,6 @@ class EmailChangeBaseSerialize(BasicSerializer):
         mail_change_text = render_to_string('talos/email_change/confirmed_email_body_mobile.txt')
         sms_sender = SMSSender()
         sms_sender.send_message(self.token.principal.phone, mail_change_text)
-
-class EmailChangeInsecureSerializer(SMSOtpSerializerMixin,
-                                    ValidatePasswordMixin,
-                                    ValidateSecretWhenLogedInMixin,
-                                    EmailChangeBaseSerialize):
-    pass
-
-
-class EmailChangeSecureSerializer(GoogleOtpSerializerMixin,
-                                  ValidateSecretWhenLogedInMixin,
-                                  ValidatePasswordMixin,
-                                  EmailChangeBaseSerialize):
-    pass
-
 
 
 class EmailResetRequestSerializer(BasicSerializer):
@@ -976,6 +959,9 @@ class EmailResetBaseSerializer(BasicSerializer):
         self.request = passed_kwargs_from_view['request']
         self.principal = None
 
+        self.directory_code = passed_kwargs_from_view.get('directory_code', 'default_directory_code')
+        self.error_code = passed_kwargs_from_view.get('error_code', 'default_error_code')
+
         super(EmailResetBaseSerializer, self).__init__(*args, **kwargs)
 
     def validate_token(self, token):
@@ -1036,18 +1022,6 @@ class EmailResetBaseSerializer(BasicSerializer):
         phone_text = render_to_string('talos/email_reset/confirmed_email_reset_mobile.txt')
         sms_sender = SMSSender()
         sms_sender.send_message(self.token.principal.phone, phone_text)
-
-class EmailResetInsecureSerializer(SMSOtpSerializerMixin, ValidatePasswordMixin, BasicSerializer):
-    pass
-
-
-
-class EmailResetSecureSerializer(SMSOtpSerializerMixin,
-                                 GoogleOtpSerializerMixin,
-                                 ValidatePasswordMixin,
-                                 EmailResetBaseSerializer):
-    pass
-
 
 
 class PhoneChangeRequestSerializer(BasicSerializer):
@@ -1132,6 +1106,10 @@ class PhoneChangeBaseSerialize(BasicSerializer):
         passed_kwargs_from_view = kwargs.get('context')
         self.request = passed_kwargs_from_view['request']
         self.principal = self.request.principal
+
+        self.directory_code = passed_kwargs_from_view.get('directory_code', 'default_directory_code')
+        self.error_code = passed_kwargs_from_view.get('error_code', 'default_error_code')
+
         super(PhoneChangeBaseSerialize, self).__init__(*args, **kwargs)
 
     def save(self):
@@ -1147,21 +1125,6 @@ class PhoneChangeBaseSerialize(BasicSerializer):
         phone_text = render_to_string('talos/phone_change/confirmed_phone_change.txt')
         sms_sender = SMSSender()
         sms_sender.send_message(self.token.principal.phone, phone_text)
-
-
-class PhoneChangeSecureSerializer(GoogleOtpSerializerMixin,
-                                  ValidateSecretWhenLogedInMixin,
-                                  ValidatePasswordMixin,
-                                  PhoneChangeBaseSerialize):
-    pass
-
-
-class PhoneChangeInsecureSerializer(SMSOtpSerializerMixin,
-                                    ValidateSecretWhenLogedInMixin,
-                                    ValidatePasswordMixin,
-                                    PhoneChangeBaseSerialize):
-    pass
-
 
 
 class PhoneResetRequestSerializer(BasicSerializer):
@@ -1252,11 +1215,16 @@ class PhoneResetValidationTokenCheckerSerializer(ValidateSecretWhenLoggedOutMixi
         super(PhoneResetValidationTokenCheckerSerializer, self).__init__(*args, **kwargs)
 
 
-class PhoneResetBaseSerialize(BasicSerializer):
+class PhoneResetBaseSerialize(OTPBaserSerializeMixin, ValidatePasswordMixin, BasicSerializer):
     token_type = 'phone_reset'
     token = serializers.CharField(label='Token')
 
     def __init__(self, *args, **kwargs):
+        passed_kwargs_from_view = kwargs.get('context')
+
+        self.directory_code = kwargs.get('directory_code', 'default_directory_code')
+        self.error_code = kwargs.get('error_code', 'default_error_code')
+
         self.principal = None
         super(PhoneResetBaseSerialize, self).__init__(*args, **kwargs)
 
@@ -1293,13 +1261,6 @@ class PhoneResetBaseSerialize(BasicSerializer):
         phone_text = render_to_string('talos/phone_reset/confirmed_phone_reset_phone.txt')
         sms_sender = SMSSender()
         sms_sender.send_message(self.token.principal.phone, phone_text)
-
-class PhoneResetInsecureSerializer(SMSOtpSerializerMixin, ValidatePasswordMixin, PhoneResetBaseSerialize):
-    pass
-
-
-class PhoneResetSecureSerializer(GoogleOtpSerializerMixin, ValidatePasswordMixin, PhoneResetBaseSerialize):
-    pass
 
 class PasswordResetRequestSerializer(BasicSerializer):
     email = serializers.CharField()
@@ -1377,7 +1338,10 @@ class PasswordResetValidationTokenSerializer(ValidateSecretWhenLoggedOutMixin,
         self.request = passed_kwargs_from_view
         super(PasswordResetValidationTokenSerializer, self).__init__(*args, **kwargs)
 
-class PasswordResetInsecureSerializer(SMSOtpSerializerMixin, BasicSerializer):
+class PasswordResetInsecureSerializer(OTPBaserSerializeMixin, BasicSerializer):
+    error_code = constants.SMS_OTP_INVALID_CODE
+    directory_code = PHONE_SMS_CREDENTIAL_DIRECTORY_CODE
+
     token = serializers.CharField()
     password = serializers.CharField()
 
@@ -1430,8 +1394,11 @@ class PasswordResetInsecureSerializer(SMSOtpSerializerMixin, BasicSerializer):
             self.validation_token.save()
 
 
-class PasswordResetSecureSerializer(GoogleOtpSerializerMixin,
+class PasswordResetSecureSerializer(OTPBaserSerializeMixin,
                                     BasicSerializer):
+    error_code = constants.GOOGLE_OTP_INVALID_CODE
+    directory_code = GOOGLE_OTP_CREDENTIAL_DIRECTORY_CODE
+
     password = serializers.CharField()
     token = serializers.CharField()
 
@@ -1480,13 +1447,16 @@ class PasswordResetSecureSerializer(GoogleOtpSerializerMixin,
             self.validation_token.is_active = False
             self.validation_token.save()
 
-class PasswordChangeBaseSerialize(BasicSerializer):
+class PasswordChangeBaseSerialize(OTPBaserSerializeMixin, ValidatePasswordMixin, BasicSerializer):
     new_password = serializers.CharField()
 
     def __init__(self, *args, **kwargs):
         passed_kwargs_from_view = kwargs.get('context')
         self.request = passed_kwargs_from_view['request']
         self.principal = self.request.principal
+
+        self.directory_code = passed_kwargs_from_view.get('directory_code', 'default_directory_code')
+        self.error_code = passed_kwargs_from_view.get('error_code', 'default_error_code')
 
         super(PasswordChangeBaseSerialize, self).__init__(*args, **kwargs)
 
@@ -1512,17 +1482,6 @@ class PasswordChangeBaseSerialize(BasicSerializer):
                                                                   {'password': self.password},
                                                                   {'password': new_password})
 
-
-class PasswordChangeInsecureSerializer(SMSOtpSerializerMixin,
-                                       ValidatePasswordMixin,
-                                       PasswordChangeBaseSerialize):
-    pass
-
-
-class PasswordChangeSecureSerializer(GoogleOtpSerializerMixin,
-                                     ValidatePasswordMixin,
-                                     PasswordChangeBaseSerialize):
-    pass
 
 
 class LdapLoginSerializer(BasicSerializer):

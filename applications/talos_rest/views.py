@@ -15,23 +15,24 @@ from .exceptions.custom_exceptions import APIValidationError
 from .serializers import SessionSerializer, \
     GoogleAuthenticatorActivateRequestSerializer, \
     GoogleAuthenticatorDeleteSerializer, GeneratePhoneCodeForAuthorizedUserSerializer, \
-    VerifyPhoneCodeForAuthorizedUserSerializer,  \
-    AddSMSEvidenceSerializer, \
-    AddGoogleEvidenceSerializer, GeneratePhoneCodeForUnAuthorizedUserSerializer, \
+    VerifyPhoneCodeForAuthorizedUserSerializer, \
+ \
+    GeneratePhoneCodeForUnAuthorizedUserSerializer, \
     BasicRegistrationSerializer, PasswordResetRequestSerializer, \
     GoogleAuthenticatorDeleteRequestSerializer, GoogleAuthenticatorActivateConfirmSerializer, \
     VerifyPhoneCodeForUnAuthorizedUserSerializer, EmailResetRequestSerializer, \
     EmailResetValidationTokenCheckerSerializer, GoogleAuthenticatorChangeRequestSerializer, \
     GoogleAuthenticatorChangeConfirmSerializer, GoogleAuthenticatorChangeDoneSerializer, \
     EmailChangeRequestSerializer, EmailChangeValidationTokenCheckerSerializer, \
-    EmailChangeInsecureSerializer, EmailChangeSecureSerializer, EmailResetInsecureSerializer, \
-    EmailResetSecureSerializer, PhoneChangeRequestSerializer, \
-    PhoneChangeValidationTokenCheckerSerializer, PhoneChangeSecureSerializer, \
-    PhoneChangeInsecureSerializer, PhoneResetRequestSerializer, \
-    PhoneResetValidationTokenCheckerSerializer, PhoneResetInsecureSerializer, \
-    PhoneResetSecureSerializer, PasswordChangeInsecureSerializer, PasswordChangeSecureSerializer, \
+    \
+    PhoneChangeRequestSerializer, \
+    PhoneChangeValidationTokenCheckerSerializer, \
+    PhoneResetRequestSerializer, \
+    PhoneResetValidationTokenCheckerSerializer, \
+ \
     LdapLoginSerializer, PasswordResetInsecureSerializer, PasswordResetSecureSerializer, \
-    PasswordResetValidationTokenSerializer
+    PasswordResetValidationTokenSerializer, PasswordChangeBaseSerialize, AddEvidenceBaseSerialize, \
+    PhoneResetBaseSerialize, PhoneChangeBaseSerialize, EmailResetBaseSerializer, EmailChangeBaseSerialize
 
 from talos_rest.permissions import IsAuthenticated, IsBasicAuthenticated, IsSecureLevelOn
 
@@ -360,30 +361,17 @@ class VerifyPhoneCodeForAuthorizedUserView(SecureAPIViewBaseView):
             return Response(success_response.data)
 
 
-
-class AddSMSEvidenceView(SecureAPIViewBaseView):
+class AddEvidenceView(SecureAPIViewBaseView):
     permission_classes = (IsBasicAuthenticated,)
-    serializer_class = AddSMSEvidenceSerializer
+    serializer_class = AddEvidenceBaseSerialize
 
-    def post(self, request):
-        kwargs = super(AddSMSEvidenceView, self).get_serializer_context()
-        serializer = AddSMSEvidenceSerializer(data=request.data, context=kwargs)
+    def post(self, request, directory_code, error_code):
+        kwargs = super(AddEvidenceView, self).get_serializer_context()
 
-        if serializer.is_valid(raise_exception=False):
-            serializer.save()
-            success_response = SuccessResponse()
-            return Response(success_response.data, success_response.status)
-        else:
-            raise APIValidationError(serializer.errors)
+        kwargs['directory_code'] = directory_code
+        kwargs['error_code'] = error_code
 
-
-class AddGoogleEvidenceView(SecureAPIViewBaseView):
-    permission_classes = (IsBasicAuthenticated,)
-    serializer_class = AddGoogleEvidenceSerializer
-
-    def post(self, request):
-        kwargs = super(AddGoogleEvidenceView, self).get_serializer_context()
-        serializer = AddGoogleEvidenceSerializer(data=request.data,
+        serializer = AddEvidenceBaseSerialize(data=request.data,
                                                  context=kwargs)
 
         if serializer.is_valid(raise_exception=False):
@@ -482,31 +470,19 @@ class EmailChangeValidationTokenCheckerAPIView(SecureAPIViewBaseView):
             raise APIValidationError(detail=serializer.errors)
 
 
-class EmailChangeInsecureAPIView(SecureAPIViewBaseView):
-    permission_classes = (IsAuthenticated,)
-    serializer_class = EmailChangeInsecureSerializer
-
-    identity_directory_code = 'basic_internal'
-
-    def put(self, request):
-        kwargs = super(EmailChangeInsecureAPIView, self).get_serializer_context()
-        serializer = EmailChangeInsecureSerializer(data=request.data, context=kwargs)
-        if serializer.is_valid(raise_exception=False):
-            serializer.save()
-            return Response(serializer.data)
-        else:
-            raise APIValidationError(detail=serializer.errors)
-
-
 class EmailChangeSecureAPIView(SecureAPIViewBaseView):
-    permission_classes = (IsAuthenticated, IsSecureLevelOn,)
-    serializer_class = EmailChangeSecureSerializer
+    permission_classes = (IsAuthenticated,)
+    serializer_class = EmailChangeBaseSerialize
 
     identity_directory_code = 'basic_internal'
 
-    def put(self, request):
+    def put(self, request, directory_code, error_code):
         kwargs = super(EmailChangeSecureAPIView, self).get_serializer_context()
-        serializer = EmailChangeSecureSerializer(data=request.data, context=kwargs)
+
+        kwargs['directory_code'] = directory_code
+        kwargs['error_code'] = error_code
+
+        serializer = EmailChangeBaseSerialize(data=request.data, context=kwargs)
         if serializer.is_valid(raise_exception=False):
             serializer.save()
             return Response(serializer.data)
@@ -600,31 +576,18 @@ class EmailResetValidationTokenCheckerAPIView(SecureAPIViewBaseView):
         else:
             raise APIValidationError(detail=serializer.errors)
 
-
-#
-class EmailResetInsecureAPIView(SecureAPIViewBaseView):
-    serializer_class = EmailResetInsecureSerializer
+class EmailResetAPIView(SecureAPIViewBaseView):
+    serializer_class = EmailResetBaseSerializer
 
     identity_directory_code = 'basic_internal'
 
-    def put(self, request):
-        kwargs = super(EmailResetInsecureAPIView, self).get_serializer_context()
-        serializer = EmailResetInsecureSerializer(data=request.data, context=kwargs)
-        if serializer.is_valid(raise_exception=False):
-            serializer.save()
-            return Response(serializer.data)
-        else:
-            raise APIValidationError(detail=serializer.errors)
+    def put(self, request, directory_code, error_code):
+        kwargs = super(EmailResetAPIView, self).get_serializer_context()
 
+        kwargs['directory_code'] = directory_code
+        kwargs['error_code'] = error_code
 
-class EmailResetSecureAPIView(SecureAPIViewBaseView):
-    serializer_class = EmailResetSecureSerializer
-
-    identity_directory_code = 'basic_internal'
-
-    def put(self, request):
-        kwargs = super(EmailResetSecureAPIView, self).get_serializer_context()
-        serializer = EmailResetSecureSerializer(data=request.data, context=kwargs)
+        serializer = EmailResetBaseSerializer(data=request.data, context=kwargs)
         if serializer.is_valid(raise_exception=False):
             serializer.save()
             return Response(serializer.data)
@@ -664,29 +627,17 @@ class PhoneChangeValidationTokenCheckerAPIView(SecureAPIViewBaseView):
 
 class PhoneChangeSecureAPIView(SecureAPIViewBaseView):
     permission_classes = (IsAuthenticated,)
-    serializer_class = PhoneChangeSecureSerializer
+    serializer_class = PhoneChangeBaseSerialize
 
     identity_directory_code = 'basic_internal'
 
-    def put(self, request):
+    def put(self, request, directory_code, error_code):
         kwargs = super(PhoneChangeSecureAPIView, self).get_serializer_context()
-        serializer = PhoneChangeSecureSerializer(data=request.data, context=kwargs)
-        if serializer.is_valid(raise_exception=False):
-            serializer.save()
-            return Response(serializer.data)
-        else:
-            raise APIValidationError(detail=serializer.errors)
 
+        kwargs['directory_code'] = directory_code
+        kwargs['error_code'] = error_code
 
-class PhoneChangeInsecureAPIView(SecureAPIViewBaseView):
-    permission_classes = (IsAuthenticated,)
-    serializer_class = PhoneChangeInsecureSerializer
-
-    identity_directory_code = 'basic_internal'
-
-    def put(self, request):
-        kwargs = super(PhoneChangeInsecureAPIView, self).get_serializer_context()
-        serializer = PhoneChangeInsecureSerializer(data=request.data, context=kwargs)
+        serializer = PhoneChangeBaseSerialize(data=request.data, context=kwargs)
         if serializer.is_valid(raise_exception=False):
             serializer.save()
             return Response(serializer.data)
@@ -723,29 +674,18 @@ class PhoneResetValidationTokenCheckerAPIView(SecureAPIViewBaseView):
             raise APIValidationError(detail=serializer.errors)
 
 
-class PhoneResetInsecureAPIView(SecureAPIViewBaseView):
-    serializer_class = PhoneResetInsecureSerializer
+class PhoneResetAPIView(SecureAPIViewBaseView):
+    serializer_class = PhoneResetBaseSerialize
 
     identity_directory_code = 'basic_internal'
 
-    def put(self, request):
-        kwargs = super(PhoneResetInsecureAPIView, self).get_serializer_context()
-        serializer = PhoneResetInsecureSerializer(data=request.data, context=kwargs)
-        if serializer.is_valid(raise_exception=False):
-            serializer.save()
-            return Response(serializer.data)
-        else:
-            raise APIValidationError(detail=serializer.errors)
+    def put(self, request, directory_code, error_code):
+        kwargs = super(PhoneResetAPIView, self).get_serializer_context()
 
+        kwargs['directory_code'] = directory_code
+        kwargs['error_code'] = error_code
 
-class PhoneResetSecureAPIView(SecureAPIViewBaseView):
-    serializer_class = PhoneResetSecureSerializer
-
-    identity_directory_code = 'basic_internal'
-
-    def put(self, request):
-        kwargs = super(PhoneResetSecureAPIView, self).get_serializer_context()
-        serializer = PhoneResetSecureSerializer(data=request.data, context=kwargs)
+        serializer = PhoneResetBaseSerialize(data=request.data, context=kwargs)
         if serializer.is_valid(raise_exception=False):
             serializer.save()
             return Response(serializer.data)
@@ -762,40 +702,19 @@ class ProvidedEvidencesView(SecureAPIViewBaseView):
         return Response(success_response.data)
 
 
-class TestView(SecureAPIViewBaseView):
-    permission_classes = (permissions.IsAuthenticated,)
 
-    def get(self):
-        return Response({"text": "Test"})
-
-
-class PasswordChangeInsecureView(SecureAPIViewBaseView):
+class PasswordChangeView(SecureAPIViewBaseView):
     permission_classes = (IsAuthenticated,)
-    serializer_class = PasswordChangeInsecureSerializer
+    serializer_class = PasswordChangeBaseSerialize
     identity_directory_code = 'basic_internal'
 
-    def put(self, request):
-        kwargs = super(PasswordChangeInsecureView, self).get_serializer_context()
-        serializer = PasswordChangeInsecureSerializer(data=request.data, context=kwargs)
-        if serializer.is_valid(raise_exception=False):
-            if serializer.save():
-                success_response = SuccessResponse()
-                return Response(success_response.data, success_response.status)
-            else:
-                error_response = ErrorResponse()
-                return Response(error_response.data, error_response.status)
-        else:
-            raise APIValidationError(detail=serializer.errors)
+    def put(self, request, directory_code, error_code):
+        kwargs = super(PasswordChangeView, self).get_serializer_context()
 
+        kwargs['directory_code'] = directory_code
+        kwargs['error_code'] = error_code
 
-class PasswordChangeSecureView(SecureAPIViewBaseView):
-    permission_classes = (IsAuthenticated,)
-    serializer_class = PasswordChangeSecureSerializer
-    identity_directory_code = 'basic_internal'
-
-    def put(self, request):
-        kwargs = super(PasswordChangeSecureView, self).get_serializer_context()
-        serializer = PasswordChangeSecureSerializer(data=request.data, context=kwargs)
+        serializer = PasswordChangeBaseSerialize(data=request.data, context=kwargs)
         if serializer.is_valid(raise_exception=False):
             if serializer.save():
                 success_response = SuccessResponse()
