@@ -1338,29 +1338,28 @@ class PasswordResetValidationTokenSerializer(ValidateSecretWhenLoggedOutMixin,
         self.request = passed_kwargs_from_view
         super(PasswordResetValidationTokenSerializer, self).__init__(*args, **kwargs)
 
-class PasswordResetInsecureSerializer(OTPBaserSerializeMixin, BasicSerializer):
-    error_code = constants.SMS_OTP_INVALID_CODE
-    directory_code = PHONE_SMS_CREDENTIAL_DIRECTORY_CODE
 
+class PasswordResetBaseSerializer(OTPBaserSerializeMixin, BasicSerializer):
     token = serializers.CharField()
     password = serializers.CharField()
 
     token_type = 'password_reset'
 
     def __init__(self, *args, **kwargs):
-        from talos.models import OneTimePasswordCredentialDirectory
         from talos.models import BasicIdentityDirectory
 
         passed_kwargs_from_view = kwargs.get('context')
 
-        self.sms_otp_directory = OneTimePasswordCredentialDirectory.objects.get(
-            code=PHONE_SMS_CREDENTIAL_DIRECTORY_CODE)
+        self.directory_code = passed_kwargs_from_view.get('directory_code', 'default_directory_code')
+        self.error_code = passed_kwargs_from_view.get('error_code', 'default_error_code')
+
         self.basic_identity_directory = BasicIdentityDirectory.objects.get(
             code=passed_kwargs_from_view['identity_directory_code'])
         self.basic_credential_directory = self.basic_identity_directory.credential_directory
+
         self.principal = None
         self.validation_token = None
-        super(PasswordResetInsecureSerializer, self).__init__(*args, **kwargs)
+        super(PasswordResetBaseSerializer, self).__init__(*args, **kwargs)
 
     def validate_token(self, token):
         try:
@@ -1393,59 +1392,6 @@ class PasswordResetInsecureSerializer(OTPBaserSerializeMixin, BasicSerializer):
             self.validation_token.is_active = False
             self.validation_token.save()
 
-
-class PasswordResetSecureSerializer(OTPBaserSerializeMixin,
-                                    BasicSerializer):
-    error_code = constants.GOOGLE_OTP_INVALID_CODE
-    directory_code = GOOGLE_OTP_CREDENTIAL_DIRECTORY_CODE
-
-    password = serializers.CharField()
-    token = serializers.CharField()
-
-    token_type = 'password_reset'
-
-    def __init__(self, *args, **kwargs):
-        from talos.models import BasicIdentityDirectory
-
-        passed_kwargs_from_view = kwargs.get('context')
-
-        self.basic_identity_directory = BasicIdentityDirectory.objects.get(code=passed_kwargs_from_view['identity_directory_code'])
-        self.basic_credential_directory = self.basic_identity_directory.credential_directory
-
-        self.principal = None
-        self.validation_token = None
-        super(PasswordResetSecureSerializer, self).__init__(*args, **kwargs)
-
-    def validate_token(self, token):
-        try:
-
-            validation_token = ValidationToken.objects.get(secret=token,
-                                                           is_active=True)
-            self.validation_token = validation_token
-            self.principal = self.validation_token.principal
-        except ValidationToken.DoesNotExist:
-            raise serializers.ValidationError("Token doesn't exits",
-                                              code=constants.TOKEN_INVALID_CODE)
-        return token
-
-    def validate_password(self, password):
-        from talos_rest.validators import validate_password
-
-        validate_password(password)
-
-        return password
-
-    def save(self):
-        password = self.validated_data['password']
-
-        if self.principal and self.basic_credential_directory:
-            self.basic_credential_directory.reset_credentials(self.principal,
-                                                              self.principal,
-                                                              {'password': password})
-
-        if self.validation_token:
-            self.validation_token.is_active = False
-            self.validation_token.save()
 
 class PasswordChangeBaseSerialize(OTPBaserSerializeMixin, ValidatePasswordMixin, BasicSerializer):
     new_password = serializers.CharField()

@@ -34,7 +34,7 @@ from .views import SessionAPIView, EmailChangeRequestAPIView, \
     PhoneResetAPIView, PrincipalSecurityLevelByTokenView, \
     \
     EmailResetAPIView, ProvidedEvidencesView,  \
-    PasswordChangeView, PasswordResetInsecureView, PasswordResetSecureView, LdapSessionAPIView, \
+    PasswordChangeView,  PasswordResetView, LdapSessionAPIView, \
     PasswordResetTokenCheckerAPIView
 
 from rest_framework.documentation import include_docs_urls
@@ -106,14 +106,13 @@ urlpatterns = [
     path('principal/password/reset-token/<slug:secret>', PasswordResetTokenCheckerAPIView.as_view(),
          name='password-reset-validation'),
 
-    path('principal/password/reset/insecure', PasswordResetInsecureView.as_view(),
+    path('principal/password/reset/insecure', PasswordResetView.as_view(),
+         {'directory_code': PHONE_SMS_CREDENTIAL_DIRECTORY_CODE, 'error_code': constants.PHONE_INVALID_CODE},
          name='password-reset-insecure'),
 
-    path('principal/password/reset/secure', PasswordResetSecureView.as_view(),
+    path('principal/password/reset/secure', PasswordResetView.as_view(),
+         {'directory_code': GOOGLE_OTP_CREDENTIAL_DIRECTORY_CODE, 'error_code': constants.GOOGLE_OTP_INVALID_CODE},
          name='password-reset-secure'),
-
-    # TODO VERSIONING
-    # re_path(r'^(?P<version>(v1|v2))/bookings/$',BasicLoginAPIView.as_view(),name='bookings-list'),
 
     path('google-authenticator/activate/request', GoogleAuthenticationActivateRequestView.as_view(),
          name='google-authenticator-activate-request'),
