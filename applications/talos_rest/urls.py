@@ -27,8 +27,8 @@ from .views import SessionAPIView, EmailChangeRequestAPIView, \
     BasicRegistrationView, PasswordResetRequestView, \
     GoogleAuthenticatorDeleteRequestView, GoogleAuthenticatorActivateConfirmView, \
     EmailResetRequestAPIView, EmailResetValidationTokenCheckerAPIView, \
-    GoogleAuthenticatorChangeRequestView, GoogleAuthenticatorChangeConfirmView, \
-    GoogleAuthenticatorChangeDoneView,  EmailChangeSecureAPIView, \
+    \
+    EmailChangeSecureAPIView, \
     PhoneChangeValidationTokenCheckerAPIView, PhoneChangeRequestAPIView, PhoneChangeSecureAPIView, \
     PhoneResetRequestAPIView, PhoneResetValidationTokenCheckerAPIView, \
     PhoneResetAPIView, PrincipalSecurityLevelByTokenView, \
@@ -123,13 +123,6 @@ urlpatterns = [
          name='google-authenticator-delete-request'),
     path('google-authenticator/delete/confirm', GoogleAuthenticatorDeleteView.as_view(),
          name='google-authenticator-delete-confirm'),
-    path('google-authenticator/change/request', GoogleAuthenticatorChangeRequestView.as_view(),
-         name='google-authenticator-change-request'),
-    path('google-authenticator/change/confirm', GoogleAuthenticatorChangeConfirmView.as_view(),
-         name='google-authenticator-change-confirm'),
-    path('google-authenticator/change/done', GoogleAuthenticatorChangeDoneView.as_view(),
-         name='google-authneticator-change-done'),
-
     path('principal/security-level', PrincipalSecurityLevelView.as_view(),
          name='principal-security-level'),
     path('principal/security-level/token/<slug:secret>',

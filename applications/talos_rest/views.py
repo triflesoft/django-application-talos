@@ -21,8 +21,8 @@ from .serializers import SessionSerializer, \
     BasicRegistrationSerializer, PasswordResetRequestSerializer, \
     GoogleAuthenticatorDeleteRequestSerializer, GoogleAuthenticatorActivateConfirmSerializer, \
     EmailResetRequestSerializer, \
-    EmailResetValidationTokenCheckerSerializer, GoogleAuthenticatorChangeRequestSerializer, \
-    GoogleAuthenticatorChangeConfirmSerializer, GoogleAuthenticatorChangeDoneSerializer, \
+    EmailResetValidationTokenCheckerSerializer,  \
+    \
     EmailChangeRequestSerializer, EmailChangeValidationTokenCheckerSerializer, \
  \
     PhoneChangeRequestSerializer, \
@@ -238,53 +238,6 @@ class GoogleAuthenticatorDeleteView(SecureAPIViewBaseView):
         serializer = GoogleAuthenticatorDeleteSerializer(data=request.data, context=kwargs)
         if serializer.is_valid(raise_exception=False):
             serializer.delete()
-            success_response = SuccessResponse()
-            return Response(success_response.data, success_response.status)
-        else:
-            raise APIValidationError(serializer.errors)
-
-
-class GoogleAuthenticatorChangeRequestView(SecureAPIViewBaseView):
-    permission_classes = (IsAuthenticated,)
-    serializer_class = GoogleAuthenticatorChangeRequestSerializer
-
-    def post(self, request):
-        kwargs = super(GoogleAuthenticatorChangeRequestView, self).get_serializer_context()
-        serializer = GoogleAuthenticatorChangeRequestSerializer(data=request.data, context=kwargs)
-        if serializer.is_valid(raise_exception=False):
-            serializer.save()
-            success_response = SuccessResponse()
-            return Response(success_response.data, success_response.status)
-        else:
-            raise APIValidationError(serializer.errors)
-
-
-class GoogleAuthenticatorChangeConfirmView(SecureAPIViewBaseView):
-    permission_classes = (IsAuthenticated,)
-    serializer_class = GoogleAuthenticatorChangeConfirmSerializer
-    identity_directory_code = 'basic_internal'
-
-    def post(self, request):
-        kwargs = super(GoogleAuthenticatorChangeConfirmView, self).get_serializer_context()
-        serializer = GoogleAuthenticatorChangeConfirmSerializer(data=request.data, context=kwargs)
-        if serializer.is_valid(raise_exception=False):
-            serializer.save()
-            success_response = SuccessResponse()
-            success_response.set_result_pairs('secret', serializer.salt)
-            return Response(success_response.data, success_response.status)
-        else:
-            raise APIValidationError(serializer.errors)
-
-
-class GoogleAuthenticatorChangeDoneView(SecureAPIViewBaseView):
-    permission_classes = (IsAuthenticated,)
-    serializer_class = GoogleAuthenticatorChangeDoneSerializer
-
-    def post(self, request):
-        kwargs = super(GoogleAuthenticatorChangeDoneView, self).get_serializer_context()
-        serializer = GoogleAuthenticatorChangeDoneSerializer(data=request.data, context=kwargs)
-        if serializer.is_valid(raise_exception=False):
-            serializer.save()
             success_response = SuccessResponse()
             return Response(success_response.data, success_response.status)
         else:
