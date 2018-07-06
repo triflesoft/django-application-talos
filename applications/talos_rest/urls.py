@@ -23,7 +23,7 @@ from .views import SessionAPIView, EmailChangeRequestAPIView, \
     GeneratePhoneCodeForAuthorizedUserView, VerifyPhoneCodeForAuthorizedUserView, \
      \
     AddEvidenceView, GeneratePhoneCodeForUnAuthorizedUserView, \
-    VerifyPhoneCodeForUnAuthorizedUserView, EmailChangeValidationTokenCheckerAPIView, \
+    EmailChangeValidationTokenCheckerAPIView, \
     BasicRegistrationView, PasswordResetRequestView, \
     GoogleAuthenticatorDeleteRequestView, GoogleAuthenticatorActivateConfirmView, \
     EmailResetRequestAPIView, EmailResetValidationTokenCheckerAPIView, \
@@ -151,8 +151,8 @@ urlpatterns = [
     path('phone-verification/generate', GeneratePhoneCodeForUnAuthorizedUserView.as_view(),
          name='generate-phone-code-for-unauthorized-user'),
 
-    path('phone-verification/verify', VerifyPhoneCodeForUnAuthorizedUserView.as_view(),
-         name='verify-phone-code-for-unauthorized-user'),
+    # path('phone-verification/verify', VerifyPhoneCodeForUnAuthorizedUserView.as_view(),
+    #      name='verify-phone-code-for-unauthorized-user'),
 
     path('basic-registration', BasicRegistrationView.as_view(), name='basic-registration'),
 

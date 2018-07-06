@@ -500,6 +500,11 @@ class AddEvidenceBaseSerialize(OTPBaserSerializeMixin, BasicSerializer):
 class GeneratePhoneCodeForUnAuthorizedUserSerializer(BasicSerializer):
     phone = serializers.CharField()
 
+    def __init__(self, *args, **kwargs):
+        passed_kwargs_from_view = kwargs.get('context')
+        self.request = passed_kwargs_from_view['request']
+        super(GeneratePhoneCodeForUnAuthorizedUserSerializer, self).__init__(*args, **kwargs)
+
     def validate_phone(self, phone):
         from talos_rest.validators import validate_phone
 
@@ -511,112 +516,23 @@ class GeneratePhoneCodeForUnAuthorizedUserSerializer(BasicSerializer):
         return phone
 
     def save(self):
+        from os import urandom
         from talos.contrib.sms_sender import SMSSender
-        from pyotp import random_base32
         from pyotp import TOTP
+        import base64
 
         phone = self.validated_data['phone']
 
-        phone_validation_token = ValidationToken()
-        phone_validation_token.identifier = 'phone'
-        phone_validation_token.identifier_value = phone
-        phone_validation_token.type = 'principal_registration'
-        secret_key = random_base32()
-        phone_validation_token.secret = secret_key
-        phone_validation_token.save()
+        secret = urandom(64)
 
-        totp = TOTP(secret_key)
+        self.request.session['secret'] = secret.hex()
+
+        totp = TOTP(base64.b32encode(secret))
         sms_sender = SMSSender()
+
         if not sms_sender.send_message(phone, 'You registration code is {}'.format(totp.now())):
             raise serializers.ValidationError('This mobile phone is invalid',
                                               code=constants.PHONE_INVALID_CODE)
-
-
-class VerifyPhoneCodeForUnAuthorizedUserSerializer(BasicSerializer):
-    phone = serializers.CharField()
-    code = serializers.CharField()
-
-    def __init__(self, *args, **kwargs):
-        self.phone = None
-        self.token = None
-        super(VerifyPhoneCodeForUnAuthorizedUserSerializer, self).__init__(*args, **kwargs)
-
-    def validate_phone(self, phone):
-        try:
-            ValidationToken.objects.get(identifier='phone',
-                                        identifier_value=phone,
-                                        type='principal_registration',
-                                        is_active=True)
-        except ValidationToken.DoesNotExist:
-            raise serializers.ValidationError('Phone does not exists',
-                                              code=constants.PHONE_INVALID_CODE)
-        self.phone = phone
-
-        return phone
-
-    def validate_code(self, code):
-        from pyotp import TOTP
-
-        try:
-            validation_token = ValidationToken.objects.filter(
-                identifier='phone',
-                identifier_value=self.phone,
-                type='principal_registration',
-                is_active=True).order_by('-id')
-
-            if validation_token.count() > 0:
-                validation_token = validation_token[0]
-            else:
-                raise serializers.ValidationError('Code is incorrect',
-                                                  code=constants.SMS_OTP_INVALID_CODE)
-            secret_key = validation_token.secret
-            totp = TOTP(secret_key)
-
-            if not totp.verify(code):
-                raise serializers.ValidationError('Code is incorrect',
-                                                  code=constants.SMS_OTP_INVALID_CODE)
-        except ValidationToken.DoesNotExist:
-            raise serializers.ValidationError('Code is incorrect',
-                                              code=constants.SMS_OTP_INVALID_CODE)
-        return code
-
-    def validate(self, attrs):
-        from pyotp import TOTP
-
-        phone = attrs['phone']
-        code = attrs['code']
-
-        try:
-            phone_validation_token = ValidationToken.objects.filter(
-                identifier='phone',
-                identifier_value=phone,
-                type='principal_registration',
-                is_active=True).order_by('-id')
-
-            if phone_validation_token.count() > 0:
-                phone_validation_token = phone_validation_token[0]
-            else:
-                raise serializers.ValidationError(
-                    'Your code is incorect',
-                    code=constants.TOKEN_INVALID_CODE)
-
-            secret_key = phone_validation_token.secret
-            totp = TOTP(secret_key)
-
-            if not totp.verify(code):
-                raise serializers.ValidationError(
-                    'Your code is incorrect',
-                    code=constants.TOKEN_INVALID_CODE)
-            self.token = phone_validation_token.uuid
-        except ValidationToken.DoesNotExist:
-            raise serializers.ValidationError(
-                'Your code is incorrect',
-                code=constants.TOKEN_INVALID_CODE)
-
-        return attrs
-
-    def save(self):
-        pass
 
 
 class BasicRegistrationSerializer(BasicSerializer):
@@ -624,7 +540,7 @@ class BasicRegistrationSerializer(BasicSerializer):
     email = serializers.CharField()
     password = serializers.CharField(min_length=6)
     phone = serializers.CharField()
-    token = serializers.CharField()
+    code = serializers.CharField()
 
     def __init__(self, *args, **kwargs):
         from talos.models import BasicIdentityDirectory
@@ -638,7 +554,7 @@ class BasicRegistrationSerializer(BasicSerializer):
             code=GOOGLE_OTP_CREDENTIAL_DIRECTORY_CODE)
         self.request = passed_kwargs_from_view.get('request')
         self.principal = None
-        self.token = None
+        self.secret = None
 
         super(BasicRegistrationSerializer, self).__init__(*args, **kwargs)
 
@@ -646,7 +562,6 @@ class BasicRegistrationSerializer(BasicSerializer):
         from talos_rest.validators import validate_email
 
         email = email.lower()
-
         validate_email(email)
 
         try:
@@ -670,15 +585,23 @@ class BasicRegistrationSerializer(BasicSerializer):
             pass
         return phone
 
-    def validate_token(self, token):
-        try:
-            ValidationToken.objects.get(uuid=token,
-                                        is_active=True,
-                                        type='principal_registration')
-        except ValidationToken.DoesNotExist:
-            raise serializers.ValidationError('Token does not exists',
-                                              constants.TOKEN_INVALID_CODE)
-        return token
+    def validate_code(self, code):
+        import pyotp
+        import base64
+
+        if self.request.session.get('secret') is not None:
+            self.secret = self.request.session['secret']
+
+            totp = pyotp.TOTP(base64.b32encode(bytes.fromhex(self.secret)))
+
+            if not totp.verify(code):
+                raise serializers.ValidationError('Code is invalid',
+                                                  constants.PHONE_INVALID_CODE)
+            del self.request.session['secret']
+        else:
+            raise serializers.ValidationError('Code is invalid',
+                                              constants.PHONE_INVALID_CODE)
+        return code
 
     def validate_password(self, password):
         from talos_rest.validators import validate_password
@@ -687,27 +610,12 @@ class BasicRegistrationSerializer(BasicSerializer):
 
         return password
 
-    def validate(self, attrs):
-
-        token = attrs['token']
-        phone = attrs['phone']
-
-        try:
-            self.token = ValidationToken.objects.get(identifier='phone',
-                                                     identifier_value=phone,
-                                                     uuid=token,
-                                                     is_active=True)
-        except ValidationToken.DoesNotExist:
-            raise serializers.ValidationError('Token and phone is invalid',
-                                              code=constants.TOKEN_INVALID_CODE)
-        return attrs
-
     def save(self):
         self.principal = Principal()
         self.principal.email = self.validated_data['email']
         self.principal.phone = self.validated_data['phone']
         self.principal.full_name = self.validated_data['full_name']
-
+        self.principal.salt = bytes.fromhex(self.secret)
         self.principal.save()
 
         self.identity_directory.create_credentials(self.principal,
@@ -715,10 +623,6 @@ class BasicRegistrationSerializer(BasicSerializer):
         self.credential_directory.create_credentials(self.principal,
                                                      {'password': self.validated_data['password']})
 
-        if self.token:
-            self.token.principal = self.principal
-            self.token.is_active = False
-            self.token.save()
 
 
 class EmailChangeRequestSerializer(BasicSerializer):

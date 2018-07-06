@@ -110,8 +110,8 @@ class InternalPhoneSMS(object):
         otp_credential.save()
 
         # TODO: Sending SMS
-        sms_sender = SMSSender()
-        sms_sender.send_message(principal.phone, 'Your code is {}'.format(otp_credential.salt))
+        #sms_sender = SMSSender()
+        #sms_sender.send_message(principal.phone, 'Your code is {}'.format(otp_credential.salt))
 
     def verify_credentials(self, principal, credentials):
         code = credentials['code']

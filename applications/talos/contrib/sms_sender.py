@@ -23,8 +23,9 @@ class SMSSender(object):
                 if number.startswith(sms_provider.prefix):
                     self.backend_object = _create_class_by_name(
                         sms_provider.directory.backend_class)()
-                else:
-                    raise Exception("Number has no match")
+
+        if not self.backend_object:
+            self.backend_object = _create_class_by_name('talos.sms_sender_backends.twilio.TwilioSender')()
 
     def send_message(self, number, message):
         self._ensure_backend(number)
