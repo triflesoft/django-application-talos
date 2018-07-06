@@ -1,4 +1,7 @@
 from re import compile
+from django.template.loader import render_to_string
+from django.core.mail import send_mail
+from django.urls import reverse
 from rest_framework import serializers
 from talos.models import Principal
 from talos.models import ValidationToken
@@ -14,7 +17,7 @@ GOOGLE_OTP_CREDENTIAL_DIRECTORY_CODE = 'onetimepassword_internal_google_authenti
 class OTPBaserSerializeMixin():
     def __init__(self, *args, **kwargs):
         self.fields['otp_code'] = serializers.CharField(label='SMS Code')
-        self.sms_otp_directory = None
+        self.otp_directory = None
         super(OTPBaserSerializeMixin, self).__init__(*args, **kwargs)
 
     def validate_otp_code(self, otp_code):
@@ -747,9 +750,6 @@ class EmailChangeRequestSerializer(BasicSerializer):
         return new_email
 
     def save(self):
-        from django.template.loader import render_to_string
-        from django.core.mail import send_mail
-
         new_email = self.validated_data['new_email']
 
         validation_token = ValidationToken()
@@ -811,10 +811,7 @@ class EmailChangeBaseSerialize(OTPBaserSerializeMixin,
 
     def save(self):
         from talos.models import BasicIdentity
-        from django.template.loader import render_to_string
-        from django.core.mail import send_mail
         from talos.contrib.sms_sender import SMSSender
-        from django.urls import reverse
 
         old_email = self.token.principal.email
 
@@ -829,7 +826,6 @@ class EmailChangeBaseSerialize(OTPBaserSerializeMixin,
         # Remove session to logout
         self.request.session.flush()
 
-        # TODO Send link to new email
         context = {
             'email': self.token.principal.email,
         }
@@ -847,7 +843,6 @@ class EmailChangeBaseSerialize(OTPBaserSerializeMixin,
             fail_silently=True
         )
 
-        # TODO Send sms to old phone
         mail_change_text = render_to_string('talos/email_change/confirmed_email_body_mobile.txt')
         sms_sender = SMSSender()
         sms_sender.send_message(self.token.principal.phone, mail_change_text)
@@ -897,10 +892,6 @@ class EmailResetRequestSerializer(BasicSerializer):
         return email
 
     def save(self):
-        from django.template.loader import render_to_string
-        from django.core.mail import send_mail
-        from django.urls import reverse
-
         new_email = self.validated_data['new_email']
         old_email = self.validated_data['old_email']
 
@@ -912,7 +903,6 @@ class EmailResetRequestSerializer(BasicSerializer):
         validation_token.type = self.token_type
         validation_token.save()
 
-        #  TODO SEND MAIL with link
         url = '{0}://{1}{2}'.format(
             self.request.scheme,
             self.request.META.get('HTTP_HOST', 'test_host'),
@@ -988,8 +978,6 @@ class EmailResetBaseSerializer(BasicSerializer):
     def save(self):
         from talos.models import BasicIdentity
         from talos.contrib.sms_sender import SMSSender
-        from django.template.loader import render_to_string
-        from django.core.mail import send_mail
 
         self.token.principal.email = self.token.identifier_value
         self.token.principal.save()
@@ -1000,7 +988,7 @@ class EmailResetBaseSerializer(BasicSerializer):
         basic_identity.username = self.token.identifier_value
         basic_identity.save()
 
-        # TODO Send link to new email
+
         context = {
             'email': self.principal.email
         }
@@ -1018,7 +1006,6 @@ class EmailResetBaseSerializer(BasicSerializer):
             fail_silently=True
         )
 
-        # TODO Send sms to old phone
         phone_text = render_to_string('talos/email_reset/confirmed_email_reset_mobile.txt')
         sms_sender = SMSSender()
         sms_sender.send_message(self.token.principal.phone, phone_text)
@@ -1046,10 +1033,6 @@ class PhoneChangeRequestSerializer(BasicSerializer):
         return new_phone
 
     def save(self):
-        from django.template.loader import render_to_string
-        from django.core.mail import send_mail
-        from django.urls import reverse
-
         new_phone = self.validated_data['new_phone']
 
         validation_token = ValidationToken()
@@ -1059,7 +1042,6 @@ class PhoneChangeRequestSerializer(BasicSerializer):
         validation_token.type = self.token_type
         validation_token.save()
 
-        # TODO SEND MAIL with link to continue phone change
         url = '{0}://{1}{2}'.format(
             self.request.scheme,
             self.request.META.get('HTTP_HOST', 'test_host'),
@@ -1114,14 +1096,12 @@ class PhoneChangeBaseSerialize(BasicSerializer):
 
     def save(self):
         from talos.contrib.sms_sender import SMSSender
-        from django.template.loader import render_to_string
 
         self.token.principal.phone = self.token.identifier_value
         self.token.principal.save()
         self.token.is_active = False
         self.token.save()
 
-        # TODO Send sms to new phone
         phone_text = render_to_string('talos/phone_change/confirmed_phone_change.txt')
         sms_sender = SMSSender()
         sms_sender.send_message(self.token.principal.phone, phone_text)
@@ -1165,10 +1145,6 @@ class PhoneResetRequestSerializer(BasicSerializer):
         return email
 
     def save(self):
-        from django.template.loader import render_to_string
-        from django.core.mail import send_mail
-        from django.urls import reverse
-
         new_phone = self.validated_data['new_phone']
         email = self.validated_data['email']
 
@@ -1180,7 +1156,6 @@ class PhoneResetRequestSerializer(BasicSerializer):
         validation_token.type = self.token_type
         validation_token.save()
 
-        # TODO SEND MAIL with link
         url = '{0}://{1}{2}'.format(
             self.request.scheme,
             self.request.META.get('HTTP_HOST', 'test_host'),
@@ -1250,14 +1225,12 @@ class PhoneResetBaseSerialize(OTPBaserSerializeMixin, ValidatePasswordMixin, Bas
 
     def save(self):
         from talos.contrib.sms_sender import SMSSender
-        from django.template.loader import render_to_string
 
         self.token.principal.phone = self.token.identifier_value
         self.token.principal.save()
         self.token.is_active = False
         self.token.save()
 
-        # TODO Send sms to new phone
         phone_text = render_to_string('talos/phone_reset/confirmed_phone_reset_phone.txt')
         sms_sender = SMSSender()
         sms_sender.send_message(self.token.principal.phone, phone_text)
@@ -1287,10 +1260,6 @@ class PasswordResetRequestSerializer(BasicSerializer):
         return email
 
     def save(self):
-        from django.urls import reverse
-        from django.template.loader import render_to_string
-        from django.core.mail import send_mail
-
         email = self.validated_data['email']
 
         validation_token = ValidationToken()
@@ -1300,7 +1269,6 @@ class PasswordResetRequestSerializer(BasicSerializer):
         validation_token.type = self.token_type
         validation_token.save()
 
-        # TODO: Send email
         url = '{0}://{1}{2}'.format(
             self.request.scheme,
             self.request.META.get('HTTP_HOST', 'test_host'),
@@ -1335,7 +1303,7 @@ class PasswordResetValidationTokenSerializer(ValidateSecretWhenLoggedOutMixin,
 
     def __init__(self, *args, **kwargs):
         passed_kwargs_from_view = kwargs.get('context')
-        self.request = passed_kwargs_from_view
+        self.request = passed_kwargs_from_view['request']
         super(PasswordResetValidationTokenSerializer, self).__init__(*args, **kwargs)
 
 
