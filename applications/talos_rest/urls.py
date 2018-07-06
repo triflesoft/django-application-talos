@@ -16,7 +16,7 @@ Including another URLconf
 
 from django.urls import path
 
-import constants
+from talos_rest import constants
 from .views import SessionAPIView, EmailChangeRequestAPIView, \
     GoogleAuthenticationActivateRequestView, \
     GoogleAuthenticatorDeleteView, PrincipalSecurityLevelView, \

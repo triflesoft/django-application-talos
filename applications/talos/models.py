@@ -1288,19 +1288,6 @@ class ValidationToken(AbstractReplicatableModel):
         return self.secret
 
 
-
-
-# TODO replace with generic HTTP request
-class SMSProviders(models.Model):
-    regex = models.CharField(max_length=100)
-    backend_class = models.CharField(max_length=255)
-    username = models.CharField(max_length=255)
-    password = models.CharField(max_length=255)
-
-    def __str__(self):
-        return self.backend_class
-
-
 class MessagingProviderDirectory(AbstractDirectory):
     def __str__(self):
         return self.backend_class
