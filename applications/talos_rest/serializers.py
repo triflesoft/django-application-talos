@@ -44,11 +44,7 @@ class GoogleOtpSerializerMixin(OTPBaserSerializeMixin):
 class ValidatePasswordMixin():
     def __init__(self, *args, **kwargs):
         super(ValidatePasswordMixin, self).__init__(*args, **kwargs)
-        from talos.models import BasicIdentityDirectory
         self.fields['password'] = serializers.CharField(label='Password', max_length=255)
-        self.basic_identity_directory = BasicIdentityDirectory.objects.get(
-            code=self.identity_directory_code)
-        self.basic_credential_directory = self.basic_identity_directory.credential_directory
         self.password = None
 
 
@@ -119,6 +115,8 @@ class BasicSerializer(serializers.Serializer):
     BASIC_SUCCESS_CODE = status.HTTP_200_OK
 
     def __init__(self, *args, **kwargs):
+        from talos.models import BasicIdentityDirectory
+
         self.request = None
         self.principal = None
         context_params = kwargs.get('context')
@@ -130,6 +128,11 @@ class BasicSerializer(serializers.Serializer):
         self.error_code = context_params.get('error_code')
 
         self.identity_directory_code = context_params.get('identity_directory_code')
+
+        if self.identity_directory_code:
+            self.basic_identity_directory = BasicIdentityDirectory.objects.get(
+                code=self.identity_directory_code)
+            self.basic_credential_directory = self.basic_identity_directory.credential_directory
 
         super(BasicSerializer, self).__init__(*args, **kwargs)
 
@@ -275,14 +278,9 @@ class GoogleAuthenticatorDeleteSerializer(GoogleOtpSerializerMixin,
 
     def __init__(self, *args, **kwargs):
         from talos.models import OneTimePasswordCredentialDirectory
-        from talos.models import BasicIdentityDirectory
-
         super(GoogleAuthenticatorDeleteSerializer, self).__init__(*args, **kwargs)
 
         self.validation_token = None
-        self.basic_identity_directory = BasicIdentityDirectory.objects.get(
-            code=self.identity_directory_code)
-        self.basic_credential_directory = self.basic_identity_directory.credential_directory
         self.otp_credential_directory = OneTimePasswordCredentialDirectory.objects.get(
             code=GOOGLE_OTP_CREDENTIAL_DIRECTORY_CODE)
         self.sms_credential_directory = OneTimePasswordCredentialDirectory.objects.get(
@@ -1036,15 +1034,7 @@ class PasswordResetBaseSerializer(OTPBaserSerializeMixin, BasicSerializer):
     token_type = 'password_reset'
 
     def __init__(self, *args, **kwargs):
-        from talos.models import BasicIdentityDirectory
-
         super(PasswordResetBaseSerializer, self).__init__(*args, **kwargs)
-
-        self.basic_identity_directory = BasicIdentityDirectory.objects.get(
-            code=self.identity_directory_code)
-        self.basic_credential_directory = self.basic_identity_directory.credential_directory
-
-        self.principal = None
         self.validation_token = None
 
 
