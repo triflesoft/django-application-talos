@@ -208,7 +208,7 @@ class GoogleAuthenticatorActivateRequestSerializer(ValidatePasswordMixin, BasicS
         self.secret = secret
 
 
-class GoogleAuthenticatorActivateConfirmSerializer(serializers.Serializer):
+class GoogleAuthenticatorActivateConfirmSerializer(BasicSerializer):
     code = serializers.CharField()
 
     def __init__(self, *args, **kwargs):
@@ -244,7 +244,7 @@ class GoogleAuthenticatorActivateConfirmSerializer(serializers.Serializer):
             del self.request.session['secret_key_activated']
 
 
-class GoogleAuthenticatorDeleteRequestSerializer(serializers.Serializer):
+class GoogleAuthenticatorDeleteRequestSerializer(BasicSerializer):
     token_type = 'otp_delete'
 
     def __init__(self, *args, **kwargs):
@@ -715,7 +715,7 @@ class EmailResetRequestSerializer(BasicSerializer):
 
 
 
-class EmailResetValidationTokenCheckerSerializer(ValidateSecretWhenLoggedOutMixin, serializers.Serializer):
+class EmailResetValidationTokenCheckerSerializer(ValidateSecretWhenLoggedOutMixin, BasicSerializer):
     token_type = 'email_reset'
 
     def __init__(self, *args, **kwargs):
