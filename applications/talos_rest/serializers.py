@@ -573,7 +573,7 @@ class EmailChangeValidationTokenCheckerSerializer(ValidateSecretWhenLogedInMixin
 
     def __init__(self, *args, **kwargs):
         passed_kwargs_from_view = kwargs.get('context')
-        self.request = passed_kwargs_from_view
+        self.request = passed_kwargs_from_view['request']
         super(EmailChangeValidationTokenCheckerSerializer, self).__init__(*args, **kwargs)
 
 
@@ -720,7 +720,7 @@ class EmailResetValidationTokenCheckerSerializer(ValidateSecretWhenLoggedOutMixi
 
     def __init__(self, *args, **kwargs):
         passed_kwargs_from_view = kwargs.get('context')
-        self.request = passed_kwargs_from_view
+        self.request = passed_kwargs_from_view['request']
         super(EmailResetValidationTokenCheckerSerializer, self).__init__(*args, **kwargs)
 
 
@@ -970,7 +970,7 @@ class PhoneResetValidationTokenCheckerSerializer(ValidateSecretWhenLoggedOutMixi
 
     def __init__(self, *args, **kwargs):
         passed_kwargs_from_view = kwargs.get('context')
-        self.request = passed_kwargs_from_view
+        self.request = passed_kwargs_from_view['request']
         super(PhoneResetValidationTokenCheckerSerializer, self).__init__(*args, **kwargs)
 
 

@@ -362,21 +362,6 @@ class GeneratePhoneCodeForUnAuthorizedUserView(SecureAPIViewBaseView):
             raise APIValidationError(serializer.errors)
 
 
-# class VerifyPhoneCodeForUnAuthorizedUserView(SecureAPIViewBaseView):
-#     serializer_class = VerifyPhoneCodeForUnAuthorizedUserSerializer
-#
-#     def post(self, request):
-#         kwargs = super(VerifyPhoneCodeForUnAuthorizedUserView, self).get_serializer_context()
-#         serializer = VerifyPhoneCodeForUnAuthorizedUserSerializer(data=request.data, context=kwargs)
-#
-#         if serializer.is_valid(raise_exception=False):
-#             success_response = SuccessResponse()
-#             success_response.set_result_pairs('token', serializer.token)
-#             return Response(success_response.data, success_response.status)
-#         else:
-#             raise APIValidationError(serializer.errors)
-
-
 class BasicRegistrationView(SecureAPIViewBaseView):
     serializer_class = BasicRegistrationSerializer
     identity_directory_code = 'basic_internal'
@@ -416,8 +401,8 @@ class EmailChangeValidationTokenCheckerAPIView(SecureAPIViewBaseView):
     serializer_class = EmailChangeValidationTokenCheckerSerializer
 
     def get(self, request, **kwargs):
-
-        serializer = EmailChangeValidationTokenCheckerSerializer(data=kwargs, context=request)
+        context = super(EmailChangeValidationTokenCheckerAPIView, self).get_serializer_context()
+        serializer = EmailChangeValidationTokenCheckerSerializer(data=kwargs, context=context)
 
         if serializer.is_valid(raise_exception=False):
             return Response(serializer.data)
@@ -511,8 +496,8 @@ class EmailResetValidationTokenCheckerAPIView(SecureAPIViewBaseView):
     serializer_class = EmailResetValidationTokenCheckerSerializer
 
     def get(self, **kwargs):
-
-        serializer = EmailResetValidationTokenCheckerSerializer(data=kwargs)
+        context = super(EmailResetValidationTokenCheckerAPIView, self).get_serializer_context()
+        serializer = EmailResetValidationTokenCheckerSerializer(data=kwargs, context=context)
 
         if serializer.is_valid(raise_exception=False):
             return Response(serializer.data)
@@ -559,8 +544,8 @@ class PhoneChangeValidationTokenCheckerAPIView(SecureAPIViewBaseView):
     serializer_class = PhoneChangeValidationTokenCheckerSerializer
 
     def get(self, request, **kwargs):
-
-        serializer = PhoneChangeValidationTokenCheckerSerializer(data=kwargs, context=request)
+        context = super(PhoneChangeValidationTokenCheckerAPIView, self).get_serializer_context()
+        serializer = PhoneChangeValidationTokenCheckerSerializer(data=kwargs, context=context)
 
         if serializer.is_valid(raise_exception=False):
             return Response(serializer.data)
