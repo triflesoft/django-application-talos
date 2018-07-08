@@ -1,11 +1,15 @@
 from django.http.request import HttpRequest
+from json import JSONDecoder
+from json import JSONEncoder
 
 
 def request_principal_get(self):
     return getattr(self, '_principal', None)
 
+
 def request_principal_set(self, value):
     setattr(self, '_principal', value)
+
 
 def request_principal_del(self):
     delattr(self, '_principal')
@@ -15,6 +19,41 @@ request_principal_property = property(request_principal_get, request_principal_s
 
 HttpRequest.user = request_principal_property
 HttpRequest.principal = request_principal_property
+
+
+class CustomJSONEncoder(JSONEncoder):
+    def default(self, obj):
+        from django.db.models import Model
+        from django.forms.models import model_to_dict
+
+        if isinstance(obj, Model):
+            return {
+                '__type': 'django-model',
+                '__application': obj._meta.app_label,
+                '__model': obj._meta.object_name,
+                'fields': model_to_dict(obj)}
+
+        return super(CustomJSONEncoder, self).default(obj)
+
+
+class CustomJSONDecoder(JSONDecoder):
+    def __init__(self, *args, **kwargs):
+        JSONDecoder.__init__(self, object_hook=self.object_hook, *args, **kwargs)
+
+    def object_hook(self, obj):
+        from django.apps import apps
+
+        if '__type' not in obj:
+            return obj
+
+        obj_type = obj['__type']
+
+        if obj_type == 'django-model':
+            model = apps.get_model(obj['__application'], obj['__model'])
+
+            return model(obj['fields'])
+
+        return obj
 
 
 class Context(object):
@@ -159,7 +198,7 @@ class Context(object):
 
         now = _tznow()
         self._get_session(now, uuid)
-        self._variables = loads(self._session.variables) if self._session.variables else {}
+        self._variables = loads(self._session.variables, cls=CustomJSONDecoder) if self._session.variables else {}
 
         if self._session.principal:
             self.principal = self._session.principal
@@ -197,7 +236,7 @@ class Context(object):
         prev_variables = self._session.variables
         prev_principal = self._session.principal
 
-        self._session.variables = dumps(self._variables)
+        self._session.variables = dumps(self._variables, cls=CustomJSONEncoder)
 
         if self.request.principal and self.request.principal.is_authenticated:
             if issubclass(type(self.request.principal), LazyObject):
