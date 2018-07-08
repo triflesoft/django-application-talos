@@ -86,6 +86,17 @@ class InternalGoogleAuthenticator(object):
     def generate_credentials(self, principal, credentials):
         return False
 
+    def send_otp(self, principal, credential):
+        pass
+
+    def verify_otp(self, principal, credential, code):
+        import pyotp
+
+        # Type of salt is memoryview
+        salt = credential.salt
+        totp = pyotp.TOTP(salt.tobytes())
+
+        return totp.verify(code)
 
 class InternalPhoneSMS(object):
     def __init__(self, credential_directory, **kwargs):
@@ -173,3 +184,23 @@ class InternalPhoneSMS(object):
         except OneTimePasswordCredential.DoesNotExist:
             pass
         return False
+
+    def send_otp(self, principal, credential):
+        import pyotp
+        from ..contrib.sms_sender import SMSSender
+
+        salt = credential.salt
+        totp = pyotp.TOTP(salt)
+
+        sms_sender = SMSSender()
+        sms_sender.send_message(principal.phone, totp.now())
+
+
+    def verify_otp(self, principal, credential, code):
+        import pyotp
+
+        # Type of salt is memoryview
+        salt = credential.salt
+        totp = pyotp.TOTP(salt.tobytes())
+
+        return totp.verify(code)

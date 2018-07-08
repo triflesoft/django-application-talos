@@ -14,15 +14,15 @@ from rest_framework import status
 from .exceptions.custom_exceptions import APIValidationError
 from .serializers import SessionSerializer, \
     GoogleAuthenticatorActivateRequestSerializer, \
-    GoogleAuthenticatorDeleteSerializer, GeneratePhoneCodeForAuthorizedUserSerializer, \
-    VerifyPhoneCodeForAuthorizedUserSerializer, \
+    GoogleAuthenticatorDeleteSerializer,  \
+     \
  \
     GeneratePhoneCodeForUnAuthorizedUserSerializer, \
     BasicRegistrationSerializer, PasswordResetRequestSerializer, \
     GoogleAuthenticatorDeleteRequestSerializer, GoogleAuthenticatorActivateConfirmSerializer, \
     EmailResetRequestSerializer, \
-    EmailResetValidationTokenCheckerSerializer,  \
-    \
+    EmailResetValidationTokenCheckerSerializer, \
+ \
     EmailChangeRequestSerializer, EmailChangeValidationTokenCheckerSerializer, \
  \
     PhoneChangeRequestSerializer, \
@@ -33,7 +33,7 @@ from .serializers import SessionSerializer, \
     LdapLoginSerializer, \
     PasswordResetValidationTokenSerializer, PasswordChangeBaseSerialize, AddEvidenceBaseSerialize, \
     PhoneResetBaseSerialize, PhoneChangeBaseSerialize, EmailResetBaseSerializer, EmailChangeBaseSerialize, \
-    PasswordResetBaseSerializer
+    PasswordResetBaseSerializer, SendOTPSerializer
 
 from talos_rest.permissions import IsAuthenticated, IsBasicAuthenticated, IsSecureLevelOn
 
@@ -287,32 +287,16 @@ class PrincipalSecurityLevelByTokenView(SecureAPIViewBaseView):
             return Response(data=error_response.data)
         return Response(data=success_response.data)
 
-
-class GeneratePhoneCodeForAuthorizedUserView(SecureAPIViewBaseView):
-    permission_classes = (IsBasicAuthenticated,)
-    serializer_class = GeneratePhoneCodeForAuthorizedUserSerializer
-
-    def post(self, request):
-        kwargs = super(GeneratePhoneCodeForAuthorizedUserView, self).get_serializer_context()
-        serializer = GeneratePhoneCodeForAuthorizedUserSerializer(data=request.data, context=kwargs)
+class SendOTPView(SecureAPIViewBaseView):
+    serializer_class = SendOTPSerializer
+    def post(self, request, otp_directory_code):
+        kwargs = super(SendOTPView, self).get_serializer_context()
+        kwargs['otp_directory_code'] = otp_directory_code
+        serializer = SendOTPSerializer(data=request.data, context=kwargs)
         if serializer.is_valid():
             serializer.save()
         success_response = SuccessResponse()
         return Response(success_response.data)
-
-
-class VerifyPhoneCodeForAuthorizedUserView(SecureAPIViewBaseView):
-    permission_classes = (IsBasicAuthenticated,)
-    serializer_class = VerifyPhoneCodeForAuthorizedUserSerializer
-
-    def post(self, request):
-        kwargs = super(VerifyPhoneCodeForAuthorizedUserView, self).get_serializer_context()
-        serializer = VerifyPhoneCodeForAuthorizedUserSerializer(data=request.data, context=kwargs)
-        if serializer.is_valid(raise_exception=True):
-            serializer.save()
-            success_response = SuccessResponse()
-            success_response.set_result_pairs('text', 'your code is correct')
-            return Response(success_response.data)
 
 
 class AddEvidenceView(SecureAPIViewBaseView):

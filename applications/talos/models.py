@@ -803,6 +803,16 @@ class OneTimePasswordCredentialDirectory(AbstractCredentialDirectory):
 
         return self.backend_object.generate_credentials(principal, credentials)
 
+    def send_otp(self, principal, credential):
+        self._ensure_backend()
+
+        self.backend_object.send_otp(principal, credential)
+
+    def verify_otp(self, principal, credential, otp_code):
+        self._ensure_backend()
+
+        self.backend_object.verify_otp(principal, credential, otp_code)
+
 
     def save(self, *args, **kwargs):
         super(OneTimePasswordCredentialDirectory, self).save(*args, **kwargs)

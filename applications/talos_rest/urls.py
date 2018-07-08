@@ -20,22 +20,22 @@ from talos_rest import constants
 from .views import SessionAPIView, EmailChangeRequestAPIView, \
     GoogleAuthenticationActivateRequestView, \
     GoogleAuthenticatorDeleteView, PrincipalSecurityLevelView, \
-    GeneratePhoneCodeForAuthorizedUserView, VerifyPhoneCodeForAuthorizedUserView, \
-     \
+      \
+ \
     AddEvidenceView, GeneratePhoneCodeForUnAuthorizedUserView, \
     EmailChangeValidationTokenCheckerAPIView, \
     BasicRegistrationView, PasswordResetRequestView, \
     GoogleAuthenticatorDeleteRequestView, GoogleAuthenticatorActivateConfirmView, \
     EmailResetRequestAPIView, EmailResetValidationTokenCheckerAPIView, \
-    \
+ \
     EmailChangeSecureAPIView, \
     PhoneChangeValidationTokenCheckerAPIView, PhoneChangeRequestAPIView, PhoneChangeSecureAPIView, \
     PhoneResetRequestAPIView, PhoneResetValidationTokenCheckerAPIView, \
     PhoneResetAPIView, PrincipalSecurityLevelByTokenView, \
-    \
-    EmailResetAPIView, ProvidedEvidencesView,  \
-    PasswordChangeView,  PasswordResetView, LdapSessionAPIView, \
-    PasswordResetTokenCheckerAPIView
+ \
+    EmailResetAPIView, ProvidedEvidencesView, \
+    PasswordChangeView, PasswordResetView, LdapSessionAPIView, \
+    PasswordResetTokenCheckerAPIView, SendOTPView
 
 from rest_framework.documentation import include_docs_urls
 
@@ -128,11 +128,8 @@ urlpatterns = [
     path('principal/security-level/token/<slug:secret>',
          PrincipalSecurityLevelByTokenView.as_view(), name='principal-security-level-by-token'),
 
-    path('authorized-phone-verification/generate', GeneratePhoneCodeForAuthorizedUserView.as_view(),
-         name='generate-phone-code-for-authorized-user'),
-
-    path('authorized-phone-verification/verify', VerifyPhoneCodeForAuthorizedUserView.as_view(),
-         name='verify-phone-code-for-authorized-user'),
+    path('send-otp/<slug:otp_directory_code>', SendOTPView.as_view(),
+         name='send-otp'),
 
     path('evidence/sms', AddEvidenceView.as_view(),
          {'directory_code': PHONE_SMS_CREDENTIAL_DIRECTORY_CODE, 'error_code': constants.SMS_OTP_INVALID_CODE},
