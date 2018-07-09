@@ -359,6 +359,11 @@ class SendOTPSerializer(BasicSerializer):
         directory.send_otp(principal, credential)
 
         #print('Send otp - credential salt', credential.salt)
+        
+        # TODO: This code should be removed from production code, it contains sensitive information!
+        totp = pyotp.TOTP(credential.salt)
+        self.otp_code = totp.now()
+
 
     def save(self):
         pass

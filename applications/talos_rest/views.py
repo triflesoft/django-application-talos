@@ -296,6 +296,7 @@ class SendOTPView(SecureAPIViewBaseView):
         if serializer.is_valid():
             serializer.save()
         success_response = SuccessResponse()
+        success_response.set_result_pairs('otp_code', serializer.otp_code)
         return Response(success_response.data)
 
 
