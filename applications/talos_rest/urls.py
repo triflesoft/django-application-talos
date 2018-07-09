@@ -22,7 +22,7 @@ from .views import SessionAPIView, EmailChangeRequestAPIView, \
     GoogleAuthenticatorDeleteView, PrincipalSecurityLevelView, \
       \
  \
-    AddEvidenceView, GeneratePhoneCodeForUnAuthorizedUserView, \
+    AddEvidenceView,  \
     EmailChangeValidationTokenCheckerAPIView, \
     BasicRegistrationView, PasswordResetRequestView, \
     GoogleAuthenticatorDeleteRequestView, GoogleAuthenticatorActivateConfirmView, \
@@ -137,12 +137,6 @@ urlpatterns = [
     path('evidence/google', AddEvidenceView.as_view(),
          {'directory_code': GOOGLE_OTP_CREDENTIAL_DIRECTORY_CODE, 'error_code': constants.GOOGLE_OTP_INVALID_CODE},
          name='add-evidence-google'),
-
-    path('phone-verification/generate', GeneratePhoneCodeForUnAuthorizedUserView.as_view(),
-         name='generate-phone-code-for-unauthorized-user'),
-
-    # path('phone-verification/verify', VerifyPhoneCodeForUnAuthorizedUserView.as_view(),
-    #      name='verify-phone-code-for-unauthorized-user'),
 
     path('basic-registration', BasicRegistrationView.as_view(), name='basic-registration'),
 

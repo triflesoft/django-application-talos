@@ -17,7 +17,7 @@ from .serializers import SessionSerializer, \
     GoogleAuthenticatorDeleteSerializer,  \
      \
  \
-    GeneratePhoneCodeForUnAuthorizedUserSerializer, \
+    \
     BasicRegistrationSerializer, PasswordResetRequestSerializer, \
     GoogleAuthenticatorDeleteRequestSerializer, GoogleAuthenticatorActivateConfirmSerializer, \
     EmailResetRequestSerializer, \
@@ -315,32 +315,6 @@ class AddEvidenceView(SecureAPIViewBaseView):
 
         if serializer.is_valid(raise_exception=False):
             serializer.save()
-            success_response = SuccessResponse()
-            return Response(success_response.data, success_response.status)
-        else:
-            raise APIValidationError(serializer.errors)
-
-
-class GeneratePhoneCodeForUnAuthorizedUserView(SecureAPIViewBaseView):
-    serializer_class = GeneratePhoneCodeForUnAuthorizedUserSerializer
-
-    def post(self, request, *args, **kwargs):
-        kwargs = super(GeneratePhoneCodeForUnAuthorizedUserView, self).get_serializer_context(*args, **kwargs)
-
-        serializer = GeneratePhoneCodeForUnAuthorizedUserSerializer(data=request.data,
-                                                                    context=kwargs)
-
-        if serializer.is_valid(raise_exception=False):
-            from rest_framework.serializers import ValidationError
-            from talos_rest import constants
-            try:
-                serializer.save()
-            except ValidationError:
-                error_response = ErrorResponse()
-                error_response.set_error_pairs('phone', constants.PHONE_INVALID_CODE)
-                error_response.set_details_pairs('phone', 'Error while sending sms')
-                return Response(error_response.data, error_response.status)
-
             success_response = SuccessResponse()
             return Response(success_response.data, success_response.status)
         else:

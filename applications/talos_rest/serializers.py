@@ -359,7 +359,7 @@ class SendOTPSerializer(BasicSerializer):
         directory.send_otp(principal, credential)
 
         #print('Send otp - credential salt', credential.salt)
-        
+
         # TODO: This code should be removed from production code, it contains sensitive information!
         totp = pyotp.TOTP(credential.salt)
         self.otp_code = totp.now()
@@ -385,40 +385,6 @@ class AddEvidenceBaseSerialize(OTPBaserSerializeMixin, BasicSerializer):
         evidence_codes.extend(self.principal.get_current_evidence_code_list())
         provided_evidences = Evidence.objects.filter(code__in=evidence_codes)
         self.principal._load_authentication_context(provided_evidences)
-
-
-class GeneratePhoneCodeForUnAuthorizedUserSerializer(BasicSerializer):
-    phone = serializers.CharField()
-
-    def __init__(self, *args, **kwargs):
-        super(GeneratePhoneCodeForUnAuthorizedUserSerializer, self).__init__(*args, **kwargs)
-
-    def validate_phone(self, phone):
-        from talos_rest.validators import validate_phone
-
-        validate_phone(phone)
-
-        if Principal.objects.filter(phone=phone).count() > 0:
-            raise serializers.ValidationError('This mobile phone is already user',
-                                              code=constants.PHONE_USED_CODE)
-        return phone
-
-    def save(self):
-        from os import urandom
-        from talos.contrib.sms_sender import SMSSender
-        from pyotp import TOTP
-        import base64
-
-        phone = self.validated_data['phone']
-        secret = urandom(64)
-        self.request.session['secret'] = secret.hex()
-
-        totp = TOTP(base64.b32encode(secret))
-        sms_sender = SMSSender()
-
-        if not sms_sender.send_message(phone, 'You registration code is {}'.format(totp.now())):
-            raise serializers.ValidationError('This mobile phone is invalid',
-                                              code=constants.PHONE_INVALID_CODE)
 
 
 class BasicRegistrationSerializer(BasicSerializer):

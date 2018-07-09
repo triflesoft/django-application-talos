@@ -306,60 +306,6 @@ class TestPermissionDeniedPermission(TestUtils):
         self.assertListEqual(sorted(expected_provided_evidences),
                              sorted(response.data.get('result').get('provided-evidences', [])))
 
-
-class GeneratePhoneCodeForUnAuthorizedUser(TestUtils):
-    url = reverse('generate-phone-code-for-unauthorized-user')
-
-    def test_generate_phone_code(self):
-        #from talos.models import ValidationToken
-        data = {
-            'phone': self.phone
-        }
-
-        response = self.client.post(self.url, data, format='json')
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['status'], status.HTTP_200_OK)
-
-        data = {
-            'phone': self.phone
-        }
-
-        response = self.client.post(self.url, data, format='json')
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-
-    def test_generate_invalid_phone(self):
-        data = {
-            'phone': 'phone'
-        }
-
-        response = self.client.post(self.url, data, format='json')
-
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data['status'], status.HTTP_400_BAD_REQUEST)
-
-        self.assertTrue(response.data.get('error').get('phone', False))
-        self.assertEqual(response.data.get('error').get('phone')[0], constants.PHONE_INVALID_CODE)
-
-    def test_generate_already_used_phone(self):
-        self.create_user()
-
-        data = {
-            'phone': self.phone
-        }
-
-        response = self.client.post(self.url, data, format='json')
-
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data['status'], status.HTTP_400_BAD_REQUEST)
-
-        self.assertTrue(response.data.get('error').get('phone', False))
-        self.assertEqual(response.data.get('error').get('phone')[0], constants.PHONE_USED_CODE)
-
-
 class TestEmailChange(TestUtils):
     email_change_request_url = reverse("email-change-request")
     email_change_insecure_url = reverse("email-change-insecure")
