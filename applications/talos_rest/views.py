@@ -110,7 +110,7 @@ class SessionAPIView(SecureAPIViewBaseView):
 
         if str(self.request.user) == 'Anonymous':
 
-            response = ErrorResponse(status=status.HTTP_404_NOT_FOUND)
+            response = ErrorResponse(status=status.HTTP_401_UNAUTHORIZED)
         else:
             response = SuccessResponse()
             response.set_result_pairs('session_id', request.session._session.uuid)
@@ -293,12 +293,14 @@ class SendOTPView(SecureAPIViewBaseView):
         kwargs = super(SendOTPView, self).get_serializer_context()
         kwargs['otp_directory_code'] = otp_directory_code
         serializer = SendOTPSerializer(data=request.data, context=kwargs)
-        if serializer.is_valid():
+        if serializer.is_valid(raise_exception=False):
             serializer.save()
-        success_response = SuccessResponse()
-        success_response.set_result_pairs('otp_code', serializer.otp_code)
-        return Response(success_response.data)
-
+            success_response = SuccessResponse()
+            success_response.set_result_pairs('otp_code', serializer.otp_code)
+            success_response.set_result_pairs('phone', serializer.phone)
+            return Response(success_response.data)
+        else:
+            raise APIValidationError(serializer.errors)
 
 class AddEvidenceView(SecureAPIViewBaseView):
     permission_classes = (IsBasicAuthenticated,)
@@ -331,8 +333,8 @@ class BasicRegistrationView(SecureAPIViewBaseView):
 
         if serializer.is_valid(raise_exception=False):
             serializer.save()
-            success_response = SuccessResponse(status=status.HTTP_201_CREATED)
-            return Response(success_response.data, status=success_response.status)
+            #success_response = SuccessResponse(status=status.HTTP_201_CREATED, data=serializer.data)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
         else:
             raise APIValidationError(serializer.errors)
 

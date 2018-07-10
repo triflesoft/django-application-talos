@@ -811,7 +811,7 @@ class OneTimePasswordCredentialDirectory(AbstractCredentialDirectory):
     def verify_otp(self, principal, credential, otp_code):
         self._ensure_backend()
 
-        self.backend_object.verify_otp(principal, credential, otp_code)
+        return self.backend_object.verify_otp(principal, credential, otp_code)
 
 
     def save(self, *args, **kwargs):

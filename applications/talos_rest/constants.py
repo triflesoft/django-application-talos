@@ -24,3 +24,5 @@ GOOGLE_OTP_NOT_ACTIVATED_CODE = 'google_otp_not_activated'
 GOOGLE_OTP_NOT_REQUESTED_CODE = 'google_otp_not_requested'
 
 SMS_OTP_INVALID_CODE = 'sms_otp_invalid'
+
+OTP_INVALID = 'otp_invalid'

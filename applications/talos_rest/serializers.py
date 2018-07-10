@@ -313,18 +313,27 @@ class SendOTPSerializer(BasicSerializer):
     otp_directory_code = PHONE_SMS_CREDENTIAL_DIRECTORY_CODE
 
     def __init__(self, *args, **kwargs):
+        super(SendOTPSerializer, self).__init__(*args, **kwargs)
+        if self.initial_data.get('phone'):
+            self.fields['phone'] = serializers.CharField(max_length=100)
+
+    def validate_phone(self, phone):
         from talos.models import OneTimePasswordCredential
         from talos.models import OneTimePasswordCredentialDirectory
         import pyotp
-
-        super(SendOTPSerializer, self).__init__(*args, **kwargs)
-
-
+        from rest_framework import serializers
+        from talos_rest.validators import validate_phone
 
         # Check if provided opt_directory_code exists
-        if OneTimePasswordCredentialDirectory.objects.filter(code=self.context_params['otp_directory_code']).count() > 0:
+        if OneTimePasswordCredentialDirectory.objects.filter(
+                code=self.context_params['otp_directory_code']).count() > 0:
             self.otp_directory_code = self.context_params['otp_directory_code']
 
+        if not self.initial_data.get('phone'):
+            raise serializers.ValidationError('Phone code is required',
+                                              code='phone_required')
+
+        validate_phone(self.initial_data['phone'])
 
         if not self.request.principal.pk:
             from django.core import serializers
@@ -354,16 +363,17 @@ class SendOTPSerializer(BasicSerializer):
             principal = self.request.principal
             credential = OneTimePasswordCredential.objects.get(principal=principal)
 
-
         directory = credential.directory
         directory.send_otp(principal, credential)
 
-        #print('Send otp - credential salt', credential.salt)
+        # print('Send otp - credential salt', credential.salt)
 
         # TODO: This code should be removed from production code, it contains sensitive information!
-        totp = pyotp.TOTP(credential.salt)
+        totp = pyotp.TOTP(credential.salt, interval=300)
         self.otp_code = totp.now()
+        self.phone = self.initial_data.get('phone', '')
 
+        return phone
 
     def save(self):
         pass
@@ -393,6 +403,8 @@ class BasicRegistrationSerializer(BasicSerializer):
     password = serializers.CharField(min_length=6)
     phone = serializers.CharField()
     code = serializers.CharField()
+
+    BASIC_SUCCESS_CODE = status.HTTP_201_CREATED
 
     def __init__(self, *args, **kwargs):
         from talos.models import BasicIdentityDirectory
@@ -446,9 +458,9 @@ class BasicRegistrationSerializer(BasicSerializer):
 
         directory = temp_credential.directory
 
-        if directory.verify_otp(temp_principal, temp_credential, code) == False:
+        if not directory.verify_otp(temp_principal, temp_credential, code):
             raise serializers.ValidationError('Code is invalid',
-                                              constants.PHONE_INVALID_CODE)
+                                              constants.OTP_INVALID)
 
         self.principal = temp_principal
         self.credential = temp_credential
@@ -459,18 +471,20 @@ class BasicRegistrationSerializer(BasicSerializer):
 
         validate_password(password)
 
-        return password
+        self.password = password
+
+        #return password
 
     def save(self):
-        self.principal.email = self.principal.email or self.validated_data['email']
-        self.principal.phone = self.principal.phone or self.validated_data['phone']
+        self.principal.email = self.validated_data['email']
+        self.principal.phone = self.validated_data['phone']
         self.principal.full_name = self.validated_data['full_name']
         self.principal.save()
 
         self.identity_directory.create_credentials(self.principal,
                                                    {'username': self.validated_data['email']})
         self.credential_directory.create_credentials(self.principal,
-                                                     {'password': self.validated_data['password']})
+                                                     {'password': self.password})
 
 
         self.credential.principal = self.principal
