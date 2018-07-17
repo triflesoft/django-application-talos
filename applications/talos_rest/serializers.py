@@ -330,12 +330,17 @@ class SendOTPSerializer(BasicSerializer):
         from talos_rest.validators import validate_phone
         from talos.models import Principal
 
-        try:
-            Principal.objects.get(phone=phone)
+        if self.initial_data.get('purpose', '') in ['user-register'] and \
+            Principal.objects.filter(phone=phone).count() > 0:
             raise serializers.ValidationError('Your phone is already used',
                                               code=constants.PHONE_USED_CODE)
-        except Principal.DoesNotExist:
-            pass
+
+        # try:
+        #     Principal.objects.get(phone=phone)
+        #     raise serializers.ValidationError('Your phone is already used',
+        #                                       code=constants.PHONE_USED_CODE)
+        # except Principal.DoesNotExist:
+        #     pass
 
         # Check if provided opt_directory_code exists
         if OneTimePasswordCredentialDirectory.objects.filter(
