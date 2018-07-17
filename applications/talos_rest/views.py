@@ -107,16 +107,20 @@ class SessionAPIView(SecureAPIViewBaseView):
     serializer_class = SessionSerializer
 
     def get(self, request):
-
         if str(self.request.user) == 'Anonymous':
-
-            response = ErrorResponse(status=status.HTTP_401_UNAUTHORIZED)
+            return Response(status=status.HTTP_401_UNAUTHORIZED)
         else:
-            response = SuccessResponse()
-            response.set_result_pairs('session_id', request.session._session.uuid)
-
-        return Response(data=response.data,
-                        status=response.status)
+            data = {
+                'status' : status.HTTP_200_OK,
+                'result' : {
+                    'session_id' : request.session._session.uuid,
+                    'email' : self.request.user.email,
+                    'full_name' : self.request.user.full_name,
+                    'phone' : self.request.user.phone
+                }
+            }
+            return Response(data=data,
+                            status=status.HTTP_200_OK)
 
     def post(self, request):
 
@@ -126,18 +130,27 @@ class SessionAPIView(SecureAPIViewBaseView):
 
         if serializer.is_valid(raise_exception=False):
             serializer.save()
-            return Response(serializer.data)
+            data = {
+                'status': status.HTTP_200_OK,
+                'result': {
+                    'email': serializer.principal.email,
+                    'full_name': serializer.principal.full_name,
+                    'phone': serializer.principal.phone
+                }
+            }
+            return Response(data,
+                            status=status.HTTP_200_OK)
         else:
             raise APIValidationError(detail=serializer.errors)
 
     def delete(self, request):
-        if str(self.request.user) == 'Anonymous':
-            reseponse = ErrorResponse(status=status.HTTP_404_NOT_FOUND)
-        else:
-            self.request.session.flush()
-            reseponse = SuccessResponse()
-        return Response(data=reseponse.data,
-                        status=reseponse.status)
+        self.request.session.flush()
+        res = {
+            'status' : 200,
+            'errors' : {},
+            'result' : {}
+        }
+        return Response(res)
 
 
 class LdapSessionAPIView(SecureAPIViewBaseView):
@@ -293,14 +306,29 @@ class SendOTPView(SecureAPIViewBaseView):
         kwargs = super(SendOTPView, self).get_serializer_context()
         kwargs['otp_directory_code'] = otp_directory_code
         serializer = SendOTPSerializer(data=request.data, context=kwargs)
+
         if serializer.is_valid(raise_exception=False):
             serializer.save()
-            success_response = SuccessResponse()
-            success_response.set_result_pairs('otp_code', serializer.otp_code)
-            success_response.set_result_pairs('phone', serializer.phone)
-            return Response(success_response.data)
+            response = {
+                'status': status.HTTP_200_OK,
+                'result': {
+                    #'otp_code': serializer.otp_code,
+                    'purpose': serializer.purpose
+                }
+            }
+
+            if serializer.purpose in ['user-register']:
+                response['result']['phone'] = serializer.phone
+            return Response(response)
         else:
-            raise APIValidationError(serializer.errors)
+            error_response = {
+                'status' : status.HTTP_400_BAD_REQUEST,
+                'result' : {
+                    'purpose' : serializer.purpose
+                },
+                'error' : dict(serializer.errors)
+            }
+            return Response(error_response, status.HTTP_400_BAD_REQUEST)
 
 class AddEvidenceView(SecureAPIViewBaseView):
     permission_classes = (IsBasicAuthenticated,)
@@ -399,8 +427,13 @@ class PasswordResetRequestView(SecureAPIViewBaseView):
         serializer = PasswordResetRequestSerializer(data=request.data, context=kwargs)
         if serializer.is_valid(raise_exception=False):
             serializer.save()
-            success_response = SuccessResponse()
-            return Response(success_response.data, success_response.status)
+            response = {
+                'status' : 200,
+                'result' : {
+                    'secret' : serializer.token.secret
+                }
+            }
+            return Response(response, status=status.HTTP_200_OK)
         else:
             raise APIValidationError(serializer.errors)
 
@@ -409,12 +442,20 @@ class PasswordResetTokenCheckerAPIView(SecureAPIViewBaseView):
     identity_directory_code = 'basic_internal'
     serializer_class = PasswordResetValidationTokenSerializer
 
-    def get(self, **kwargs):
-
-        serializer = PasswordResetValidationTokenSerializer(data=kwargs)
+    def post(self, request):
+        kwargs = super(PasswordResetTokenCheckerAPIView, self).get_serializer_context()
+        serializer = PasswordResetValidationTokenSerializer(data=request.data, context=kwargs)
 
         if serializer.is_valid(raise_exception=False):
-            return Response(serializer.data)
+            serializer.save()
+            response = {
+                'status' : status.HTTP_200_OK,
+                'result' : {
+                    #'otp-code' : serializer.otp_code,
+                    'secret' : serializer.token.secret
+                }
+            }
+            return Response(response, status=status.HTTP_200_OK)
         else:
             raise APIValidationError(detail=serializer.errors)
 

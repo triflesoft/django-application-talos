@@ -312,10 +312,15 @@ class SendOTPSerializer(BasicSerializer):
 
     otp_directory_code = PHONE_SMS_CREDENTIAL_DIRECTORY_CODE
 
+    purpose = serializers.CharField()
+
     def __init__(self, *args, **kwargs):
         super(SendOTPSerializer, self).__init__(*args, **kwargs)
-        if self.initial_data.get('phone'):
-            self.fields['phone'] = serializers.CharField(max_length=100)
+        if self.principal:
+            self.fields['phone'] = serializers.CharField(max_length=100, default=self.principal.phone)
+        else:
+            if self.initial_data.get('phone'):
+                 self.fields['phone'] = serializers.CharField(max_length=100)
 
     def validate_phone(self, phone):
         from talos.models import OneTimePasswordCredential
@@ -323,17 +328,21 @@ class SendOTPSerializer(BasicSerializer):
         import pyotp
         from rest_framework import serializers
         from talos_rest.validators import validate_phone
+        from talos.models import Principal
+
+        try:
+            Principal.objects.get(phone=phone)
+            raise serializers.ValidationError('Your phone is already used',
+                                              code=constants.PHONE_USED_CODE)
+        except Principal.DoesNotExist:
+            pass
 
         # Check if provided opt_directory_code exists
         if OneTimePasswordCredentialDirectory.objects.filter(
                 code=self.context_params['otp_directory_code']).count() > 0:
             self.otp_directory_code = self.context_params['otp_directory_code']
 
-        if not self.initial_data.get('phone'):
-            raise serializers.ValidationError('Phone code is required',
-                                              code='phone_required')
-
-        validate_phone(self.initial_data['phone'])
+        validate_phone(phone)
 
         if not self.request.principal.pk:
             from django.core import serializers
@@ -366,14 +375,16 @@ class SendOTPSerializer(BasicSerializer):
         directory = credential.directory
         directory.send_otp(principal, credential)
 
-        # print('Send otp - credential salt', credential.salt)
-
         # TODO: This code should be removed from production code, it contains sensitive information!
         totp = pyotp.TOTP(credential.salt, interval=300)
         self.otp_code = totp.now()
-        self.phone = self.initial_data.get('phone', '')
+        self.phone = phone
 
         return phone
+
+    def validate_purpose(self, purpose):
+        self.purpose = purpose
+        return purpose
 
     def save(self):
         pass
@@ -402,7 +413,7 @@ class BasicRegistrationSerializer(BasicSerializer):
     email = serializers.CharField()
     password = serializers.CharField(min_length=6)
     phone = serializers.CharField()
-    code = serializers.CharField()
+    otp_code = serializers.CharField()
 
     BASIC_SUCCESS_CODE = status.HTTP_201_CREATED
 
@@ -447,7 +458,7 @@ class BasicRegistrationSerializer(BasicSerializer):
             pass
         return phone
 
-    def validate_code(self, code):
+    def validate_otp_code(self, code):
         from django.core import serializers as model_serializer
         if not self.request.session.get('temp_credential') or not self.request.session.get('temp_principal'):
             raise serializers.ValidationError('Code is invalid',
@@ -999,10 +1010,13 @@ class PasswordResetRequestSerializer(BasicSerializer):
         validation_token.type = self.token_type
         validation_token.save()
 
+        self.token = validation_token
+
         url = '{0}://{1}{2}'.format(
             self.request.scheme,
             self.request.META.get('HTTP_HOST', 'test_host'),
-            reverse('password-reset-validation', args=[self.token.secret])
+            'password/reset/?token={0}'.format(validation_token.secret)
+            #reverse('password-reset-validation', args=[self.token.secret])
         )
 
 
@@ -1034,9 +1048,24 @@ class PasswordResetValidationTokenSerializer(ValidateSecretWhenLoggedOutMixin,
     def __init__(self, *args, **kwargs):
         super(PasswordResetValidationTokenSerializer, self).__init__(*args, **kwargs)
 
+    def save(self):
+        from talos.models import OneTimePasswordCredential
+        from talos.models import OneTimePasswordCredentialDirectory
+        import pyotp
+
+        principal = self.token.principal
+        otp_credential = OneTimePasswordCredential.objects.get(principal=principal)
+        otp_directory = otp_credential.directory
+
+        otp_directory.send_otp(principal, otp_credential)
+
+        # TODO: This should be removed from production code, it's for only testing reasons
+        totp = pyotp.TOTP(otp_credential.salt, interval=300)
+        self.otp_code = totp.now()
+
 
 class PasswordResetBaseSerializer(OTPBaserSerializeMixin, BasicSerializer):
-    token = serializers.CharField()
+    secret = serializers.CharField()
     password = serializers.CharField()
 
     token_type = 'password_reset'
@@ -1046,17 +1075,17 @@ class PasswordResetBaseSerializer(OTPBaserSerializeMixin, BasicSerializer):
         self.validation_token = None
 
 
-    def validate_token(self, token):
+    def validate_secret(self, secret):
         try:
-            validation_token = ValidationToken.objects.get(secret=token,
+            validation_token = ValidationToken.objects.get(secret=secret,
                                                            is_active=True,
                                                            type=self.token_type)
             self.validation_token = validation_token
             self.principal = self.validation_token.principal
         except ValidationToken.DoesNotExist:
-            raise serializers.ValidationError("Token doesn't exits",
+            raise serializers.ValidationError("Secret doesn't exits",
                                               code=constants.TOKEN_INVALID_CODE)
-        return token
+        return secret
 
     def validate_password(self, password):
         from talos_rest.validators import validate_password

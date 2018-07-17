@@ -109,6 +109,7 @@ class InternalPhoneSMS(object):
         from ..models import _tzmax
         from pyotp import random_base32
         from talos.contrib.sms_sender import SMSSender
+        import pyotp
 
         otp_credential = OneTimePasswordCredential()
         otp_credential.uuid = uuid4()
@@ -120,9 +121,10 @@ class InternalPhoneSMS(object):
         otp_credential.salt = base32_secret.encode()
         otp_credential.save()
 
-        # TODO: Sending SMS
-        #sms_sender = SMSSender()
-        #sms_sender.send_message(principal.phone, 'Your code is {}'.format(otp_credential.salt))
+
+        totp = pyotp.TOTP(otp_credential.salt, interval=300)
+        sms_sender = SMSSender()
+        sms_sender.send_message(principal.phone, 'Your code is {}'.format(totp.now()))
 
     def verify_credentials(self, principal, credentials):
         code = credentials['code']
@@ -137,7 +139,7 @@ class InternalPhoneSMS(object):
                 valid_till__gte=_tznow())
 
             secret_key = otp_credential.salt.decode()
-            totp = TOTP(secret_key)
+            totp = TOTP(secret_key, interval=300)
 
             if totp.verify(code):
                 return True
@@ -190,7 +192,7 @@ class InternalPhoneSMS(object):
         from ..contrib.sms_sender import SMSSender
 
         salt = credential.salt
-        totp = pyotp.TOTP(salt)
+        totp = pyotp.TOTP(salt, interval=300)
 
         sms_sender = SMSSender()
         sms_sender.send_message(principal.phone, totp.now())
@@ -201,6 +203,8 @@ class InternalPhoneSMS(object):
 
         # Type of salt is memoryview
         salt = credential.salt
-        totp = pyotp.TOTP(salt.tobytes())
+        totp = pyotp.TOTP(salt.tobytes(), interval=300)
 
-        return totp.verify(code)
+        if totp.verify(code):
+            return True
+        return False

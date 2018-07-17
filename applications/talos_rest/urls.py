@@ -103,7 +103,7 @@ urlpatterns = [
     path('principal/password/reset-request', PasswordResetRequestView.as_view(),
          name='password-reset-request'),
 
-    path('principal/password/reset-token/<slug:secret>', PasswordResetTokenCheckerAPIView.as_view(),
+    path('principal/password/reset-token/validate', PasswordResetTokenCheckerAPIView.as_view(),
          name='password-reset-validation'),
 
     path('principal/password/reset/insecure', PasswordResetView.as_view(),
