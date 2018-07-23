@@ -14,10 +14,8 @@ from rest_framework import status
 from .exceptions.custom_exceptions import APIValidationError
 from .serializers import SessionSerializer, \
     GoogleAuthenticatorActivateRequestSerializer, \
-    GoogleAuthenticatorDeleteSerializer,  \
-     \
+    GoogleAuthenticatorDeleteSerializer, \
  \
-    \
     BasicRegistrationSerializer, PasswordResetRequestSerializer, \
     GoogleAuthenticatorDeleteRequestSerializer, GoogleAuthenticatorActivateConfirmSerializer, \
     EmailResetRequestSerializer, \
@@ -33,10 +31,14 @@ from .serializers import SessionSerializer, \
     LdapLoginSerializer, \
     PasswordResetValidationTokenSerializer, PasswordChangeBaseSerialize, AddEvidenceBaseSerialize, \
     PhoneResetBaseSerialize, PhoneChangeBaseSerialize, EmailResetBaseSerializer, EmailChangeBaseSerialize, \
-    PasswordResetBaseSerializer, SendOTPSerializer
+    PasswordResetBaseSerializer, SendOTPSerializer, IdentityDirectorySerializer, CredentialDirectorySerializer, \
+    PrincipalSerializer, RegistrationRequestSerializer, RegistrationMessageSerializer, \
+    RegistrationConfirmationSerializer
 
 from talos_rest.permissions import IsAuthenticated, IsBasicAuthenticated, IsSecureLevelOn
 
+from talos.models import BasicIdentityDirectory
+from talos.models import BasicCredentialDirectory
 
 class TranslationContextMixin(object):
     def get_context_data(self, **kwargs):
@@ -345,8 +347,11 @@ class AddEvidenceView(SecureAPIViewBaseView):
 
         if serializer.is_valid(raise_exception=False):
             serializer.save()
-            success_response = SuccessResponse()
-            return Response(success_response.data, success_response.status)
+            data = {
+                'status' : status.HTTP_200_OK,
+                'result' : {}
+            }
+            return Response(data, status.HTTP_200_OK)
         else:
             raise APIValidationError(serializer.errors)
 
@@ -649,5 +654,116 @@ class PasswordChangeView(SecureAPIViewBaseView):
             if serializer.save():
                 success_response = SuccessResponse()
                 return Response(success_response.data, success_response.status)
+        else:
+            raise APIValidationError(serializer.errors)
+
+
+
+class IdentityDirectoryView(SecureAPIViewBaseView):
+    serializer_class = IdentityDirectorySerializer
+    queryset = ''
+
+    def get(self, request):
+        identity_directories = BasicIdentityDirectory.objects.all()
+
+        serializer = IdentityDirectorySerializer(identity_directories, many=True)
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class CredentialDirectoryView(SecureAPIViewBaseView):
+    serializer_class = CredentialDirectorySerializer
+    queryset = ''
+
+    def get(self, request):
+        credential_directories = BasicCredentialDirectory.objects.all()
+
+        serializer = CredentialDirectorySerializer(credential_directories, many=True)
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class PrincipalView(SecureAPIViewBaseView):
+    serializer_class = PrincipalSerializer
+
+    def get(self, request, uuid):
+        kwargs = super(PrincipalView, self).get_serializer_context()
+        kwargs['query_params'] = request.query_params
+
+        serializer = PrincipalSerializer(context=kwargs)
+
+        response = serializer.get_user_data(uuid)
+        return Response(response, status=status.HTTP_200_OK)
+
+    def post(self, request, uuid):
+        kwargs = super(PrincipalView, self).get_serializer_context()
+
+        serializer = PrincipalSerializer(data=request.data, context=kwargs)
+
+        if serializer.is_valid(raise_exception=False):
+            serializer.save()
+            return Response(serializer.response_data, status=status.HTTP_200_OK)
+        else:
+            raise APIValidationError(serializer.errors)
+
+
+
+# # # Registration # # #
+class RegistrationRequestView(SecureAPIViewBaseView):
+    serializer_class = RegistrationRequestSerializer
+
+    def post(self, request):
+        context = super(RegistrationRequestView, self).get_serializer_context()
+        serializer = RegistrationRequestSerializer(data=request.data, context=context)
+        if serializer.is_valid(raise_exception=False):
+            serializer.save()
+            response = {
+                'status' : status.HTTP_200_OK,
+                'result' : {
+                    'token' : serializer.uuid
+                }
+            }
+
+            return Response(response, status=status.HTTP_200_OK)
+        else:
+            raise APIValidationError(serializer.errors)
+
+    def patch(self, request, id):
+        context = super(RegistrationRequestView, self).get_serializer_context()
+
+        data = request.data
+        data['token'] = id
+        serializer = RegistrationConfirmationSerializer(data=data, context=context)
+
+        if serializer.is_valid(raise_exception=False):
+            serializer.save()
+            response = {
+                'status' : status.HTTP_200_OK,
+                'result' : {}
+            }
+
+            return Response(response, status=status.HTTP_200_OK)
+        else:
+            raise APIValidationError(serializer.errors)
+
+
+
+class RegistrationMessageView(SecureAPIViewBaseView):
+    serializer_class = RegistrationMessageSerializer
+
+    def post(self, request):
+        context = super(RegistrationMessageView, self).get_serializer_context()
+        serializer = RegistrationMessageSerializer(data=request.data, context=context)
+
+        if serializer.is_valid(raise_exception=False):
+            serializer.send()
+            response = {
+                'status' : status.HTTP_200_OK,
+                'result' : {
+                    'token' : serializer.token
+                }
+            }
+
+            return Response(response, status=status.HTTP_200_OK)
         else:
             raise APIValidationError(serializer.errors)

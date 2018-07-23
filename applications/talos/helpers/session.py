@@ -3,6 +3,7 @@ from json import JSONDecoder
 from json import JSONEncoder
 
 
+
 def request_principal_get(self):
     return getattr(self, '_principal', None)
 
@@ -20,13 +21,29 @@ request_principal_property = property(request_principal_get, request_principal_s
 HttpRequest.user = request_principal_property
 HttpRequest.principal = request_principal_property
 
-
 class CustomJSONEncoder(JSONEncoder):
     def default(self, obj):
         from django.db.models import Model
         from django.forms.models import model_to_dict
+        from django.core import serializers as model_serializer
+        from ..models import Principal
 
-        if isinstance(obj, Model):
+        if isinstance(obj, Principal):
+
+            fields = {}
+            fields['principal'] = model_serializer.serialize('json', [obj])
+            fields['basic_identity'] = model_serializer.serialize('json', [obj.basic_identity])
+            fields['basic_credential'] = model_serializer.serialize('json', [obj.basic_credential])
+            fields['otp_credential'] = model_serializer.serialize('json', [obj.otp_credential])
+
+            return {
+                '__type': 'django-talos-principal',
+                '__application': obj._meta.app_label,
+                '__model': obj._meta.object_name,
+                'fields': fields
+            }
+
+        elif isinstance(obj, Model):
             return {
                 '__type': 'django-model',
                 '__application': obj._meta.app_label,
@@ -42,16 +59,35 @@ class CustomJSONDecoder(JSONDecoder):
 
     def object_hook(self, obj):
         from django.apps import apps
+        from django.core import serializers as model_serializer
 
         if '__type' not in obj:
             return obj
 
         obj_type = obj['__type']
 
-        if obj_type == 'django-model':
-            model = apps.get_model(obj['__application'], obj['__model'])
+        if obj_type == 'django-talos-principal':
+            model_class = apps.get_model(obj['__application'], obj['__model'])
 
-            return model(obj['fields'])
+            principal = list(model_serializer.deserialize('json', obj['fields']['principal']))[0].object
+            basic_identity = list(model_serializer.deserialize('json', obj['fields']['basic_identity']))[0].object
+            basic_credential = list(model_serializer.deserialize('json', obj['fields']['basic_credential']))[0].object
+            otp_credential = list(model_serializer.deserialize('json', obj['fields']['otp_credential']))[0].object
+
+            basic_identity.principal = principal
+            basic_credential.principal = principal
+            otp_credential.principal = principal
+
+            principal.basic_identity = basic_identity
+            principal.basic_credential = basic_credential
+            principal.otp_credential = otp_credential
+
+            return principal
+
+        elif obj_type == 'django-model':
+            model_class = apps.get_model(obj['__application'], obj['__model'])
+
+            return model_class(**obj['fields'])
 
         return obj
 

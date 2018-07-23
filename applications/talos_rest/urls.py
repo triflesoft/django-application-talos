@@ -20,9 +20,8 @@ from talos_rest import constants
 from .views import SessionAPIView, EmailChangeRequestAPIView, \
     GoogleAuthenticationActivateRequestView, \
     GoogleAuthenticatorDeleteView, PrincipalSecurityLevelView, \
-      \
  \
-    AddEvidenceView,  \
+    AddEvidenceView, \
     EmailChangeValidationTokenCheckerAPIView, \
     BasicRegistrationView, PasswordResetRequestView, \
     GoogleAuthenticatorDeleteRequestView, GoogleAuthenticatorActivateConfirmView, \
@@ -35,7 +34,8 @@ from .views import SessionAPIView, EmailChangeRequestAPIView, \
  \
     EmailResetAPIView, ProvidedEvidencesView, \
     PasswordChangeView, PasswordResetView, LdapSessionAPIView, \
-    PasswordResetTokenCheckerAPIView, SendOTPView
+    PasswordResetTokenCheckerAPIView, SendOTPView, IdentityDirectoryView, CredentialDirectoryView, PrincipalView, \
+    RegistrationRequestView, RegistrationMessageView
 
 from rest_framework.documentation import include_docs_urls
 
@@ -150,4 +150,18 @@ urlpatterns = [
          {'directory_code' : GOOGLE_OTP_CREDENTIAL_DIRECTORY_CODE, 'error_code' : constants.GOOGLE_OTP_INVALID_CODE},
          name='password-change-secure'),
 
+    path('directory/identity', IdentityDirectoryView.as_view(),
+         name='identity-directory'),
+
+    path('directory/credential', CredentialDirectoryView.as_view(),
+         name='credential-directory'),
+
+    path('principal/<slug:uuid>', PrincipalView.as_view(),
+         name='principal'),
+
+    path('registration/', RegistrationRequestView.as_view(), name='registration'),
+
+    path('registration/<slug:id>', RegistrationRequestView.as_view(),name='registration-confirmation'),
+
+    path('registration-message/', RegistrationMessageView.as_view(), name='registration-message'),
 ]

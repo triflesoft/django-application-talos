@@ -559,7 +559,6 @@ class BasicIdentity(AbstractIdentity):
     directory = models.ForeignKey(BasicIdentityDirectory, related_name='identities', on_delete=models.CASCADE)
     username = models.CharField(max_length=255)
 
-
     class Meta:
         unique_together = [
             ('directory', 'username')]
@@ -862,7 +861,7 @@ class OneTimePasswordCredential(AbstractCredential):
         verbose_name_plural = 'One-Time Password Credentials'
 
     def __str__(self):
-        return str(self.principal)
+        return str(self.principal) + ' (" '  + type(self)._meta.verbose_name + '",) "' + self.directory.name + '"'
 
 
 class TokenCredentialDirectory(AbstractCredentialDirectory):
@@ -961,6 +960,33 @@ class PrincipalManager(models.Manager):
     def get_by_natural_key(self, username):
         return super(PrincipalManager, self).get(email=username)
 
+class PrincipalIdentities(object):
+
+    def __init__(self, principal):
+        self.principal = principal
+
+    @property
+    def basic(self):
+        if self.principal.pk:
+            return list(BasicIdentity.objects.filter(principal=self.principal))
+        return []
+
+class PrincipalCredentials(object):
+    def __init__(self, principal):
+        self.principal = principal
+
+    @property
+    def basic(self):
+        if self.principal.pk:
+            return list(BasicCredential.objects.filter(principal=self.principal))
+        return []
+
+    @property
+    def otp(self):
+        if self.principal.pk:
+            return list(OneTimePasswordCredential.objects.filter(principal=self.principal))
+        return []
+
 
 class Principal(AbstractReplicatableModel):
     REQUIRED_FIELDS = []
@@ -977,6 +1003,8 @@ class Principal(AbstractReplicatableModel):
     salt = models.BinaryField()
     roles = models.ManyToManyField(Role, through='PrincipalRoleMembership', through_fields=('principal', 'role'))
 
+
+
     class Meta:
         model_permissions = ('__all__')
         object_permissions = ('__all__')
@@ -990,6 +1018,9 @@ class Principal(AbstractReplicatableModel):
         self._roles_effective = OrderedDict()
         self._privileges_effective = OrderedDict()
         self._model_actions_effective = OrderedDict()
+        self.identities = PrincipalIdentities(self)
+        self.credentials = PrincipalCredentials(self)
+
 
     def _ensure_basic_credential_directory(self):
         global _basic_credential_directory_cache
@@ -1250,9 +1281,16 @@ class Principal(AbstractReplicatableModel):
 
     def save(self, *args, **kwargs):
         from os import urandom
+        import itertools
 
         if not self.salt:
             self.salt = urandom(64)
+
+        for identity in self.identities.basic:
+            identity.save()
+
+        for credential in itertools.chain(self.credentials.basic, self.credentials.otp):
+            credential.save()
 
         super(Principal, self).save(*args, **kwargs)
 
