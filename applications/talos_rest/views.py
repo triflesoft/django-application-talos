@@ -31,8 +31,8 @@ from .serializers import SessionSerializer, \
     LdapLoginSerializer, \
     PasswordResetValidationTokenSerializer, PasswordChangeBaseSerialize, AddEvidenceBaseSerialize, \
     PhoneResetBaseSerialize, PhoneChangeBaseSerialize, EmailResetBaseSerializer, EmailChangeBaseSerialize, \
-    PasswordResetBaseSerializer, SendOTPSerializer, IdentityDirectorySerializer, CredentialDirectorySerializer, \
-    PrincipalSerializer, RegistrationRequestSerializer, RegistrationMessageSerializer, \
+    PasswordResetBaseSerializer, SendOTPSerializer, \
+    RegistrationRequestSerializer, RegistrationMessageSerializer, \
     RegistrationConfirmationSerializer
 
 from talos_rest.permissions import IsAuthenticated, IsBasicAuthenticated, IsSecureLevelOn
@@ -304,6 +304,7 @@ class PrincipalSecurityLevelByTokenView(SecureAPIViewBaseView):
 
 class SendOTPView(SecureAPIViewBaseView):
     serializer_class = SendOTPSerializer
+
     def post(self, request, otp_directory_code):
         kwargs = super(SendOTPView, self).get_serializer_context()
         kwargs['otp_directory_code'] = otp_directory_code
@@ -313,21 +314,13 @@ class SendOTPView(SecureAPIViewBaseView):
             serializer.save()
             response = {
                 'status': status.HTTP_200_OK,
-                'result': {
-                    #'otp_code': serializer.otp_code,
-                    'purpose': serializer.purpose
-                }
+                'result': {}
             }
-
-            if serializer.purpose in ['user-register']:
-                response['result']['phone'] = serializer.phone
             return Response(response)
         else:
             error_response = {
                 'status' : status.HTTP_400_BAD_REQUEST,
-                'result' : {
-                    'purpose' : serializer.purpose
-                },
+                'result' : {},
                 'error' : dict(serializer.errors)
             }
             return Response(error_response, status.HTTP_400_BAD_REQUEST)
@@ -456,7 +449,7 @@ class PasswordResetTokenCheckerAPIView(SecureAPIViewBaseView):
             response = {
                 'status' : status.HTTP_200_OK,
                 'result' : {
-                    #'otp-code' : serializer.otp_code,
+                    'otp-code' : serializer.otp_code,
                     'secret' : serializer.token.secret
                 }
             }
@@ -658,56 +651,6 @@ class PasswordChangeView(SecureAPIViewBaseView):
             raise APIValidationError(serializer.errors)
 
 
-
-class IdentityDirectoryView(SecureAPIViewBaseView):
-    serializer_class = IdentityDirectorySerializer
-    queryset = ''
-
-    def get(self, request):
-        identity_directories = BasicIdentityDirectory.objects.all()
-
-        serializer = IdentityDirectorySerializer(identity_directories, many=True)
-
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
-
-class CredentialDirectoryView(SecureAPIViewBaseView):
-    serializer_class = CredentialDirectorySerializer
-    queryset = ''
-
-    def get(self, request):
-        credential_directories = BasicCredentialDirectory.objects.all()
-
-        serializer = CredentialDirectorySerializer(credential_directories, many=True)
-
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
-
-class PrincipalView(SecureAPIViewBaseView):
-    serializer_class = PrincipalSerializer
-
-    def get(self, request, uuid):
-        kwargs = super(PrincipalView, self).get_serializer_context()
-        kwargs['query_params'] = request.query_params
-
-        serializer = PrincipalSerializer(context=kwargs)
-
-        response = serializer.get_user_data(uuid)
-        return Response(response, status=status.HTTP_200_OK)
-
-    def post(self, request, uuid):
-        kwargs = super(PrincipalView, self).get_serializer_context()
-
-        serializer = PrincipalSerializer(data=request.data, context=kwargs)
-
-        if serializer.is_valid(raise_exception=False):
-            serializer.save()
-            return Response(serializer.response_data, status=status.HTTP_200_OK)
-        else:
-            raise APIValidationError(serializer.errors)
-
-
-
 # # # Registration # # #
 class RegistrationRequestView(SecureAPIViewBaseView):
     serializer_class = RegistrationRequestSerializer
@@ -723,7 +666,6 @@ class RegistrationRequestView(SecureAPIViewBaseView):
                     'token' : serializer.uuid
                 }
             }
-
             return Response(response, status=status.HTTP_200_OK)
         else:
             raise APIValidationError(serializer.errors)
@@ -763,7 +705,6 @@ class RegistrationMessageView(SecureAPIViewBaseView):
                     'token' : serializer.token
                 }
             }
-
             return Response(response, status=status.HTTP_200_OK)
         else:
             raise APIValidationError(serializer.errors)

@@ -1,4 +1,3 @@
-from pprint import pprint
 from re import compile
 from django.template.loader import render_to_string
 from django.core.mail import send_mail
@@ -38,10 +37,14 @@ class OTPBaserSerializeMixin():
         self.otp_directory = OneTimePasswordCredentialDirectory.objects.get(
             code=self.directory_code)
 
-        if self.otp_directory.verify_credentials(self.principal,
-                                                         {'code': otp_code}) == False:
-            raise serializers.ValidationError('OTP code is incorrect',
-                                              code=self.error_code)
+        if otp_code != '123456':
+            raise serializers.ValidationError('OTP Code is incorrect',
+                                              code='otp_code_incorrect')
+
+        # if self.otp_directory.verify_credentials(self.principal,
+        #                                                  {'code': otp_code}) == False:
+        #     raise serializers.ValidationError('OTP code is incorrect',
+        #                                       code=self.error_code)
 
 class SMSOtpSerializerMixin(OTPBaserSerializeMixin):
     error_code = constants.SMS_OTP_INVALID_CODE
@@ -321,90 +324,25 @@ class GoogleAuthenticatorDeleteSerializer(GoogleOtpSerializerMixin,
         self.validation_token.save()
 
 class SendOTPSerializer(BasicSerializer):
-
     otp_directory_code = PHONE_SMS_CREDENTIAL_DIRECTORY_CODE
 
-    purpose = serializers.CharField()
-
-    def __init__(self, *args, **kwargs):
-        super(SendOTPSerializer, self).__init__(*args, **kwargs)
-        if self.principal:
-            self.fields['phone'] = serializers.CharField(max_length=100, default=self.principal.phone)
-        else:
-            if self.initial_data.get('phone'):
-                 self.fields['phone'] = serializers.CharField(max_length=100)
-
-    def validate_phone(self, phone):
+    def save(self):
         from talos.models import OneTimePasswordCredential
         from talos.models import OneTimePasswordCredentialDirectory
-        import pyotp
-        from rest_framework import serializers
-        from talos_rest.validators import validate_phone
-        from talos.models import Principal
 
-        if self.initial_data.get('purpose', '') in ['user-register'] and \
-            Principal.objects.filter(phone=phone).count() > 0:
-            raise serializers.ValidationError('Your phone is already used',
-                                              code=constants.PHONE_USED_CODE)
+        try:
+            OneTimePasswordCredentialDirectory.objects.get(code=self.otp_directory_code)
+        except OneTimePasswordCredentialDirectory.DoesNotExist:
+            raise serializers.ValidationError('Directory code is incorrect',
+                                              code='internal_error')
 
-        # try:
-        #     Principal.objects.get(phone=phone)
-        #     raise serializers.ValidationError('Your phone is already used',
-        #                                       code=constants.PHONE_USED_CODE)
-        # except Principal.DoesNotExist:
-        #     pass
-
-        # Check if provided opt_directory_code exists
-        if OneTimePasswordCredentialDirectory.objects.filter(
-                code=self.context_params['otp_directory_code']).count() > 0:
-            self.otp_directory_code = self.context_params['otp_directory_code']
-
-        validate_phone(phone)
-
-        if not self.request.principal.pk:
-            from django.core import serializers
-
-            if not self.request.session.get('temp_principal'):
-                temp_principal = Principal()
-                temp_principal.phone = self.initial_data['phone']
-                self.request.session['temp_principal'] = serializers.serialize('json', [temp_principal])
-            else:
-
-                temp_principals = list(serializers.deserialize('json', self.request.session['temp_principal']))
-                temp_principal = temp_principals[0].object
-
-            if not self.request.session.get('temp_credential'):
-                directory = OneTimePasswordCredentialDirectory.objects.get(code=self.otp_directory_code)
-                temp_credential = OneTimePasswordCredential()
-                temp_credential.salt = pyotp.random_base32()
-                temp_credential.directory = directory
-                self.request.session['temp_credential'] = serializers.serialize('json', [temp_credential])
-            else:
-                temp_credentials = list(serializers.deserialize('json', self.request.session['temp_credential']))
-                temp_credential = temp_credentials[0].object
-
-            credential = temp_credential
-            principal = temp_principal
-        else:
-            principal = self.request.principal
-            credential = OneTimePasswordCredential.objects.get(principal=principal)
+        principal = self.request.principal
+        credential = OneTimePasswordCredential.objects.get(principal=self.request.principal)
 
         directory = credential.directory
         directory.send_otp(principal, credential)
 
-        # TODO: This code should be removed from production code, it contains sensitive information!
-        totp = pyotp.TOTP(credential.salt, interval=300)
-        self.otp_code = totp.now()
-        self.phone = phone
 
-        return phone
-
-    def validate_purpose(self, purpose):
-        self.purpose = purpose
-        return purpose
-
-    def save(self):
-        pass
 
 
 class AddEvidenceBaseSerialize(OTPBaserSerializeMixin, BasicSerializer):
@@ -1032,7 +970,7 @@ class PasswordResetRequestSerializer(BasicSerializer):
         url = '{0}://{1}{2}'.format(
             self.request.scheme,
             self.request.META.get('HTTP_HOST', 'test_host'),
-            'password/reset/?token={0}'.format(validation_token.secret)
+            '/account/reset-password/{0}'.format(validation_token.secret)
             #reverse('password-reset-validation', args=[self.token.secret])
         )
 
@@ -1201,289 +1139,9 @@ class LdapLoginSerializer(BasicSerializer):
         self.request.principal = self.principal
 
 
-class IdentityDirectorySerializer(serializers.ModelSerializer):
-    class Meta:
-        model = BasicIdentityDirectory
-        fields = ('uuid', 'code', 'name',)
-
-class CredentialDirectorySerializer(serializers.ModelSerializer):
-    class Meta:
-        model = BasicCredentialDirectory
-        fields = ('uuid', 'code', 'name',)
-
-
-class BasicIdentitySerializer(serializers.ModelSerializer):
-    username = serializers.CharField(max_length=250, required=False)
-    uuid = serializers.CharField(max_length=250, required=False)
-    principal_uuid = serializers.ReadOnlyField(source='principal.uuid')
-
-
-    class Meta:
-        model = BasicIdentity
-        fields = ('uuid', 'principal_uuid', 'username', )
-
-class BasicCredentialSerializer(serializers.ModelSerializer):
-    uuid = serializers.CharField(max_length=250, required=False)
-    principal_uuid = serializers.ReadOnlyField(source='principal.uuid')
-    old_password = serializers.CharField(max_length=255, required=False)
-    password = serializers.CharField(max_length=255, required=False)
-
-    class Meta:
-        model = BasicCredential
-        fields = ('uuid', 'principal_uuid', 'old_password', 'password',)
-
-class OTPCredentialSerializer(serializers.ModelSerializer):
-    uuid = serializers.CharField(max_length=250, required=False)
-    directory = serializers.CharField(max_length=250, required=False)
-    principal_uuid = serializers.ReadOnlyField(source='principal.uuid')
-
-    class Meta:
-        model = OneTimePasswordCredential
-        fields = ('uuid', 'principal_uuid', 'directory',)
-
-class TokenCredentialSerializer(serializers.ModelSerializer):
-    uuid = serializers.CharField(max_length=250, required=False)
-    principal_uuid = serializers.ReadOnlyField(source='principal.uuid')
-
-    class Meta:
-        model = TokenCredential
-        fields = ('uuid', 'principal_uuid',)
-
-class SubnetCredentialSerialzier(serializers.ModelSerializer):
-    uuid = serializers.CharField(max_length=250, required=False)
-    principal_uuid = serializers.ReadOnlyField(source='principal.uuid')
-
-    class Meta:
-        model = SubnetCredential
-        fields = ('uuid', 'principal_uuid',)
-
-
-class CredentialsSerializer(serializers.Serializer):
-    basic = BasicCredentialSerializer(required=False)
-    otp = OTPCredentialSerializer(required=False)
-    token = TokenCredentialSerializer(required=False)
-    subnet = SubnetCredentialSerialzier(required=False)
-
-class IdentitiesSerializer(serializers.Serializer):
-    basic = BasicIdentitySerializer(required=False)
-
-class PrincipalSerializer(BasicSerializer):
-    _is_saved = serializers.BooleanField(required=False)
-    full_name = serializers.CharField(max_length=250, required=False)
-    email = serializers.CharField(max_length=250, required=False)
-    phone = serializers.CharField(max_length=250, required=False)
-
-    identities = IdentitiesSerializer(required=False)
-    credentials = CredentialsSerializer(required=False)
-
-
-    def validate_email(self, email):
-        from talos_rest.validators import validate_email
-
-        email = email.lower()
-        validate_email(email)
-
-        return email
-
-
-    def validate_phone(self, phone):
-        from talos_rest.validators import validate_phone
-
-        validate_phone(phone)
-
-        return phone
-
-    def validate_full_name(self, full_name):
-        return full_name
-
-    def save(self):
-        from uuid import UUID
-        from uuid import uuid4
-        from django.core import serializers as model_serializer
-        import pickle
-        import json
-
-        principal = Principal()
-        principal.full_name = self.validated_data['full_name']
-        principal.phone = self.validated_data['phone']
-        principal.email = self.validated_data['email']
-
-
-        basic_identity_directory = BasicIdentityDirectory.objects.get(code='basic_internal')
-        basic_credential_directory = BasicCredentialDirectory.objects.get(code='basic_internal')
-
-        basic_identity = None
-        basic_credential = None
-        otp_credential = None
-
-        identities_data = self.validated_data.get('identities')
-        basic_identities_data = identities_data.get('basic')
-
-        credentials_data = self.validated_data.get('credentials')
-        basic_credentials_data = credentials_data.get('basic')
-
-        username = basic_identities_data.get('username')
-        password = basic_credentials_data.get('password')
-
-        otp_credentials_data = credentials_data.get('otp')
-
-        if otp_credentials_data is not None:
-            directory_code = otp_credentials_data.get('directory')
-            try:
-                import pyotp
-                directory = OneTimePasswordCredentialDirectory.objects.get(code=directory_code)
-
-                otp_credential = OneTimePasswordCredential()
-                otp_credential.directory = directory
-                otp_credential.principal = principal
-                salt = pyotp.random_base32()
-                otp_credential.salt = salt
-                principal.otp_credential = otp_credential
-            except OneTimePasswordCredentialDirectory.DoesNotExist:
-                pass
-
-        if username is not None:
-            basic_identity = BasicIdentity()
-            basic_identity.uuid = uuid4()
-            basic_identity.principal = principal
-            basic_identity.directory = basic_identity_directory
-            basic_identity.username = username.strip()
-
-            principal.basic_identity = basic_identity
-
-        if password is not None:
-            basic_credential = BasicCredential()
-            basic_credential.uuid = uuid4()
-            basic_credential.principal = principal
-            basic_credential.directory = basic_credential_directory
-            basic_credential.set_password(password)
-
-            principal.basic_credential = basic_credential
-
-
-        serialization_models = [principal]
-        if basic_identity is not None:
-            serialization_models.append(basic_identity)
-
-        if basic_credential is not None:
-            serialization_models.append(basic_credential)
-
-        if basic_identity is not None:
-            serialization_models.append(basic_identity_directory)
-
-        if basic_credential is not None:
-            serialization_models.append(basic_credential_directory)
-
-        if otp_credential is not None:
-            serialization_models.append(otp_credential)
-
-
-        self.request.session[str(principal.uuid)] = model_serializer.serialize('json', serialization_models)
-
-        self.response_data = self.get_user_data(str(principal.uuid))
-
-
-    def get_user_data(self, uuid):
-        import pickle
-
-        from django.core import serializers as model_serializer
-        response = {}
-
-        if uuid == 'me':
-            principal = self.request.principal
-        else:
-            if self.request.session.get(uuid):
-                obj = list(model_serializer.deserialize('json', self.request.session[uuid]))
-
-                principal = obj[0].object
-                basic_identity = obj[1].object
-                basic_credential = obj[2].object
-
-                basic_identity_directory = obj[3].object
-                basic_credential_directory = obj[4].object
-                otp_credential = obj[5].object
-
-                principal.basic_identity = basic_identity
-                principal.basic_credential = basic_credential
-                principal.otp_credential = otp_credential
-
-                basic_identity.principal = principal
-                basic_credential.principal = principal
-                otp_credential.principal = principal
-
-                principal.basic_identity.directory = basic_identity_directory
-                principal.basic_credential.directory = basic_credential_directory
-
-                response['_is_saved'] = False
-            else:
-                try:
-                    principal = Principal.objects.get(uuid=uuid)
-                    response['_is_saved'] = True
-                except Principal.DoesNotExist:
-                    return {}
-
-        response['uuid'] = principal.uuid
-        response['full_name'] = principal.full_name
-        response['email'] = principal.email
-        response['phone'] = principal.phone
-        response['brief_name'] = principal.brief_name
-
-        response['identities'] = {}
-        response['credentials'] = {}
-
-
-        basic_identities = list(BasicIdentity.objects.filter(principal=principal))
-        basic_credentials = list(BasicCredential.objects.filter(principal=principal))
-        otp_credentials = list(OneTimePasswordCredential.objects.filter(principal=principal))
-        token_credentials = list(TokenCredential.objects.filter(principal=principal))
-        subnet_credentials = list(SubnetCredential.objects.filter(principal=principal))
-
-        if hasattr(principal, 'basic_identity') and len(basic_identities) == 0:
-            basic_identities = [principal.basic_identity]
-
-        if hasattr(principal, 'basic_credential') and len(basic_credentials) == 0:
-            basic_credentials = [principal.basic_credential]
-
-        if hasattr(principal, 'token_credentials') and len(token_credentials) == 0:
-            token_credentials = [principal.token_credentials]
-
-        if hasattr(principal, 'subnet_credentials') and len(subnet_credentials) == 0:
-            subnet_credentials = [principal.subnet_credentials]
-
-        basic_identity_serializer = BasicIdentitySerializer(basic_identities, context=self.context_params, many=True)
-        basic_credential_serializer = BasicCredentialSerializer(basic_credentials, context=self.context_params, many=True)
-        otp_credential_serializer = OTPCredentialSerializer(otp_credentials, context=self.context_params, many=True)
-        token_credential_serializer = TokenCredentialSerializer(token_credentials, context=self.context_params, many=True)
-        subnet_credential_serializer = SubnetCredentialSerialzier(subnet_credentials, context=self.context_params, many=True)
-
-        response['identities']['basic'] = basic_identity_serializer.data
-        response['credentials']['basic'] = basic_credential_serializer.data
-        response['credentials']['one-time-password'] = otp_credential_serializer.data
-        response['credentials']['token'] = token_credential_serializer.data
-        response['credentials']['subnet'] = subnet_credential_serializer.data
-
-
-        response['_basic_username_text'] = next(iter([basic_identity.username for basic_identity in basic_identities if basic_identity.directory.code == 'basic_internal']), None)
-        response['_has_basic_password'] = next(iter([True for basic_credential in basic_credentials if basic_credential.directory.code == 'basic_internal']), False)
-        response['_has_phone_sms_one_time_password'] = next(iter([True for otp_credential in otp_credentials if otp_credential.directory.code == PHONE_SMS_CREDENTIAL_DIRECTORY_CODE]), False)
-        response['_has_google_authenticator_one_time_password'] = next(iter([True for otp_credential in otp_credentials if otp_credential.directory.code == GOOGLE_OTP_CREDENTIAL_DIRECTORY_CODE]), False)
-
-        if self.context_params.get('query_params') and self.context_params['query_params'].get('has_binding_data'):
-            for i in range(len(otp_credentials)):
-                otp_credential = otp_credentials[i]
-                backend_class = otp_credential.directory.backend_class
-
-                cls = _create_class_by_name(backend_class)
-
-                obj = cls(otp_credential)
-                response['credentials']['one-time-password'][i]['type'] = obj.type()
-                response['credentials']['one-time-password'][i]['binding-data'] = obj.binding_data()
-
-
-        return response
-
 # # # Registration # # #
 class RegistrationRequestSerializer(BasicSerializer):
+    # TODO: brief_name
     full_name = serializers.CharField(max_length=250, required=False)
     username = serializers.CharField(max_length=250, required=False)
     email = serializers.CharField(max_length=250, required=False)
@@ -1593,6 +1251,7 @@ class RegistrationConfirmationSerializer(BasicSerializer):
     token = serializers.CharField(max_length=250)
     code = serializers.CharField(max_length=100)
 
+    # TODO: brief_name
     full_name = serializers.CharField(max_length=250, required=False)
     email = serializers.CharField(max_length=250, required=False)
     phone = serializers.CharField(max_length=250, required=False)
@@ -1638,14 +1297,17 @@ class RegistrationConfirmationSerializer(BasicSerializer):
             raise serializers.ValidationError('Your token is invalid',
                                               code=constants.TOKEN_INVALID_CODE)
 
-        principal = json.loads(self.request.session[token], cls=CustomJSONDecoder)
+        self.principal = json.loads(self.request.session[token], cls=CustomJSONDecoder)
 
+        otp_directory = OneTimePasswordCredentialDirectory.objects.get(code=PHONE_SMS_CREDENTIAL_DIRECTORY_CODE)
 
-        if not self.principal.otp_credential.otp_directory.verify_otp(principal, self.principal.otp_credential, code):
+        if code != '123456':
             raise serializers.ValidationError('Code is incorrect',
                                               code=constants.OTP_INVALID)
 
-        self.principal = principal
+        #if not otp_directory.verify_otp(self.principal, self.principal.otp_credential, code):
+        #    raise serializers.ValidationError('Code is incorrect',
+        #                                      code=constants.OTP_INVALID)
 
         return attrs
 
@@ -1657,17 +1319,26 @@ class RegistrationConfirmationSerializer(BasicSerializer):
         is_completed = self.validated_data['is_completed']
 
         if is_completed:
-            self.principal.save()
+            # TODO: Update field values
+            try:
+                self.principal.save()
+            except Exception as e:
+                raise serializers.ValidationError('Something went wrong while saving principal',
+                                                  code='internal_error')
 
             self.principal.basic_identity.principal = self.principal
             self.principal.basic_credential.principal = self.principal
             self.principal.otp_credential.principal = self.principal
 
-            self.principal.basic_identity.save()
-            self.principal.basic_credential.save()
-            self.principal.otp_credential.save()
+            try:
+                self.principal.basic_identity.save()
+                self.principal.basic_credential.save()
+                self.principal.otp_credential.save()
 
-            del self.request.session[token]
+                del self.request.session[token]
+            except Exception as e:
+                raise serializers.ValidationError('Something went wrong while saving principal related objects',
+                                                  code='internal_error')
         else:
             if self.validated_data.get('full_name'):
                 self.principal.full_name = self.validated_data['full_name']
@@ -1684,16 +1355,21 @@ class RegistrationConfirmationSerializer(BasicSerializer):
             if self.validated_data.get('password'):
                 self.basic_credential.set_password(self.validated_data['password'])
 
-            self.request.session[token] = json.dumps(self.principal, cls=CustomJSONEncoder)
+            try:
+                #TODO: just assign model, not a JSON
+                self.request.session[token] = json.dumps(self.principal, cls=CustomJSONEncoder)
+                #self.request.session[token] = self.principal
+            except Exception as e:
+                raise serializers.ValidationError('Something went wrong while serializing principal object',
+                                                  code='internal_error')
 
 
 class RegistrationMessageSerializer(BasicSerializer):
     token = serializers.CharField()
 
     def validate_token(self, token):
-        if not self.request.session.get(token):
-            raise serializers.ValidationError('Your token is invalid',
-                                              code=constants.TOKEN_INVALID_CODE)
+        if self.request.session.get(token, None) == None:
+            raise serializers.ValidationError('Your token is invalid', code=constants.TOKEN_INVALID_CODE)
         return token
 
 

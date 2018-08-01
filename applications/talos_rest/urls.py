@@ -34,7 +34,7 @@ from .views import SessionAPIView, EmailChangeRequestAPIView, \
  \
     EmailResetAPIView, ProvidedEvidencesView, \
     PasswordChangeView, PasswordResetView, LdapSessionAPIView, \
-    PasswordResetTokenCheckerAPIView, SendOTPView, IdentityDirectoryView, CredentialDirectoryView, PrincipalView, \
+    PasswordResetTokenCheckerAPIView, SendOTPView,  \
     RegistrationRequestView, RegistrationMessageView
 
 from rest_framework.documentation import include_docs_urls
@@ -46,7 +46,7 @@ urlpatterns = [
     path('docs/', include_docs_urls(title='My API title', public=False,
                                     description='Talos Rest API overview')),
 
-    path('session', SessionAPIView.as_view(), name='talos-rest-sessions'),
+    path('session/', SessionAPIView.as_view(), name='talos-rest-sessions'),
     path('ldap/session', LdapSessionAPIView.as_view(), name='talos-rest-ldap-sessions'),
 
     # Email Change
@@ -100,17 +100,17 @@ urlpatterns = [
          name='phone-reset-secure'),
 
     # Password reset
-    path('principal/password/reset-request', PasswordResetRequestView.as_view(),
+    path('principal/password/reset-request/', PasswordResetRequestView.as_view(),
          name='password-reset-request'),
 
-    path('principal/password/reset-token/validate', PasswordResetTokenCheckerAPIView.as_view(),
+    path('principal/password/reset-token/validate/', PasswordResetTokenCheckerAPIView.as_view(),
          name='password-reset-validation'),
 
-    path('principal/password/reset/insecure', PasswordResetView.as_view(),
+    path('principal/password/reset/insecure/', PasswordResetView.as_view(),
          {'directory_code': PHONE_SMS_CREDENTIAL_DIRECTORY_CODE, 'error_code': constants.PHONE_INVALID_CODE},
          name='password-reset-insecure'),
 
-    path('principal/password/reset/secure', PasswordResetView.as_view(),
+    path('principal/password/reset/secure/', PasswordResetView.as_view(),
          {'directory_code': GOOGLE_OTP_CREDENTIAL_DIRECTORY_CODE, 'error_code': constants.GOOGLE_OTP_INVALID_CODE},
          name='password-reset-secure'),
 
@@ -128,40 +128,32 @@ urlpatterns = [
     path('principal/security-level/token/<slug:secret>',
          PrincipalSecurityLevelByTokenView.as_view(), name='principal-security-level-by-token'),
 
-    path('send-otp/<slug:otp_directory_code>', SendOTPView.as_view(),
+    path('send-otp/<slug:otp_directory_code>/', SendOTPView.as_view(),
          name='send-otp'),
 
-    path('evidence/sms', AddEvidenceView.as_view(),
+    path('evidence/sms/', AddEvidenceView.as_view(),
          {'directory_code': PHONE_SMS_CREDENTIAL_DIRECTORY_CODE, 'error_code': constants.SMS_OTP_INVALID_CODE},
          name='add-evidence-sms'),
-    path('evidence/google', AddEvidenceView.as_view(),
+    path('evidence/google/', AddEvidenceView.as_view(),
          {'directory_code': GOOGLE_OTP_CREDENTIAL_DIRECTORY_CODE, 'error_code': constants.GOOGLE_OTP_INVALID_CODE},
          name='add-evidence-google'),
 
     path('basic-registration', BasicRegistrationView.as_view(), name='basic-registration'),
 
-    path('provided-evidences', ProvidedEvidencesView.as_view(), name='provided-evidences'),
+    path('provided-evidences/', ProvidedEvidencesView.as_view(), name='provided-evidences'),
 
-    path('principal/password/insecure', PasswordChangeView.as_view(),
+    path('principal/password/insecure/', PasswordChangeView.as_view(),
          {'directory_code' : PHONE_SMS_CREDENTIAL_DIRECTORY_CODE, 'error_code' : constants.SMS_OTP_INVALID_CODE},
          name='password-change-insecure'),
 
-    path('principal/password/secure', PasswordChangeView.as_view(),
+    path('principal/password/secure/', PasswordChangeView.as_view(),
          {'directory_code' : GOOGLE_OTP_CREDENTIAL_DIRECTORY_CODE, 'error_code' : constants.GOOGLE_OTP_INVALID_CODE},
          name='password-change-secure'),
-
-    path('directory/identity', IdentityDirectoryView.as_view(),
-         name='identity-directory'),
-
-    path('directory/credential', CredentialDirectoryView.as_view(),
-         name='credential-directory'),
-
-    path('principal/<slug:uuid>', PrincipalView.as_view(),
-         name='principal'),
 
     path('registration/', RegistrationRequestView.as_view(), name='registration'),
 
     path('registration/<slug:id>', RegistrationRequestView.as_view(),name='registration-confirmation'),
 
+    # TODO: 'registration/<slug:id>/message/'
     path('registration-message/', RegistrationMessageView.as_view(), name='registration-message'),
 ]

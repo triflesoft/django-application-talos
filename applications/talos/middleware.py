@@ -28,6 +28,7 @@ class SessionMiddleware(object):
         session.save()
         session_key = str(session.uuid)
         response['X-Session-ID'] = session_key
+        response['access-control-expose-headers'] = 'X-Session-ID'
         response.set_cookie(
             settings.SESSION_COOKIE_NAME,
             value=session_key,
