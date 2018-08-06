@@ -1,4 +1,3 @@
-from re import compile
 from django.template.loader import render_to_string
 from django.core.mail import send_mail
 from django.urls import reverse
@@ -10,18 +9,6 @@ from talos.models import _tznow
 from rest_framework import status
 from talos_rest import constants
 
-def _create_class_by_name(class_name):
-    name_parts = class_name.split('.')
-    module_name = '.'.join(name_parts[:-1])
-    module = __import__(module_name)
-
-    for name_part in name_parts[1:]:
-        module = getattr(module, name_part)
-
-    return module
-
-email_regex = compile(r'^[^@]+@[^@]+\.[^@]+$')
-
 PHONE_SMS_CREDENTIAL_DIRECTORY_CODE = 'onetimepassword_internal_phone_sms_authenticator'
 GOOGLE_OTP_CREDENTIAL_DIRECTORY_CODE = 'onetimepassword_internal_google_authenticator'
 
@@ -32,10 +19,8 @@ class OTPBaserSerializeMixin():
         super(OTPBaserSerializeMixin, self).__init__(*args, **kwargs)
 
     def validate_otp_code(self, otp_code):
-        from talos.models import OneTimePasswordCredentialDirectory
-
-        self.otp_directory = OneTimePasswordCredentialDirectory.objects.get(
-            code=self.directory_code)
+        otp_credential = self.principal.credentials.otp[0]
+        self.otp_directory = otp_credential.directory
 
         # TODO: Should be removed
         if otp_code != '123456':
@@ -76,20 +61,12 @@ class ValidateSecretWhenLogedInMixin():
     def __init__(self, *args, **kwargs):
         self.fields['secret'] = serializers.CharField(label='Token', max_length=255)
         self.token = None
-
         super(ValidateSecretWhenLogedInMixin, self).__init__(*args, **kwargs)
 
 
     def validate_secret(self, token):
-        """ Validate token"""
         try:
-            self.token = ValidationToken.objects.get(
-                secret=token,
-                type=self.token_type,
-                expires_at__gt=_tznow(),
-                is_active=True
-            )
-
+            self.token = ValidationToken.objects.get(secret=token, type=self.token_type, expires_at__gt=_tznow(), is_active=True)
         except ValidationToken.DoesNotExist:
             self.token = None
 
@@ -97,7 +74,7 @@ class ValidateSecretWhenLogedInMixin():
             raise serializers.ValidationError(
                 'Token is not valid.',
                 code=constants.TOKEN_INVALID_CODE)
-
+        return token
 
 class ValidateSecretWhenLoggedOutMixin():
     def __init__(self, *args, **kwargs):
@@ -107,24 +84,13 @@ class ValidateSecretWhenLoggedOutMixin():
 
 
     def validate_secret(self, token):
-        """ Validate token"""
         try:
-            self.token = ValidationToken.objects.get(
-                secret=token,
-                type=self.token_type,
-                expires_at__gt=_tznow(),
-                is_active=True
-            )
-
+            self.token = ValidationToken.objects.get(secret=token, type=self.token_type, expires_at__gt=_tznow(), is_active=True)
         except ValidationToken.DoesNotExist:
-            self.token = None
-
-        if not self.token:
             raise serializers.ValidationError(
                 'Token is not valid.',
                 code=constants.TOKEN_INVALID_CODE)
         return self.token
-
 
 
 class BasicSerializer(serializers.Serializer):
@@ -196,8 +162,6 @@ class SessionSerializer(BasicSerializer):
             raise serializers.ValidationError(
                 'Password is not valid. Note that password is case-sensitive.',
                 code=constants.PASSWORD_INVALID_CODE)
-
-        # return password
 
     def save(self):
         self.principal._load_authentication_context(self.evidences)
@@ -325,21 +289,9 @@ class GoogleAuthenticatorDeleteSerializer(GoogleOtpSerializerMixin,
         self.validation_token.save()
 
 class SendOTPSerializer(BasicSerializer):
-    otp_directory_code = PHONE_SMS_CREDENTIAL_DIRECTORY_CODE
-
     def save(self):
-        from talos.models import OneTimePasswordCredential
-        from talos.models import OneTimePasswordCredentialDirectory
-
-        try:
-            OneTimePasswordCredentialDirectory.objects.get(code=self.otp_directory_code)
-        except OneTimePasswordCredentialDirectory.DoesNotExist:
-            raise serializers.ValidationError('Directory code is incorrect',
-                                              code='internal_error')
-
         principal = self.request.principal
-        credential = OneTimePasswordCredential.objects.get(principal=self.request.principal)
-
+        credential = principal.credentials.otp[0]
         directory = credential.directory
         directory.send_otp(principal, credential)
 
@@ -348,11 +300,9 @@ class SendOTPSerializer(BasicSerializer):
 
 class AddEvidenceBaseSerialize(OTPBaserSerializeMixin, BasicSerializer):
     def __init__(self, *args, **kwargs):
-        from talos.models import OneTimePasswordCredentialDirectory
         super(AddEvidenceBaseSerialize, self).__init__(*args, **kwargs)
 
-        self.otp_directory = OneTimePasswordCredentialDirectory.objects.get(
-            code=self.directory_code)
+        self.otp_directory = self.principal.credentials.otp[0].directory
         self.otp_evidences = self.otp_directory.provided_evidences.all().order_by('-id')
 
     def save(self):
@@ -363,104 +313,6 @@ class AddEvidenceBaseSerialize(OTPBaserSerializeMixin, BasicSerializer):
         provided_evidences = Evidence.objects.filter(code__in=evidence_codes)
         self.principal._load_authentication_context(provided_evidences)
 
-
-class BasicRegistrationSerializer(BasicSerializer):
-    full_name = serializers.CharField()
-    email = serializers.CharField()
-    password = serializers.CharField(min_length=6)
-    phone = serializers.CharField()
-    otp_code = serializers.CharField()
-
-    BASIC_SUCCESS_CODE = status.HTTP_201_CREATED
-
-    def __init__(self, *args, **kwargs):
-        from talos.models import BasicIdentityDirectory
-        from talos.models import OneTimePasswordCredentialDirectory
-        super(BasicRegistrationSerializer, self).__init__(*args, **kwargs)
-
-        self.identity_directory = BasicIdentityDirectory.objects.get(
-            code=self.identity_directory_code)
-        self.credential_directory = self.identity_directory.credential_directory
-        self.otp_credential_directory = OneTimePasswordCredentialDirectory.objects.get(
-            code=GOOGLE_OTP_CREDENTIAL_DIRECTORY_CODE)
-        self.secret = None
-
-
-
-    def validate_email(self, email):
-        from talos_rest.validators import validate_email
-
-        email = email.lower()
-        validate_email(email)
-
-        try:
-            Principal.objects.get(email=email)
-            raise serializers.ValidationError("Email is already used",
-                                              code=constants.EMAIL_USED_CODE)
-        except Principal.DoesNotExist:
-            pass
-        return email
-
-    def validate_phone(self, phone):
-        from talos_rest.validators import validate_phone
-
-        validate_phone(phone)
-
-        try:
-            Principal.objects.get(phone=phone)
-            raise serializers.ValidationError("Phone is already used",
-                                              code=constants.PHONE_USED_CODE)
-        except Principal.DoesNotExist:
-            pass
-        return phone
-
-    def validate_otp_code(self, code):
-        from django.core import serializers as model_serializer
-        if not self.request.session.get('temp_credential') or not self.request.session.get('temp_principal'):
-            raise serializers.ValidationError('Code is invalid',
-                                              constants.PHONE_INVALID_CODE)
-
-        temp_credential = list(model_serializer.deserialize('json', self.request.session['temp_credential']))[0].object
-        temp_principal = list(model_serializer.deserialize('json', self.request.session['temp_principal']))[0].object
-
-        directory = temp_credential.directory
-
-        if not directory.verify_otp(temp_principal, temp_credential, code):
-            raise serializers.ValidationError('Code is invalid',
-                                              constants.OTP_INVALID)
-
-        self.principal = temp_principal
-        self.credential = temp_credential
-        return code
-
-    def validate_password(self, password):
-        from talos_rest.validators import validate_password
-
-        validate_password(password)
-
-        self.password = password
-
-        #return password
-
-    def save(self):
-        self.principal.email = self.validated_data['email']
-        self.principal.phone = self.validated_data['phone']
-        self.principal.full_name = self.validated_data['full_name']
-        self.principal.save()
-
-        self.identity_directory.create_credentials(self.principal,
-                                                   {'username': self.validated_data['email']})
-        self.credential_directory.create_credentials(self.principal,
-                                                     {'password': self.password})
-
-
-        self.credential.principal = self.principal
-        self.credential.save()
-
-        if self.request.session.get('temp_principal'):
-            del self.request.session['temp_principal']
-        if self.request.session.get('temp_credential'):
-            del self.request.session['temp_credential']
 
 class EmailChangeRequestSerializer(BasicSerializer):
     token_type = 'email_change'
@@ -473,10 +325,7 @@ class EmailChangeRequestSerializer(BasicSerializer):
     def validate_new_email(self, value):
         new_email = value
 
-        if not email_regex.match(new_email):
-            raise serializers.ValidationError(
-                'E-mail address is ill-formed.',
-                code=constants.EMAIL_INVALID_CODE)
+
 
         try:
             Principal.objects.get(email=new_email)
@@ -587,13 +436,10 @@ class EmailResetRequestSerializer(BasicSerializer):
     def __init__(self, *args, **kwargs):
         super(EmailResetRequestSerializer, self).__init__(*args, **kwargs)
 
-    def validate_new_email(self, value):
-        new_email = value
+    def validate_new_email(self, new_email):
+        from talos_rest.validators import validate_email
 
-        if not email_regex.match(new_email):
-            raise serializers.ValidationError(
-                'E-mail address is ill-formed.',
-                code=constants.EMAIL_INVALID_CODE)
+        validate_email(new_email)
 
         try:
             Principal.objects.get(email=new_email)
@@ -606,10 +452,9 @@ class EmailResetRequestSerializer(BasicSerializer):
         return new_email
 
     def validate_old_email(self, email):
-        if not email_regex.match(email):
-            raise serializers.ValidationError(
-                'E-mail address is ill-formed.',
-                code=constants.EMAIL_INVALID_CODE)
+        from talos_rest.validators import validate_email
+
+        validate_email(email)
 
         try:
             Principal.objects.get(email=email)
@@ -837,10 +682,9 @@ class PhoneResetRequestSerializer(BasicSerializer):
         return new_phone
 
     def validate_email(self, email):
-        if not email_regex.match(email):
-            raise serializers.ValidationError(
-                'E-mail address is ill-formed.',
-                code=constants.EMAIL_INVALID_CODE)
+        from talos_rest.validators import validate_email
+
+        validate_email(email)
 
         try:
             Principal.objects.get(email=email)
@@ -1093,54 +937,6 @@ class PasswordChangeBaseSerialize(OTPBaserSerializeMixin, ValidatePasswordMixin,
 
 
 
-class LdapLoginSerializer(BasicSerializer):
-    email = serializers.CharField(label='Email', help_text='Please enter email')
-    password = serializers.CharField(label='Password', help_text='Please enter password')
-
-    def __init__(self, *args, **kwargs):
-        from talos.models import BasicIdentityDirectory
-        super(LdapLoginSerializer, self).__init__(*args, **kwargs)
-
-        self.identity_directory = BasicIdentityDirectory.objects.get(
-            code=self.identity_directory_code)
-        self.credential_directory = self.identity_directory.credential_directory
-        self.evidences = list(self.credential_directory.provided_evidences.all().order_by('id'))
-
-    def validate_email(self, value):
-
-        self.email = value
-
-        self.principal = self.identity_directory.get_principal({'username': self.email})
-
-        if not self.principal:
-            raise serializers.ValidationError(
-                'Username is not valid. Note that username may be case-sensitive.',
-                code=constants.USERNAME_INVALID_CODE)
-
-        if not self.principal.is_active:
-            raise serializers.ValidationError(
-                'Username is valid, but account is disabled.',
-                code=constants.ACCOUNT_INACTIVE_CODE)
-
-        return self.email
-
-    def validate_password(self, value):
-        password = value
-        if self.principal and (
-                not self.credential_directory.verify_credentials(self.email,
-                                                                 {'password': password})):
-            raise serializers.ValidationError(
-                'Password is not valid. Note that password is case-sensitive.',
-                code=constants.PASSWORD_INVALID_CODE)
-
-        # return password
-
-    def save(self):
-        self.principal._load_authentication_context(self.evidences)
-        self.request.principal = self.principal
-
-
-# # # Registration # # #
 class RegistrationRequestSerializer(BasicSerializer):
     brief_name = serializers.CharField(max_length=250, required=False)
     full_name = serializers.CharField(max_length=250, required=False)

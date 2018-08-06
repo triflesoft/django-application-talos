@@ -4,6 +4,9 @@
 # error occurs
 from talos_rest import constants
 
+from re import compile
+
+email_regex = compile(r'^[^@]+@[^@]+\.[^@]+$')
 
 def validate_phone(phone):
     from django.core.validators import RegexValidator
@@ -25,6 +28,11 @@ def validate_email(email):
     from django.core.validators import validate_email as django_validate_email
     from django.core.exceptions import ValidationError
     from rest_framework import serializers
+
+    if not email_regex.match(email):
+        raise serializers.ValidationError(
+            'E-mail address is ill-formed.',
+            code=constants.EMAIL_INVALID_CODE)
 
     try:
         django_validate_email(email)

@@ -1,77 +1,49 @@
-"""talos_test URL Configuration
-
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/2.0/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
-"""
-
 from django.urls import path
 
-from talos_rest import constants
 from .views import SessionAPIView, EmailChangeRequestAPIView, \
     GoogleAuthenticationActivateRequestView, \
-    GoogleAuthenticatorDeleteView, PrincipalSecurityLevelView, \
+    GoogleAuthenticatorDeleteView, \
  \
     AddEvidenceView, \
     EmailChangeValidationTokenCheckerAPIView, \
-    BasicRegistrationView, PasswordResetRequestView, \
+    PasswordResetRequestView, \
     GoogleAuthenticatorDeleteRequestView, GoogleAuthenticatorActivateConfirmView, \
     EmailResetRequestAPIView, EmailResetValidationTokenCheckerAPIView, \
  \
     EmailChangeSecureAPIView, \
     PhoneChangeValidationTokenCheckerAPIView, PhoneChangeRequestAPIView, PhoneChangeSecureAPIView, \
     PhoneResetRequestAPIView, PhoneResetValidationTokenCheckerAPIView, \
-    PhoneResetAPIView, PrincipalSecurityLevelByTokenView, \
+    PhoneResetAPIView, \
  \
-    EmailResetAPIView, ProvidedEvidencesView, \
-    PasswordChangeView, PasswordResetView, LdapSessionAPIView, \
+    EmailResetAPIView, \
+    PasswordChangeView, PasswordResetView, \
     PasswordResetTokenCheckerAPIView, SendOTPView,  \
     RegistrationRequestView, RegistrationMessageView
 
-from rest_framework.documentation import include_docs_urls
+
 
 PHONE_SMS_CREDENTIAL_DIRECTORY_CODE = 'onetimepassword_internal_phone_sms_authenticator'
 GOOGLE_OTP_CREDENTIAL_DIRECTORY_CODE = 'onetimepassword_internal_google_authenticator'
 
 urlpatterns = [
-    path('docs/', include_docs_urls(title='My API title', public=False,
-                                    description='Talos Rest API overview')),
 
     path('session/', SessionAPIView.as_view(), name='talos-rest-sessions'),
-    path('ldap/session', LdapSessionAPIView.as_view(), name='talos-rest-ldap-sessions'),
 
     # Email Change
     path('principal/email/change-request', EmailChangeRequestAPIView.as_view(),
          name='email-change-request'),
     path('email/email-change-token/<slug:secret>',
          EmailChangeValidationTokenCheckerAPIView.as_view(), name='email-change-token-validation'),
-    path('principal/email/insecure', EmailChangeSecureAPIView.as_view(),
-        {'directory_code' : PHONE_SMS_CREDENTIAL_DIRECTORY_CODE, 'error_code' : constants.PHONE_INVALID_CODE},
-         name='email-change-insecure'),
-    path('principal/email/secure', EmailChangeSecureAPIView.as_view(),
-        {'directory_code' : GOOGLE_OTP_CREDENTIAL_DIRECTORY_CODE, 'error_code' : constants.GOOGLE_OTP_INVALID_CODE},
-         name='email-change-secure'),
+    path('principal/email/', EmailChangeSecureAPIView.as_view(), name='email-change-insecure'),
+
 
     # Email Reset
     path('principal/email/reset-request', EmailResetRequestAPIView.as_view(),
          name='email-reset-request'),
     path('email/email_reset_token/<slug:secret>', EmailResetValidationTokenCheckerAPIView.as_view(),
          name='email-reset-token-validation'),
-    path('principal/reset-email-insecure', EmailResetAPIView.as_view(),
-        {'directory_code' : PHONE_SMS_CREDENTIAL_DIRECTORY_CODE, 'error_code' : constants.PHONE_INVALID_CODE},
-         name='email-reset-insecure'),
-    path('principal/reset-email-secure', EmailResetAPIView.as_view(),
-        {'directory_code' : GOOGLE_OTP_CREDENTIAL_DIRECTORY_CODE, 'error_code' : constants.GOOGLE_OTP_INVALID_CODE},
-         name='email-reset-secure'),
+    path('principal/reset/email/', EmailResetAPIView.as_view(), name='email-reset-insecure'),
+
 
     # Phone Change
     path('principal/phone/change-request', PhoneChangeRequestAPIView.as_view(),
@@ -79,12 +51,8 @@ urlpatterns = [
     path('phone/phone_change_token/<slug:secret>',
          PhoneChangeValidationTokenCheckerAPIView.as_view(),
          name='phone-change-token-validation'),
-    path('principal/phone/insecure', PhoneChangeSecureAPIView.as_view(),
-        {'directory_code' : PHONE_SMS_CREDENTIAL_DIRECTORY_CODE, 'error_code' : constants.SMS_OTP_INVALID_CODE},
-         name='phone-change-insecure'),
-    path('principal/phone/secure', PhoneChangeSecureAPIView.as_view(),
-        {'directory_code' : GOOGLE_OTP_CREDENTIAL_DIRECTORY_CODE, 'error_code' : constants.GOOGLE_OTP_INVALID_CODE},
-         name='phone-change-secure'),
+    path('principal/phone/', PhoneChangeSecureAPIView.as_view(), name='phone-change-insecure'),
+
 
     # Phone reset
     path('principal/phone/reset-request', PhoneResetRequestAPIView.as_view(),
@@ -92,12 +60,8 @@ urlpatterns = [
     path('phone/phone_reset_token/<slug:secret>',
          PhoneResetValidationTokenCheckerAPIView.as_view(),
          name='phone-reset-token-validation'),
-    path('principal/reset-phone-insecure', PhoneResetAPIView.as_view(),
-        {'directory_code' : PHONE_SMS_CREDENTIAL_DIRECTORY_CODE, 'error_code' : constants.SMS_OTP_INVALID_CODE},
+    path('principal/reset/phone/', PhoneResetAPIView.as_view(),
          name='phone-reset-insecure'),
-    path('principal/reset-phone-secure', PhoneResetAPIView.as_view(),
-        {'directory_code': GOOGLE_OTP_CREDENTIAL_DIRECTORY_CODE, 'error_code': constants.GOOGLE_OTP_INVALID_CODE},
-         name='phone-reset-secure'),
 
     # Password reset
     path('principal/password/reset-request/', PasswordResetRequestView.as_view(),
@@ -106,13 +70,8 @@ urlpatterns = [
     path('principal/password/reset-token/validate/', PasswordResetTokenCheckerAPIView.as_view(),
          name='password-reset-validation'),
 
-    path('principal/password/reset/insecure/', PasswordResetView.as_view(),
-         {'directory_code': PHONE_SMS_CREDENTIAL_DIRECTORY_CODE, 'error_code': constants.PHONE_INVALID_CODE},
-         name='password-reset-insecure'),
+    path('principal/password/reset/', PasswordResetView.as_view(),name='password-reset-secure'),
 
-    path('principal/password/reset/secure/', PasswordResetView.as_view(),
-         {'directory_code': GOOGLE_OTP_CREDENTIAL_DIRECTORY_CODE, 'error_code': constants.GOOGLE_OTP_INVALID_CODE},
-         name='password-reset-secure'),
 
     path('google-authenticator/activate/request', GoogleAuthenticationActivateRequestView.as_view(),
          name='google-authenticator-activate-request'),
@@ -123,37 +82,17 @@ urlpatterns = [
          name='google-authenticator-delete-request'),
     path('google-authenticator/delete/confirm', GoogleAuthenticatorDeleteView.as_view(),
          name='google-authenticator-delete-confirm'),
-    path('principal/security-level', PrincipalSecurityLevelView.as_view(),
-         name='principal-security-level'),
-    path('principal/security-level/token/<slug:secret>',
-         PrincipalSecurityLevelByTokenView.as_view(), name='principal-security-level-by-token'),
 
-    path('send-otp/<slug:otp_directory_code>/', SendOTPView.as_view(),
+    path('send-otp/', SendOTPView.as_view(),
          name='send-otp'),
 
-    path('evidence/sms/', AddEvidenceView.as_view(),
-         {'directory_code': PHONE_SMS_CREDENTIAL_DIRECTORY_CODE, 'error_code': constants.SMS_OTP_INVALID_CODE},
+    path('evidence/', AddEvidenceView.as_view(),
          name='add-evidence-sms'),
-    path('evidence/google/', AddEvidenceView.as_view(),
-         {'directory_code': GOOGLE_OTP_CREDENTIAL_DIRECTORY_CODE, 'error_code': constants.GOOGLE_OTP_INVALID_CODE},
-         name='add-evidence-google'),
 
-    path('basic-registration', BasicRegistrationView.as_view(), name='basic-registration'),
-
-    path('provided-evidences/', ProvidedEvidencesView.as_view(), name='provided-evidences'),
-
-    path('principal/password/insecure/', PasswordChangeView.as_view(),
-         {'directory_code' : PHONE_SMS_CREDENTIAL_DIRECTORY_CODE, 'error_code' : constants.SMS_OTP_INVALID_CODE},
-         name='password-change-insecure'),
-
-    path('principal/password/secure/', PasswordChangeView.as_view(),
-         {'directory_code' : GOOGLE_OTP_CREDENTIAL_DIRECTORY_CODE, 'error_code' : constants.GOOGLE_OTP_INVALID_CODE},
-         name='password-change-secure'),
+    path('principal/password/', PasswordChangeView.as_view(), name='password-change-insecure'),
 
     path('registration/', RegistrationRequestView.as_view(), name='registration'),
-
     path('registration/<slug:id>', RegistrationRequestView.as_view(),name='registration-confirmation'),
+    path('registration/<slug:id>/message/', RegistrationMessageView.as_view(), name='registration-message'),
 
-    # TODO: 'registration/<slug:id>/message/'
-    path('registration-message/', RegistrationMessageView.as_view(), name='registration-message'),
 ]
