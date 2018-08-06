@@ -940,14 +940,14 @@ class ValidationTokenAdmin(AbstractReplicatableAdmin):
     ]
     list_display = [
         'principal',
-        'identifier',
+        'identifier_type',
         'identifier_value',
         'type',
         'expires_at',
         'is_active']
     list_filter = [
         'principal',
-        'identifier',
+        'identifier_type',
         'identifier_value',
         'type',
         'expires_at',

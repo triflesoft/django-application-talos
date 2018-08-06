@@ -964,28 +964,43 @@ class PrincipalIdentities(object):
 
     def __init__(self, principal):
         self.principal = principal
+        self.basic_identities = []
+        if self.principal.pk:
+            self.basic_identities = list(BasicIdentity.objects.filter(principal=self.principal))
 
     @property
     def basic(self):
-        if self.principal.pk:
-            return list(BasicIdentity.objects.filter(principal=self.principal))
-        return []
+        return self.basic_identities
+
+    @basic.setter
+    def basic(self, value):
+        self.basic_identities = value
+
 
 class PrincipalCredentials(object):
     def __init__(self, principal):
         self.principal = principal
+        self.basic_credentials = []
+        self.otp_credentials = []
+        if self.principal.pk:
+            self.basic_credentials = list(BasicCredential.objects.filter(principal=self.principal))
+            self.otp_credentials = list(OneTimePasswordCredential.objects.filter(principal=self.principal))
 
     @property
     def basic(self):
-        if self.principal.pk:
-            return list(BasicCredential.objects.filter(principal=self.principal))
-        return []
+        return self.basic_credentials
+
+    @basic.setter
+    def basic(self, value):
+        self.basic_credentials = value
 
     @property
     def otp(self):
-        if self.principal.pk:
-            return list(OneTimePasswordCredential.objects.filter(principal=self.principal))
-        return []
+        return self.otp_credentials
+
+    @otp.setter
+    def otp(self, value):
+        self.otp_credentials = value
 
 
 class Principal(AbstractReplicatableModel):
@@ -1002,6 +1017,8 @@ class Principal(AbstractReplicatableModel):
     last_login = models.DateTimeField(blank=True, null=True)
     salt = models.BinaryField()
     roles = models.ManyToManyField(Role, through='PrincipalRoleMembership', through_fields=('principal', 'role'))
+    is_email_verified = models.BooleanField(default=False)
+    is_phone_verified = models.BooleanField(default=False)
 
 
 
@@ -1286,13 +1303,17 @@ class Principal(AbstractReplicatableModel):
         if not self.salt:
             self.salt = urandom(64)
 
+        super(Principal, self).save(*args, **kwargs)
+
         for identity in self.identities.basic:
+            identity.principal = self
             identity.save()
 
         for credential in itertools.chain(self.credentials.basic, self.credentials.otp):
+            credential.principal = self
             credential.save()
 
-        super(Principal, self).save(*args, **kwargs)
+
 
     def __str__(self):
         return self.full_name or self.brief_name or self.email
@@ -1306,7 +1327,7 @@ class ValidationToken(AbstractReplicatableModel):
     principal = models.ForeignKey(Principal, null=True, blank=True, related_name='+', on_delete=models.CASCADE,
                                   editable=False)
     # email = models.EmailField(max_length=255, editable=False)
-    identifier = models.CharField(max_length= 255, choices= VALIDATION_TOKEN_IDENTIFIER_CHOICES, editable=False, default='undefined')
+    identifier_type = models.CharField(max_length= 255, choices= VALIDATION_TOKEN_IDENTIFIER_CHOICES, editable=False, default='undefined')
     identifier_value = models.CharField(max_length=255, null=True)
     type = models.CharField(max_length=255, choices=VALIDATION_TOKEN_TYPE_CHOICES, editable=False)
     secret = models.CharField(max_length=64, unique=True, editable=False)

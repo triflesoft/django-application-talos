@@ -37,6 +37,7 @@ class OTPBaserSerializeMixin():
         self.otp_directory = OneTimePasswordCredentialDirectory.objects.get(
             code=self.directory_code)
 
+        # TODO: Should be removed
         if otp_code != '123456':
             raise serializers.ValidationError('OTP Code is incorrect',
                                               code='otp_code_incorrect')
@@ -278,7 +279,7 @@ class GoogleAuthenticatorDeleteRequestSerializer(BasicSerializer):
 
     def save(self):
         validation_token = ValidationToken()
-        validation_token.identifier = 'email'
+        validation_token.identifier_type = 'email'
         validation_token.identifier_value = self.principal.email
         validation_token.principal = self.principal
         validation_token.type = self.token_type
@@ -491,7 +492,7 @@ class EmailChangeRequestSerializer(BasicSerializer):
         new_email = self.validated_data['new_email']
 
         validation_token = ValidationToken()
-        validation_token.identifier = 'email'
+        validation_token.identifier_type = 'email'
         validation_token.identifier_value = new_email
         validation_token.principal = self.request.principal
         validation_token.type = self.token_type
@@ -624,7 +625,7 @@ class EmailResetRequestSerializer(BasicSerializer):
         old_email = self.validated_data['old_email']
 
         validation_token = ValidationToken()
-        validation_token.identifier = 'email'
+        validation_token.identifier_type = 'email'
         validation_token.identifier_value = new_email
         principal = Principal.objects.get(email=old_email)
         validation_token.principal = principal
@@ -753,7 +754,7 @@ class PhoneChangeRequestSerializer(BasicSerializer):
         new_phone = self.validated_data['new_phone']
 
         validation_token = ValidationToken()
-        validation_token.identifier = 'phone'
+        validation_token.identifier_type = 'phone'
         validation_token.identifier_value = new_phone
         validation_token.principal = self.request.principal
         validation_token.type = self.token_type
@@ -855,7 +856,7 @@ class PhoneResetRequestSerializer(BasicSerializer):
         email = self.validated_data['email']
 
         validation_token = ValidationToken()
-        validation_token.identifier = 'phone'
+        validation_token.identifier_type = 'phone'
         validation_token.identifier_value = new_phone
         principal = Principal.objects.get(email=email)
         validation_token.principal = principal
@@ -959,7 +960,7 @@ class PasswordResetRequestSerializer(BasicSerializer):
         email = self.validated_data['email']
 
         validation_token = ValidationToken()
-        validation_token.identifier = 'email'
+        validation_token.identifier_type = 'email'
         validation_token.identifier_value = email
         validation_token.principal = self.principal
         validation_token.type = self.token_type
@@ -1141,12 +1142,15 @@ class LdapLoginSerializer(BasicSerializer):
 
 # # # Registration # # #
 class RegistrationRequestSerializer(BasicSerializer):
-    # TODO: brief_name
+    brief_name = serializers.CharField(max_length=250, required=False)
     full_name = serializers.CharField(max_length=250, required=False)
     username = serializers.CharField(max_length=250, required=False)
     email = serializers.CharField(max_length=250, required=False)
     phone = serializers.CharField(max_length=250, required=False)
     password = serializers.CharField(max_length=250, required=False)
+
+    def validate_brief_name(self, brief_name):
+        return brief_name
 
     def validate_full_name(self, full_name):
         return full_name
@@ -1198,6 +1202,8 @@ class RegistrationRequestSerializer(BasicSerializer):
         import pyotp
 
         principal = Principal()
+        if self.validated_data.get('brief_name'):
+            principal.brief_name = self.validated_data.get('brief_name')
         principal.full_name = self.validated_data.get('full_name', None)
         principal.email = self.validated_data.get('email', None)
         principal.phone = self.validated_data.get('phone', None)
@@ -1211,7 +1217,7 @@ class RegistrationRequestSerializer(BasicSerializer):
             basic_identity.directory = BasicIdentityDirectory.objects.get(code='basic_internal')
             basic_identity.username = self.validated_data['username']
 
-            principal.basic_identity = basic_identity
+            principal.identities.basic.append(basic_identity)
 
         if self.validated_data.get('password'):
             basic_credential = BasicCredential()
@@ -1225,8 +1231,7 @@ class RegistrationRequestSerializer(BasicSerializer):
             basic_credential.force_change = False
             basic_credential.set_password(self.validated_data['password'])
 
-
-            principal.basic_credential = basic_credential
+            principal.credentials.basic.append(basic_credential)
 
         if self.validated_data.get('phone'):
             otp_credential = OneTimePasswordCredential()
@@ -1238,7 +1243,7 @@ class RegistrationRequestSerializer(BasicSerializer):
             salt = pyotp.random_base32()
             otp_credential.salt = salt
 
-            principal.otp_credential = otp_credential
+            principal.credentials.otp.append(otp_credential)
 
         serialized = json.dumps(principal, cls=CustomJSONEncoder)
 
@@ -1251,7 +1256,7 @@ class RegistrationConfirmationSerializer(BasicSerializer):
     token = serializers.CharField(max_length=250)
     code = serializers.CharField(max_length=100)
 
-    # TODO: brief_name
+    brief_name = serializers.CharField(max_length=250, required=False)
     full_name = serializers.CharField(max_length=250, required=False)
     email = serializers.CharField(max_length=250, required=False)
     phone = serializers.CharField(max_length=250, required=False)
@@ -1291,7 +1296,6 @@ class RegistrationConfirmationSerializer(BasicSerializer):
 
         token = attrs['token']
         code = attrs['code']
-        is_completed = attrs['is_completed']
 
         if not self.request.session.get(token):
             raise serializers.ValidationError('Your token is invalid',
@@ -1299,7 +1303,9 @@ class RegistrationConfirmationSerializer(BasicSerializer):
 
         self.principal = json.loads(self.request.session[token], cls=CustomJSONDecoder)
 
-        otp_directory = OneTimePasswordCredentialDirectory.objects.get(code=PHONE_SMS_CREDENTIAL_DIRECTORY_CODE)
+        otp_credential = self.principal.credentials.otp[0]
+
+        otp_directory = otp_credential.directory
 
         if code != '123456':
             raise serializers.ValidationError('Code is incorrect',
@@ -1318,47 +1324,37 @@ class RegistrationConfirmationSerializer(BasicSerializer):
         token = self.validated_data['token']
         is_completed = self.validated_data['is_completed']
 
+        if self.validated_data.get('brief_name'):
+            self.principal.brief_name = self.validated_data['brief_name']
+
+        if self.validated_data.get('full_name'):
+            self.principal.full_name = self.validated_data['full_name']
+
+        if self.validated_data.get('email'):
+            self.principal.email = self.validated_data['email']
+
+        if self.validated_data.get('phone'):
+            self.principal.phone = self.validated_data['phone']
+
+        if self.validated_data.get('email'):
+            self.basic_identity.username = self.validated_data['email']
+
+        if self.validated_data.get('password'):
+            self.basic_credential.set_password(self.validated_data['password'])
+
+
         if is_completed:
-            # TODO: Update field values
             try:
                 self.principal.save()
             except Exception as e:
+                print(e)
                 raise serializers.ValidationError('Something went wrong while saving principal',
                                                   code='internal_error')
 
-            self.principal.basic_identity.principal = self.principal
-            self.principal.basic_credential.principal = self.principal
-            self.principal.otp_credential.principal = self.principal
-
-            try:
-                self.principal.basic_identity.save()
-                self.principal.basic_credential.save()
-                self.principal.otp_credential.save()
-
-                del self.request.session[token]
-            except Exception as e:
-                raise serializers.ValidationError('Something went wrong while saving principal related objects',
-                                                  code='internal_error')
+            del self.request.session[token]
         else:
-            if self.validated_data.get('full_name'):
-                self.principal.full_name = self.validated_data['full_name']
-
-            if self.validated_data.get('email'):
-                self.principal.email = self.validated_data['email']
-
-            if self.validated_data.get('phone'):
-                self.principal.phone = self.validated_data['phone']
-
-            if self.validated_data.get('email'):
-                self.basic_identity.username = self.validated_data['email']
-
-            if self.validated_data.get('password'):
-                self.basic_credential.set_password(self.validated_data['password'])
-
             try:
-                #TODO: just assign model, not a JSON
                 self.request.session[token] = json.dumps(self.principal, cls=CustomJSONEncoder)
-                #self.request.session[token] = self.principal
             except Exception as e:
                 raise serializers.ValidationError('Something went wrong while serializing principal object',
                                                   code='internal_error')
@@ -1372,7 +1368,6 @@ class RegistrationMessageSerializer(BasicSerializer):
             raise serializers.ValidationError('Your token is invalid', code=constants.TOKEN_INVALID_CODE)
         return token
 
-
     def send(self):
         import json
         from talos.helpers.session import CustomJSONDecoder
@@ -1380,7 +1375,7 @@ class RegistrationMessageSerializer(BasicSerializer):
         token = self.validated_data['token']
         principal = json.loads(self.request.session[token], cls=CustomJSONDecoder)
 
-        otp_credential = principal.otp_credential
+        otp_credential = principal.credentials.otp[0]
         otp_directory = otp_credential.directory
         otp_directory.send_otp(principal, otp_credential)
 

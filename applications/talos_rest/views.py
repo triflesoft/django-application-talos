@@ -693,9 +693,11 @@ class RegistrationRequestView(SecureAPIViewBaseView):
 class RegistrationMessageView(SecureAPIViewBaseView):
     serializer_class = RegistrationMessageSerializer
 
-    def post(self, request):
+    def post(self, request, id):
         context = super(RegistrationMessageView, self).get_serializer_context()
-        serializer = RegistrationMessageSerializer(data=request.data, context=context)
+        data = request.data
+        data['token'] = id
+        serializer = RegistrationMessageSerializer(data=data, context=context)
 
         if serializer.is_valid(raise_exception=False):
             serializer.send()

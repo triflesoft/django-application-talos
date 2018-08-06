@@ -32,9 +32,9 @@ class CustomJSONEncoder(JSONEncoder):
 
             fields = {}
             fields['principal'] = model_serializer.serialize('json', [obj])
-            fields['basic_identity'] = model_serializer.serialize('json', [obj.basic_identity])
-            fields['basic_credential'] = model_serializer.serialize('json', [obj.basic_credential])
-            fields['otp_credential'] = model_serializer.serialize('json', [obj.otp_credential])
+            fields['basic_identities'] = model_serializer.serialize('json', obj.identities.basic)
+            fields['basic_credentials'] = model_serializer.serialize('json', obj.credentials.basic)
+            fields['otp_credentials'] = model_serializer.serialize('json', obj.credentials.otp)
 
             return {
                 '__type': 'django-talos-principal',
@@ -70,17 +70,14 @@ class CustomJSONDecoder(JSONDecoder):
             model_class = apps.get_model(obj['__application'], obj['__model'])
 
             principal = list(model_serializer.deserialize('json', obj['fields']['principal']))[0].object
-            basic_identity = list(model_serializer.deserialize('json', obj['fields']['basic_identity']))[0].object
-            basic_credential = list(model_serializer.deserialize('json', obj['fields']['basic_credential']))[0].object
-            otp_credential = list(model_serializer.deserialize('json', obj['fields']['otp_credential']))[0].object
 
-            basic_identity.principal = principal
-            basic_credential.principal = principal
-            otp_credential.principal = principal
+            basic_identities = [obj.object for obj in list(model_serializer.deserialize('json', obj['fields']['basic_identities']))]
+            basic_credentials = [obj.object for obj in list(model_serializer.deserialize('json', obj['fields']['basic_credentials']))]
+            otp_credentials = [obj.object for obj in list(model_serializer.deserialize('json', obj['fields']['otp_credentials']))]
 
-            principal.basic_identity = basic_identity
-            principal.basic_credential = basic_credential
-            principal.otp_credential = otp_credential
+            principal.identities.basic = basic_identities
+            principal.credentials.basic = basic_credentials
+            principal.credentials.otp = otp_credentials
 
             return principal
 
