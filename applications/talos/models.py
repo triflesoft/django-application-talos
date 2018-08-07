@@ -13,6 +13,7 @@ VALIDATION_TOKEN_TYPE_CHOICES = [
     ('principal_registration', 'Principal registration'),
     ('password_reset', 'Password reset'),
     ('email_change', 'E-mail change'),
+    ('email_activation', 'Email activation'),
 ]
 
 VALIDATION_TOKEN_IDENTIFIER_CHOICES = [

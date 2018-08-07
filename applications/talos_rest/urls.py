@@ -4,7 +4,6 @@ from .views import SessionAPIView, EmailChangeRequestAPIView, \
     GoogleAuthenticationActivateRequestView, \
     GoogleAuthenticatorDeleteView, \
  \
-    AddEvidenceView, \
     EmailChangeValidationTokenCheckerAPIView, \
     PasswordResetRequestView, \
     GoogleAuthenticatorDeleteRequestView, GoogleAuthenticatorActivateConfirmView, \
@@ -17,10 +16,8 @@ from .views import SessionAPIView, EmailChangeRequestAPIView, \
  \
     EmailResetAPIView, \
     PasswordChangeView, PasswordResetView, \
-    PasswordResetTokenCheckerAPIView, SendOTPView,  \
-    RegistrationRequestView, RegistrationMessageView
-
-
+    PasswordResetTokenCheckerAPIView, SendOTPView, \
+    RegistrationRequestView, RegistrationMessageView, EmailActivationRequestView, EmailActivationConfirmationView
 
 PHONE_SMS_CREDENTIAL_DIRECTORY_CODE = 'onetimepassword_internal_phone_sms_authenticator'
 GOOGLE_OTP_CREDENTIAL_DIRECTORY_CODE = 'onetimepassword_internal_google_authenticator'
@@ -72,7 +69,6 @@ urlpatterns = [
 
     path('principal/password/reset/', PasswordResetView.as_view(),name='password-reset-secure'),
 
-
     path('google-authenticator/activate/request', GoogleAuthenticationActivateRequestView.as_view(),
          name='google-authenticator-activate-request'),
     path('google-authenticator/activate/confirm', GoogleAuthenticatorActivateConfirmView.as_view(),
@@ -83,16 +79,16 @@ urlpatterns = [
     path('google-authenticator/delete/confirm', GoogleAuthenticatorDeleteView.as_view(),
          name='google-authenticator-delete-confirm'),
 
-    path('send-otp/', SendOTPView.as_view(),
+    path('otp-message/', SendOTPView.as_view(),
          name='send-otp'),
-
-    path('evidence/', AddEvidenceView.as_view(),
-         name='add-evidence-sms'),
 
     path('principal/password/', PasswordChangeView.as_view(), name='password-change-insecure'),
 
     path('registration/', RegistrationRequestView.as_view(), name='registration'),
     path('registration/<slug:id>', RegistrationRequestView.as_view(),name='registration-confirmation'),
     path('registration/<slug:id>/message/', RegistrationMessageView.as_view(), name='registration-message'),
+
+    path('email-activation-message/', EmailActivationRequestView.as_view(), name='email-activation-request'),
+    path('email-activation/<slug:secret>/confirmation/', EmailActivationConfirmationView.as_view(), name='email-activation-confirmation'),
 
 ]

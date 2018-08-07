@@ -28,12 +28,11 @@ from .serializers import SessionSerializer, \
     PhoneResetRequestSerializer, \
     PhoneResetValidationTokenCheckerSerializer, \
  \
-    \
-    PasswordResetValidationTokenSerializer, PasswordChangeBaseSerialize, AddEvidenceBaseSerialize, \
+    PasswordResetValidationTokenSerializer, PasswordChangeBaseSerialize, \
     PhoneResetBaseSerialize, PhoneChangeBaseSerialize, EmailResetBaseSerializer, EmailChangeBaseSerialize, \
     PasswordResetBaseSerializer, SendOTPSerializer, \
     RegistrationRequestSerializer, RegistrationMessageSerializer, \
-    RegistrationConfirmationSerializer
+    RegistrationConfirmationSerializer, EmailActivationRequestSerializer, EmailActivationConfirmationSerializer
 
 from talos_rest.permissions import IsAuthenticated, IsBasicAuthenticated, IsSecureLevelOn
 
@@ -149,6 +148,20 @@ class SessionAPIView(SecureAPIViewBaseView):
         else:
             raise APIValidationError(detail=serializer.errors)
 
+    def patch(self, request):
+        kwargs = super(SessionAPIView, self).get_serializer_context()
+        serializer = SessionSerializer(data=request.data, context=kwargs)
+
+        if serializer.is_valid(raise_exception=False):
+            serializer.save()
+            data = {
+                'status' : status.HTTP_200_OK,
+                'result' : {}
+            }
+            return Response(data, status=status.HTTP_200_OK)
+        else:
+            raise APIValidationError(detail=serializer.errors)
+
     def delete(self, request):
         self.request.session.flush()
         res = {
@@ -244,24 +257,6 @@ class SendOTPView(SecureAPIViewBaseView):
             }
             return Response(error_response, status.HTTP_400_BAD_REQUEST)
 
-class AddEvidenceView(SecureAPIViewBaseView):
-    permission_classes = (IsBasicAuthenticated,)
-    serializer_class = AddEvidenceBaseSerialize
-
-    def post(self, request):
-        kwargs = super(AddEvidenceView, self).get_serializer_context()
-
-        serializer = AddEvidenceBaseSerialize(data=request.data,
-                                                 context=kwargs)
-        if serializer.is_valid(raise_exception=False):
-            serializer.save()
-            data = {
-                'status' : status.HTTP_200_OK,
-                'result' : {}
-            }
-            return Response(data, status.HTTP_200_OK)
-        else:
-            raise APIValidationError(serializer.errors)
 
 class EmailChangeRequestAPIView(SecureAPIViewBaseView):
     serializer_class = EmailChangeRequestSerializer
@@ -578,5 +573,42 @@ class RegistrationMessageView(SecureAPIViewBaseView):
                 }
             }
             return Response(response, status=status.HTTP_200_OK)
+        else:
+            raise APIValidationError(serializer.errors)
+
+class EmailActivationRequestView(SecureAPIViewBaseView):
+    serializer_class = EmailActivationRequestSerializer
+
+    def post(self, request):
+        context = super(EmailActivationRequestView, self).get_serializer_context()
+        serializer = EmailActivationRequestSerializer(data=request.data, context=context)
+
+        if serializer.is_valid(raise_exception=True):
+            serializer.save()
+            data = {
+                'status' : status.HTTP_200_OK,
+                'result' : {}
+            }
+            return Response(data, status=status.HTTP_200_OK)
+        else:
+            raise APIValidationError(serializer.errors)
+
+
+class EmailActivationConfirmationView(SecureAPIViewBaseView):
+    serializer_class = EmailActivationConfirmationSerializer
+
+    def post(self, request, secret):
+        context = super(EmailActivationConfirmationView, self).get_serializer_context()
+        data = request.data
+        data['secret'] = secret
+
+        serializer = EmailActivationConfirmationSerializer(data=data, context=context)
+        if serializer.is_valid(raise_exception=False):
+            serializer.save()
+            data = {
+                'status' : status.HTTP_200_OK,
+                'result' : {}
+            }
+            return Response(data, status=status.HTTP_200_OK)
         else:
             raise APIValidationError(serializer.errors)

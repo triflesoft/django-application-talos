@@ -1,5 +1,4 @@
 from django.template.loader import render_to_string
-from django.core.mail import send_mail
 from django.urls import reverse
 from rest_framework import serializers
 from talos.models import Principal, BasicIdentityDirectory, BasicCredentialDirectory, BasicIdentity, BasicCredential, \
@@ -8,6 +7,8 @@ from talos.models import ValidationToken
 from talos.models import _tznow
 from rest_framework import status
 from talos_rest import constants
+from talos_rest.validators import validate_email as  talos_rest_validate_email
+from talos_rest.validators import validate_phone as talos_rest_validate_phone
 
 PHONE_SMS_CREDENTIAL_DIRECTORY_CODE = 'onetimepassword_internal_phone_sms_authenticator'
 GOOGLE_OTP_CREDENTIAL_DIRECTORY_CODE = 'onetimepassword_internal_google_authenticator'
@@ -63,7 +64,6 @@ class ValidateSecretWhenLogedInMixin():
         self.token = None
         super(ValidateSecretWhenLogedInMixin, self).__init__(*args, **kwargs)
 
-
     def validate_secret(self, token):
         try:
             self.token = ValidationToken.objects.get(secret=token, type=self.token_type, expires_at__gt=_tznow(), is_active=True)
@@ -81,7 +81,6 @@ class ValidateSecretWhenLoggedOutMixin():
         self.fields['secret'] = serializers.CharField(label='Token', max_length=255)
         self.token = None
         super(ValidateSecretWhenLoggedOutMixin, self).__init__(*args, **kwargs)
-
 
     def validate_secret(self, token):
         try:
@@ -125,13 +124,18 @@ class BasicSerializer(serializers.Serializer):
         return final_data
 
 
-class SessionSerializer(BasicSerializer):
+class SessionSerializer(OTPBaserSerializeMixin, BasicSerializer):
     email = serializers.CharField(label='Email', help_text='Please enter email')
     password = serializers.CharField(label='Password', help_text='Please enter password')
 
     def __init__(self, *args, **kwargs):
         from talos.models import BasicIdentityDirectory
         super(SessionSerializer, self).__init__(*args, **kwargs)
+
+        if self.request.method in ['POST']:
+            self.fields['otp_code'].required = False
+        else:
+            self.fields['otp_code'].required = True
 
         self.identity_directory = BasicIdentityDirectory.objects.get(
             code=self.identity_directory_code)
@@ -164,8 +168,20 @@ class SessionSerializer(BasicSerializer):
                 code=constants.PASSWORD_INVALID_CODE)
 
     def save(self):
-        self.principal._load_authentication_context(self.evidences)
-        self.request.principal = self.principal
+        if self.request.method in ['POST']:
+            self.principal._load_authentication_context(self.evidences)
+            self.request.principal = self.principal
+        else:
+            from talos.models import Evidence
+
+            credential_directory = self.principal.credentials.otp[0].directory
+            evidences = list(credential_directory.provided_evidences.all().order_by('id'))
+
+            evidence_codes = [evidence.code for evidence in evidences]
+            evidence_codes.extend(self.request.principal.get_current_evidence_code_list())
+            provided_evidences = Evidence.objects.filter(code__in=evidence_codes)
+            self.principal._load_authentication_context(provided_evidences)
+            self.request.principal = self.principal
 
 
 class GoogleAuthenticatorActivateRequestSerializer(ValidatePasswordMixin, BasicSerializer):
@@ -228,7 +244,7 @@ class GoogleAuthenticatorActivateConfirmSerializer(BasicSerializer):
         if self.otp_credential_directory:
             self.otp_credential_directory.create_credentials(self.principal,
                                                              {'salt': self.request.session[
-                                                                 'temp_otp_secret_key']})
+                                                              'temp_otp_secret_key']})
             self.salt = self.request.session['temp_otp_secret_key']
             del self.request.session['temp_otp_secret_key']
             del self.request.session['secret_key_activated']
@@ -239,7 +255,6 @@ class GoogleAuthenticatorDeleteRequestSerializer(BasicSerializer):
 
     def __init__(self, *args, **kwargs):
         super(GoogleAuthenticatorDeleteRequestSerializer, self).__init__(*args, **kwargs)
-
 
     def save(self):
         validation_token = ValidationToken()
@@ -297,23 +312,6 @@ class SendOTPSerializer(BasicSerializer):
 
 
 
-
-class AddEvidenceBaseSerialize(OTPBaserSerializeMixin, BasicSerializer):
-    def __init__(self, *args, **kwargs):
-        super(AddEvidenceBaseSerialize, self).__init__(*args, **kwargs)
-
-        self.otp_directory = self.principal.credentials.otp[0].directory
-        self.otp_evidences = self.otp_directory.provided_evidences.all().order_by('-id')
-
-    def save(self):
-        from talos.models import Evidence
-
-        evidence_codes = [evidence.code for evidence in self.otp_evidences]
-        evidence_codes.extend(self.principal.get_current_evidence_code_list())
-        provided_evidences = Evidence.objects.filter(code__in=evidence_codes)
-        self.principal._load_authentication_context(provided_evidences)
-
-
 class EmailChangeRequestSerializer(BasicSerializer):
     token_type = 'email_change'
 
@@ -322,22 +320,13 @@ class EmailChangeRequestSerializer(BasicSerializer):
     def __init__(self, *args, **kwargs):
         super(EmailChangeRequestSerializer, self).__init__(*args, **kwargs)
 
-    def validate_new_email(self, value):
-        new_email = value
+    def validate_new_email(self, new_email):
+        return talos_rest_validate_email(new_email, validate_uniqueness=True)
 
-
-
-        try:
-            Principal.objects.get(email=new_email)
-            raise serializers.ValidationError(
-                'Principal with provided e-mail is already registered.',
-                code=constants.EMAIL_USED_CODE)
-        except Principal.DoesNotExist:
-            pass
-
-        return new_email
 
     def save(self):
+        from talos_rest.utils import send_email
+
         new_email = self.validated_data['new_email']
 
         validation_token = ValidationToken()
@@ -350,29 +339,16 @@ class EmailChangeRequestSerializer(BasicSerializer):
         context = {
             'email' : new_email,
             'url' : 'http://localhost:8000/email-change-validation/{}'.format(validation_token.secret)
-
         }
 
-        mail_subject = render_to_string('talos/email_change/request_email_subject.txt', context)
-        mail_body_text = render_to_string('talos/email_change/request_email_body.txt', context)
-        mail_body_html = render_to_string('talos/email_change/request_email_body.html', context)
-
-        send_mail(
-            subject=mail_subject,
-            message=mail_body_text,
-            html_message=mail_body_html,
-            from_email=None,
-            recipient_list=[new_email],
-            fail_silently=True
-        )
-
+        send_email(context,
+                   [new_email],
+                   'talos/email_change/request_email_subject.txt',
+                   'talos/email_change/request_email_body.txt',
+                   'talos/email_change/request_email_body.html')
 
 
 class EmailChangeValidationTokenCheckerSerializer(ValidateSecretWhenLogedInMixin, BasicSerializer):
-    """
-    Validate token from Email Change
-    if token is valid it means that email is validated successfully
-    """
     token_type = 'email_change'
 
     def __init__(self, *args, **kwargs):
@@ -386,12 +362,12 @@ class EmailChangeBaseSerialize(OTPBaserSerializeMixin,
     token_type = 'email_change'
 
     def __init__(self, *args, **kwargs):
-
         super(EmailChangeBaseSerialize, self).__init__(*args, **kwargs)
 
     def save(self):
         from talos.models import BasicIdentity
         from talos.contrib.sms_sender import SMSSender
+        from talos_rest.utils import send_email
 
         old_email = self.token.principal.email
 
@@ -410,18 +386,11 @@ class EmailChangeBaseSerialize(OTPBaserSerializeMixin,
             'email': self.token.principal.email,
         }
 
-        mail_subject = render_to_string('talos/email_change/confirmed_email_subject.txt', context)
-        mail_body_text = render_to_string('talos/email_change/confirmed_email_body.txt', context)
-        mail_body_html = render_to_string('talos/email_change/confirmed_email_body.html', context)
+        send_email(context, [self.token.principal.email, old_email],
+                   'talos/email_change/confirmed_email_subject.txt',
+                   'talos/email_change/confirmed_email_body.txt',
+                   'talos/email_change/confirmed_email_body.html')
 
-        send_mail(
-            subject=mail_subject,
-            message=mail_body_text,
-            html_message=mail_body_html,
-            from_email=None,
-            recipient_list=[self.token.principal.email, old_email],
-            fail_silently=True
-        )
 
         mail_change_text = render_to_string('talos/email_change/confirmed_email_body_mobile.txt')
         sms_sender = SMSSender()
@@ -437,35 +406,16 @@ class EmailResetRequestSerializer(BasicSerializer):
         super(EmailResetRequestSerializer, self).__init__(*args, **kwargs)
 
     def validate_new_email(self, new_email):
-        from talos_rest.validators import validate_email
+        return talos_rest_validate_email(new_email, validate_uniqueness=True)
 
-        validate_email(new_email)
-
-        try:
-            Principal.objects.get(email=new_email)
-            raise serializers.ValidationError(
-                'Principal with provided e-mail is already registered.',
-                code=constants.EMAIL_USED_CODE)
-        except Principal.DoesNotExist:
-            pass
-
-        return new_email
 
     def validate_old_email(self, email):
-        from talos_rest.validators import validate_email
+        return talos_rest_validate_email(email, validate_existance=True)
 
-        validate_email(email)
-
-        try:
-            Principal.objects.get(email=email)
-        except Principal.DoesNotExist:
-            raise serializers.ValidationError(
-                'Principal with provided email not exists',
-                code=constants.EMAIL_INVALID_CODE)
-
-        return email
 
     def save(self):
+        from talos_rest.utils import send_email
+
         new_email = self.validated_data['new_email']
         old_email = self.validated_data['old_email']
 
@@ -489,20 +439,10 @@ class EmailResetRequestSerializer(BasicSerializer):
             'recipient_name' : self.request.principal.full_name
         }
 
-        mail_subject = render_to_string('talos/email_reset/request_email_reset_subject.txt', context)
-        mail_body_text = render_to_string('talos/email_reset/request_email_reset_body.txt', context)
-        mail_body_html = render_to_string('talos/email_reset/request_email_reset_body.html', context)
-
-        send_mail(
-            subject=mail_subject,
-            message=mail_body_text,
-            html_message=mail_body_html,
-            from_email=None,
-            recipient_list=[self.token.principal.email],
-            fail_silently=True
-        )
-
-
+        send_email(context, [self.token.principal.email],
+                   'talos/email_reset/request_email_reset_subject.txt',
+                   'talos/email_reset/request_email_reset_body.txt',
+                   'talos/email_reset/request_email_reset_body.html')
 
 
 class EmailResetValidationTokenCheckerSerializer(ValidateSecretWhenLoggedOutMixin, BasicSerializer):
@@ -520,29 +460,19 @@ class EmailResetBaseSerializer(BasicSerializer):
         super(EmailResetBaseSerializer, self).__init__(*args, **kwargs)
 
     def validate_token(self, token):
-        """ Validate token"""
         try:
-            self.token = ValidationToken.objects.get(
-                secret=token,
-                type=self.token_type,
-                expires_at__gt=_tznow(),
-                is_active=True
-            )
-
+            self.token = ValidationToken.objects.get(secret=token, type=self.token_type, expires_at__gt=_tznow(), is_active=True)
+            self.principal = self.token.principal
         except ValidationToken.DoesNotExist:
-            self.token = None
-
-        if not self.token:
             raise serializers.ValidationError(
                 'Token is not valid.',
                 code=constants.TOKEN_INVALID_CODE)
-        else:
-            self.principal = self.token.principal
         return self.token
 
     def save(self):
         from talos.models import BasicIdentity
         from talos.contrib.sms_sender import SMSSender
+        from talos_rest.utils import send_email
 
         self.token.principal.email = self.token.identifier_value
         self.token.principal.save()
@@ -558,18 +488,12 @@ class EmailResetBaseSerializer(BasicSerializer):
             'email': self.principal.email
         }
 
-        mail_subject = render_to_string('talos/email_reset/confirmed_email_reset_subject.txt', context)
-        mail_body_text = render_to_string('talos/email_reset/confirmed_email_reset_body.txt', context)
-        mail_body_html = render_to_string('talos/email_reset/confirmed_email_reset_body.html', context)
+        send_email(context,
+                   [self.token.principal.email],
+                   'talos/email_reset/confirmed_email_reset_subject.txt',
+                   'talos/email_reset/confirmed_email_reset_body.txt',
+                   'talos/email_reset/confirmed_email_reset_body.html')
 
-        send_mail(
-            subject=mail_subject,
-            message=mail_body_text,
-            html_message=mail_body_html,
-            from_email=None,
-            recipient_list=[self.token.principal.email],
-            fail_silently=True
-        )
 
         phone_text = render_to_string('talos/email_reset/confirmed_email_reset_mobile.txt')
         sms_sender = SMSSender()
@@ -585,17 +509,11 @@ class PhoneChangeRequestSerializer(BasicSerializer):
         super(PhoneChangeRequestSerializer, self).__init__(*args, **kwargs)
 
     def validate_new_phone(self, new_phone):
-        try:
-            Principal.objects.get(phone=new_phone)
-            raise serializers.ValidationError(
-                'Principal with provided phone is already registered.',
-                code=constants.PHONE_USED_CODE)
-        except Principal.DoesNotExist:
-            pass
-
-        return new_phone
+        return talos_rest_validate_phone(new_phone, validate_uniqueness=True)
 
     def save(self):
+        from talos_rest.utils import send_email
+
         new_phone = self.validated_data['new_phone']
 
         validation_token = ValidationToken()
@@ -614,28 +532,15 @@ class PhoneChangeRequestSerializer(BasicSerializer):
         context = {
             'email': self.principal.email,
             'url': url
-
         }
 
-        mail_subject = render_to_string('talos/phone_change/request_phone_subject.txt', context)
-        mail_body_text = render_to_string('talos/phone_change/request_phone_body.txt', context)
-        mail_body_html = render_to_string('talos/phone_change/request_phone_body.html', context)
-
-        send_mail(
-            subject=mail_subject,
-            message=mail_body_text,
-            html_message=mail_body_html,
-            from_email=None,
-            recipient_list=[self.token.principal.email],
-            fail_silently=True
-        )
-
+        send_email(context,
+                  [self.token.principal.email],
+                  'talos/phone_change/request_phone_subject.txt',
+                  'talos/phone_change/request_phone_body.txt',
+                  'talos/phone_change/request_phone_body.html')
 
 class PhoneChangeValidationTokenCheckerSerializer(ValidateSecretWhenLogedInMixin, BasicSerializer):
-    """
-    Validate token from Phone Change
-    if token is valid it means that email is validated successfully
-    """
     token_type = 'phone_change'
 
     def __init__(self, *args, **kwargs):
@@ -671,31 +576,15 @@ class PhoneResetRequestSerializer(BasicSerializer):
         super(PhoneResetRequestSerializer, self).__init__(*args, **kwargs)
 
     def validate_new_phone(self, new_phone):
-        try:
-            Principal.objects.get(phone=new_phone)
-            raise serializers.ValidationError(
-                'Principal with provided phone is already registered.',
-                code=constants.PHONE_USED_CODE)
-        except Principal.DoesNotExist:
-            pass
+        return talos_rest_validate_phone(new_phone, validate_uniqueness=True)
 
-        return new_phone
 
     def validate_email(self, email):
-        from talos_rest.validators import validate_email
-
-        validate_email(email)
-
-        try:
-            Principal.objects.get(email=email)
-        except Principal.DoesNotExist:
-            raise serializers.ValidationError(
-                'Principal with provided email not exists',
-                code=constants.EMAIL_INVALID_CODE)
-
-        return email
+        return talos_rest_validate_email(email, validate_existance=True)
 
     def save(self):
+        from talos_rest.utils import send_email
+
         new_phone = self.validated_data['new_phone']
         email = self.validated_data['email']
 
@@ -718,18 +607,11 @@ class PhoneResetRequestSerializer(BasicSerializer):
             'url': url
         }
 
-        mail_subject = render_to_string('talos/phone_reset/request_phone_reset_subject.txt', context)
-        mail_body_text = render_to_string('talos/phone_reset/request_phone_reset_body.txt', context)
-        mail_body_html = render_to_string('talos/phone_reset/request_phone_reset_body.html', context)
-
-        send_mail(
-            subject=mail_subject,
-            message=mail_body_text,
-            html_message=mail_body_html,
-            from_email=None,
-            recipient_list=[self.token.principal.email],
-            fail_silently=True
-        )
+        send_email(context,
+                   [self.token.principal.email],
+                   'talos/phone_reset/request_phone_reset_subject.txt',
+                   'talos/phone_reset/request_phone_reset_body.txt',
+                   'talos/phone_reset/request_phone_reset_body.html')
 
 
 class PhoneResetValidationTokenCheckerSerializer(ValidateSecretWhenLoggedOutMixin, BasicSerializer):
@@ -747,24 +629,13 @@ class PhoneResetBaseSerialize(OTPBaserSerializeMixin, ValidatePasswordMixin, Bas
         super(PhoneResetBaseSerialize, self).__init__(*args, **kwargs)
 
     def validate_token(self, token):
-        """ Validate token"""
         try:
-            self.token = ValidationToken.objects.get(
-                secret=token,
-                type=self.token_type,
-                expires_at__gt=_tznow(),
-                is_active=True
-            )
-
+            self.token = ValidationToken.objects.get(secret=token, type=self.token_type, expires_at__gt=_tznow(), is_active=True)
+            self.principal = self.token.principal
         except ValidationToken.DoesNotExist:
-            self.token = None
-
-        if not self.token:
             raise serializers.ValidationError(
                 'Token is not valid.',
                 code=constants.TOKEN_INVALID_CODE)
-        else:
-            self.principal = self.token.principal
 
     def save(self):
         from talos.contrib.sms_sender import SMSSender
@@ -801,6 +672,8 @@ class PasswordResetRequestSerializer(BasicSerializer):
         return email
 
     def save(self):
+        from talos_rest.utils import send_email
+
         email = self.validated_data['email']
 
         validation_token = ValidationToken()
@@ -816,9 +689,7 @@ class PasswordResetRequestSerializer(BasicSerializer):
             self.request.scheme,
             self.request.META.get('HTTP_HOST', 'test_host'),
             '/account/reset-password/{0}'.format(validation_token.secret)
-            #reverse('password-reset-validation', args=[self.token.secret])
         )
-
 
         context = {
             'email': email,
@@ -826,19 +697,11 @@ class PasswordResetRequestSerializer(BasicSerializer):
             'recipient_name': validation_token.principal.full_name,
         }
 
-
-        mail_subject = render_to_string('talos/email_change/request_email_subject.txt', context)
-        mail_body_text = render_to_string('talos/email_change/request_email_body.txt', context)
-        mail_body_html = render_to_string('talos/email_change/request_email_body.html', context)
-
-        send_mail(
-            subject=mail_subject,
-            message=mail_body_text,
-            html_message=mail_body_html,
-            from_email=None,
-            recipient_list=[email],
-            fail_silently=True)
-
+        send_email(context,
+                   [email],
+                   'talos/email_change/request_email_subject.txt',
+                   'talos/email_change/request_email_body.txt',
+                   'talos/email_change/request_email_body.html')
 
 
 class PasswordResetValidationTokenSerializer(ValidateSecretWhenLoggedOutMixin,
@@ -849,19 +712,10 @@ class PasswordResetValidationTokenSerializer(ValidateSecretWhenLoggedOutMixin,
         super(PasswordResetValidationTokenSerializer, self).__init__(*args, **kwargs)
 
     def save(self):
-        from talos.models import OneTimePasswordCredential
-        from talos.models import OneTimePasswordCredentialDirectory
-        import pyotp
-
         principal = self.token.principal
-        otp_credential = OneTimePasswordCredential.objects.get(principal=principal)
+        otp_credential = principal.credentials.otp[0]
         otp_directory = otp_credential.directory
-
         otp_directory.send_otp(principal, otp_credential)
-
-        # TODO: This should be removed from production code, it's for only testing reasons
-        totp = pyotp.TOTP(otp_credential.salt, interval=300)
-        self.otp_code = totp.now()
 
 
 class PasswordResetBaseSerializer(OTPBaserSerializeMixin, BasicSerializer):
@@ -952,31 +806,10 @@ class RegistrationRequestSerializer(BasicSerializer):
         return full_name
 
     def validate_email(self, email):
-        from talos_rest.validators import validate_email
-
-        email = email.lower()
-        validate_email(email)
-
-        try:
-            Principal.objects.get(email=email)
-            raise serializers.ValidationError("Email is already used",
-                                              code=constants.EMAIL_USED_CODE)
-        except Principal.DoesNotExist:
-            pass
-        return email
+        return talos_rest_validate_email(email, validate_uniqueness=True)
 
     def validate_phone(self, phone):
-        from talos_rest.validators import validate_phone
-
-        validate_phone(phone)
-
-        try:
-            Principal.objects.get(phone=phone)
-            raise serializers.ValidationError("Phone is already used",
-                                              code=constants.PHONE_USED_CODE)
-        except Principal.DoesNotExist:
-            pass
-        return phone
+        return talos_rest_validate_phone(phone, validate_uniqueness=True)
 
     def validate_password(self, password):
         return password
@@ -1059,32 +892,10 @@ class RegistrationConfirmationSerializer(BasicSerializer):
     password = serializers.CharField(max_length=250, required=False)
 
     def validate_email(self, email):
-        from talos_rest.validators import validate_email
-
-        email = email.lower()
-        validate_email(email)
-
-        try:
-            Principal.objects.get(email=email)
-            raise serializers.ValidationError("Email is already used",
-                                              code=constants.EMAIL_USED_CODE)
-        except Principal.DoesNotExist:
-            pass
-        return email
+        return talos_rest_validate_email(email, validate_uniqueness=True)
 
     def validate_phone(self, phone):
-        from talos_rest.validators import validate_phone
-
-        validate_phone(phone)
-
-        try:
-            Principal.objects.get(phone=phone)
-            raise serializers.ValidationError("Phone is already used",
-                                              code=constants.PHONE_USED_CODE)
-        except Principal.DoesNotExist:
-            pass
-        return phone
-
+        return talos_rest_validate_phone(phone, validate_uniqueness=True)
 
     def validate(self, attrs):
         import json
@@ -1176,3 +987,56 @@ class RegistrationMessageSerializer(BasicSerializer):
         otp_directory.send_otp(principal, otp_credential)
 
         self.token = self.validated_data['token']
+
+class EmailActivationRequestSerializer(BasicSerializer):
+    def save(self):
+        from talos.models import ValidationToken
+        from talos_rest.utils import send_email
+
+        email = self.principal.email
+
+        validation_token = ValidationToken()
+        validation_token.identifier_type = 'email'
+        validation_token.identifier_value = email
+        validation_token.principal = self.principal
+        validation_token.type = 'email_activation'
+        validation_token.save()
+
+        url = '{0}://{1}{2}'.format(
+            self.request.scheme,
+            self.request.META.get('HTTP_HOST', 'test_host'),
+            '/account/email-activation/{0}'.format(validation_token.secret)
+        )
+
+        context = {
+            'email': email,
+            'url': url,
+            'recipient_name': validation_token.principal.full_name,
+        }
+
+        send_email(context,
+                   [email],
+                   'talos/email_activation/email_activation_request_subject.txt',
+                   'talos/email_activation/email_activation_request_body.txt',
+                   'talos/email_activation/email_activation_request_body.html')
+
+
+class EmailActivationConfirmationSerializer(BasicSerializer):
+    secret = serializers.CharField(max_length=250) 
+    
+    def validate_secret(self, secret): 
+        from talos.models import ValidationToken
+        try:
+            self.validation_token = ValidationToken.objects.get(secret=secret,
+                                                                is_active=True)
+        except ValidationToken.DoesNotExist:
+            raise serializers.ValidationError('Your token is invalid',
+                                              constants.TOKEN_INVALID_CODE)
+        return secret 
+    
+    def save(self):
+        self.validation_token.is_active = False
+        self.validation_token.save()
+
+        self.principal.is_email_verified = True
+        self.principal.save()

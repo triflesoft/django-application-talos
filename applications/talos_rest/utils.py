@@ -49,3 +49,21 @@ class ErrorResponse(object):
     @property
     def status(self):
         return self._status
+
+
+def send_email(context, recipient_list, mail_subject, mail_body_text, mail_body_html):
+    from django.template.loader import render_to_string
+    from django.core.mail import send_mail
+
+    mail_subject = render_to_string(mail_subject, context)
+    mail_body_text = render_to_string(mail_body_text, context)
+    mail_body_html = render_to_string(mail_body_html, context)
+
+    send_mail(
+        subject=mail_subject,
+        message=mail_body_text,
+        html_message=mail_body_html,
+        from_email=None,
+        recipient_list=recipient_list,
+        fail_silently=True
+    )
