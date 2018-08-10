@@ -193,8 +193,7 @@ class AppMigrationHelper(object):
 
             evidence_ownership_factor_google_authenticator, _ = Evidence.objects.get_or_create(
                 code='ownership_factor_google_authenticator',
-                defaults={'name' : 'Authenticated by Google Authenticator'}
-            )
+                defaults={'name': 'Authenticated by Google Authenticator'})
 
             evidence_inherence_factor, _ = Evidence.objects.get_or_create(
                 code='inherence_factor',
@@ -232,7 +231,7 @@ class AppMigrationHelper(object):
                     'name': 'Internal Anonymous Role Directory'})
 
             authenticated_role_directory, _ = RoleDirectory.objects.get_or_create(
-                code='authenticated_rinternal',
+                code='authenticated_internal',
                 defaults={
                     'backend_class': 'talos.directory.role.Internal',
                     'is_active': True,
@@ -364,7 +363,7 @@ class AppMigrationHelper(object):
                 TokenCredentialDirectoryProvidedEvidence.objects.get_or_create(directory=access_token_credential_directory, evidence=evidence)
 
             phone_sms_credential_directory, _ = OneTimePasswordCredentialDirectory.objects.get_or_create(
-                code='onetimepassword_internal_phone_sms_authenticator',
+                code='onetimepassword_internal_phone_sms',
                 defaults={
                     'backend_class': 'talos.directory.onetimepassword_credential.InternalPhoneSMS',
                     'is_active': True,

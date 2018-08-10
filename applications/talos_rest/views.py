@@ -1,17 +1,19 @@
-from django.utils.decorators import method_decorator
-
-from django.views.decorators.cache import never_cache
-
-from django.views.decorators.debug import sensitive_post_parameters
-
-from rest_framework.response import Response
-
-from talos_rest import permissions
-from .utils import SuccessResponse, ErrorResponse
-from rest_framework.generics import GenericAPIView
-from rest_framework import status
-# Serializer classes
 from .exceptions.custom_exceptions import APIValidationError
+from .utils import SuccessResponse, ErrorResponse
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import never_cache
+from django.views.decorators.debug import sensitive_post_parameters
+from rest_framework import status
+from rest_framework.generics import GenericAPIView
+from rest_framework.response import Response
+from talos.models import BasicCredentialDirectory
+from talos.models import BasicIdentityDirectory
+from talos_rest import permissions
+from talos_rest.permissions import IsAuthenticated
+from talos_rest.permissions import IsBasicAuthenticated
+from talos_rest.permissions import IsSecureLevelOn
+
+
 from .serializers import SessionSerializer, \
     GoogleAuthenticatorActivateRequestSerializer, \
     GoogleAuthenticatorDeleteSerializer, \
@@ -34,10 +36,7 @@ from .serializers import SessionSerializer, \
     RegistrationRequestSerializer, RegistrationMessageSerializer, \
     RegistrationConfirmationSerializer, EmailActivationRequestSerializer, EmailActivationConfirmationSerializer
 
-from talos_rest.permissions import IsAuthenticated, IsBasicAuthenticated, IsSecureLevelOn
 
-from talos.models import BasicIdentityDirectory
-from talos.models import BasicCredentialDirectory
 
 class TranslationContextMixin(object):
     def get_context_data(self, **kwargs):
@@ -114,18 +113,18 @@ class SessionAPIView(SecureAPIViewBaseView):
             credential_directory = self.request.user.credentials.otp[0].directory
             evidences = list(dict(self.request.principal._evidences_effective).keys())
             data = {
-                'status' : status.HTTP_200_OK,
-                'result' : {
-                    'session_id' : request.session._session.uuid,
-                    'email' : self.request.user.email,
-                    'full_name' : self.request.user.full_name,
-                    'phone' : self.request.user.phone,
-                    'provided_evidences' : evidences,
-                    'otp_credential_directory' : credential_directory.code
+                'status': status.HTTP_200_OK,
+                'result': {
+                    'session_id': request.session._session.uuid,
+                    'email': self.request.user.email,
+                    'full_name': self.request.user.full_name,
+                    'phone': self.request.user.phone,
+                    'provided_evidences': evidences,
+                    'otp_credential_directory': credential_directory.code
                 }
             }
-            return Response(data=data,
-                            status=status.HTTP_200_OK)
+
+            return Response(data=data, status=status.HTTP_200_OK)
 
     def post(self, request):
 
@@ -143,8 +142,7 @@ class SessionAPIView(SecureAPIViewBaseView):
                     'phone': serializer.principal.phone
                 }
             }
-            return Response(data,
-                            status=status.HTTP_200_OK)
+            return Response(data, status=status.HTTP_200_OK)
         else:
             raise APIValidationError(detail=serializer.errors)
 
@@ -526,9 +524,9 @@ class RegistrationRequestView(SecureAPIViewBaseView):
         if serializer.is_valid(raise_exception=False):
             serializer.save()
             response = {
-                'status' : status.HTTP_200_OK,
-                'result' : {
-                    'token' : serializer.uuid
+                'status': status.HTTP_200_OK,
+                'result': {
+                    'token': serializer.uuid
                 }
             }
             return Response(response, status=status.HTTP_200_OK)
@@ -545,8 +543,8 @@ class RegistrationRequestView(SecureAPIViewBaseView):
         if serializer.is_valid(raise_exception=False):
             serializer.save()
             response = {
-                'status' : status.HTTP_200_OK,
-                'result' : {}
+                'status': status.HTTP_200_OK,
+                'result': {}
             }
 
             return Response(response, status=status.HTTP_200_OK)
