@@ -691,7 +691,7 @@ class PasswordResetRequestSerializer(BasicSerializer):
         url = '{0}://{1}{2}'.format(
             self.request.scheme,
             self.request.META.get('HTTP_HOST', 'test_host'),
-            '/account/reset-password/{0}'.format(validation_token.secret)
+            '/account/reset-password-token#{0}'.format(validation_token.secret)
         )
 
         context = {
@@ -961,11 +961,11 @@ class RegistrationConfirmationSerializer(BasicSerializer):
             extra = self.validated_data.get('extra', {})
             try:
                 try:
-                    pre_registration.send(sender=self.principal.__class__, extra=extra)
+                    pre_registration.send(sender=self.principal.__class__, extra=extra, principal=self.principal)
                 except Exception as e:
                     raise serializers.ValidationError(e)
                 self.principal.save()
-                post_registration.send(sender=self.principal.__class__, extra=extra)
+                post_registration.send(sender=self.principal.__class__, extra=extra, principal=self.principal)
             except Exception as e:
                 print(e)
                 raise serializers.ValidationError('Something went wrong while saving principal',
