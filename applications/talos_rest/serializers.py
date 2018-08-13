@@ -136,6 +136,8 @@ class SessionSerializer(OTPBaserSerializeMixin, BasicSerializer):
             self.fields['otp_code'].required = False
         else:
             self.fields['otp_code'].required = True
+            self.fields['email'].required = False
+            self.fields['password'].required = False
 
         self.identity_directory = BasicIdentityDirectory.objects.get(
             code=self.identity_directory_code)
@@ -891,6 +893,8 @@ class RegistrationConfirmationSerializer(BasicSerializer):
     phone = serializers.CharField(max_length=250, required=False)
     password = serializers.CharField(max_length=250, required=False)
 
+    extra = serializers.DictField(required=False)
+
     def validate_email(self, email):
         return talos_rest_validate_email(email, validate_uniqueness=True)
 
@@ -927,6 +931,8 @@ class RegistrationConfirmationSerializer(BasicSerializer):
     def save(self):
         import json
         from talos.helpers.session import CustomJSONEncoder
+        from talos_rest.signals import pre_registration
+        from talos_rest.signals import post_registration
 
         token = self.validated_data['token']
         is_completed = self.validated_data['is_completed']
@@ -951,8 +957,14 @@ class RegistrationConfirmationSerializer(BasicSerializer):
 
 
         if is_completed:
+            extra = self.validated_data.get('extra', {})
             try:
+                try:
+                    pre_registration.send(sender=self.principal.__class__, extra=extra)
+                except Exception as e:
+                    raise serializers.ValidationError(e)
                 self.principal.save()
+                post_registration.send(sender=self.principal.__class__, extra=extra)
             except Exception as e:
                 print(e)
                 raise serializers.ValidationError('Something went wrong while saving principal',

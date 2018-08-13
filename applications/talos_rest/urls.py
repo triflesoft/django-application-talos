@@ -31,7 +31,7 @@ urlpatterns = [
          name='email-change-request'),
     path('email/email-change-token/<slug:secret>',
          EmailChangeValidationTokenCheckerAPIView.as_view(), name='email-change-token-validation'),
-    path('principal/email/', EmailChangeSecureAPIView.as_view(), name='email-change-insecure'),
+    path('principal/email/', EmailChangeSecureAPIView.as_view(), name='email-change'),
 
 
     # Email Reset
@@ -39,7 +39,7 @@ urlpatterns = [
          name='email-reset-request'),
     path('email/email_reset_token/<slug:secret>', EmailResetValidationTokenCheckerAPIView.as_view(),
          name='email-reset-token-validation'),
-    path('principal/reset/email/', EmailResetAPIView.as_view(), name='email-reset-insecure'),
+    path('principal/reset/email/', EmailResetAPIView.as_view(), name='email-reset'),
 
 
     # Phone Change
@@ -48,7 +48,7 @@ urlpatterns = [
     path('phone/phone_change_token/<slug:secret>',
          PhoneChangeValidationTokenCheckerAPIView.as_view(),
          name='phone-change-token-validation'),
-    path('principal/phone/', PhoneChangeSecureAPIView.as_view(), name='phone-change-insecure'),
+    path('principal/phone/', PhoneChangeSecureAPIView.as_view(), name='phone-change'),
 
 
     # Phone reset
@@ -58,7 +58,7 @@ urlpatterns = [
          PhoneResetValidationTokenCheckerAPIView.as_view(),
          name='phone-reset-token-validation'),
     path('principal/reset/phone/', PhoneResetAPIView.as_view(),
-         name='phone-reset-insecure'),
+         name='phone-reset'),
 
     # Password reset
     path('principal/password/reset-request/', PasswordResetRequestView.as_view(),
@@ -67,7 +67,7 @@ urlpatterns = [
     path('principal/password/reset-token/validate/', PasswordResetTokenCheckerAPIView.as_view(),
          name='password-reset-validation'),
 
-    path('principal/password/reset/', PasswordResetView.as_view(),name='password-reset-secure'),
+    path('principal/password/reset/', PasswordResetView.as_view(),name='password-reset'),
 
     path('google-authenticator/activate/request', GoogleAuthenticationActivateRequestView.as_view(),
          name='google-authenticator-activate-request'),
@@ -82,7 +82,7 @@ urlpatterns = [
     path('otp-message/', SendOTPView.as_view(),
          name='send-otp'),
 
-    path('principal/password/', PasswordChangeView.as_view(), name='password-change-insecure'),
+    path('principal/password/', PasswordChangeView.as_view(), name='password-change'),
 
     path('registration/', RegistrationRequestView.as_view(), name='registration'),
     path('registration/<slug:id>', RegistrationRequestView.as_view(),name='registration-confirmation'),

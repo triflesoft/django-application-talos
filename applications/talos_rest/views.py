@@ -108,7 +108,7 @@ class SessionAPIView(SecureAPIViewBaseView):
     serializer_class = SessionSerializer
 
     def get(self, request):
-        if str(self.request.user) == 'Anonymous':
+        if self.request.user.is_anonymous:
             return Response(status=status.HTTP_401_UNAUTHORIZED)
         else:
             credential_directory = self.request.user.credentials.otp[0].directory
@@ -128,7 +128,6 @@ class SessionAPIView(SecureAPIViewBaseView):
                             status=status.HTTP_200_OK)
 
     def post(self, request):
-
         kwargs = super(SessionAPIView, self).get_serializer_context()
         data = request.data
         serializer = SessionSerializer(data=data, context=kwargs)
