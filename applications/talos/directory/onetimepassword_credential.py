@@ -3,11 +3,11 @@ class InternalGoogleAuthenticator(object):
         self._credential_directory = credential_directory
 
     def create_credentials(self, principal, credentials):
+        from pyotp import random_base32
         from uuid import uuid4
         from ..models import _tzmin
         from ..models import _tzmax
         from ..models import OneTimePasswordCredential
-        from pyotp import random_base32
 
         otp_credential = OneTimePasswordCredential()
         otp_credential.uuid = uuid4()
@@ -15,19 +15,22 @@ class InternalGoogleAuthenticator(object):
         otp_credential.valid_from = _tzmin()
         otp_credential.valid_till = _tzmax()
         otp_credential.directory = self._credential_directory
+
         if credentials.get('salt', None):
             base32_secret = credentials['salt']
             otp_credential.is_activated = True
         else:
             base32_secret = random_base32()
+
         otp_credential.salt = base32_secret.encode()
         otp_credential.save()
+
         return otp_credential.salt
 
     def verify_credentials(self, principal, credentials):
+        from pyotp import TOTP
         from ..models import _tznow
         from ..models import OneTimePasswordCredential
-        from pyotp import TOTP
 
         code = credentials['code']
 

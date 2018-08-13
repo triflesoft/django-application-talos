@@ -8,6 +8,7 @@ from re import compile
 
 email_regex = compile(r'^[^@]+@[^@]+\.[^@]+$')
 
+
 def validate_phone(phone, validate_uniqueness=False):
     from django.core.validators import RegexValidator
     from django.core.exceptions import ValidationError
@@ -26,12 +27,10 @@ def validate_phone(phone, validate_uniqueness=False):
         except Principal.DoesNotExist:
             pass
 
-
     try:
         phone_regex(phone)
     except ValidationError:
-        raise serializers.ValidationError('Phone is invalid',
-                                          code=constants.PHONE_INVALID_CODE)
+        raise serializers.ValidationError('Phone is invalid', code=constants.PHONE_INVALID_CODE)
 
     return phone
 

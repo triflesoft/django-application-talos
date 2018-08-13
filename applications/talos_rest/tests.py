@@ -77,7 +77,7 @@ class TestUtils(APITestCase):
             raise Exception('Please run create_user() login() before this function')
 
         otp_directory = OneTimePasswordCredentialDirectory.objects.get(
-            code='onetimepassword_internal_phone_sms_authenticator')
+            code='onetimepassword_internal_phone_sms')
         otp_directory.create_credentials(self.principal, {})
 
         otp_credential = OneTimePasswordCredential.objects.last()
@@ -96,8 +96,7 @@ class TestUtils(APITestCase):
         if self.principal is None:
             raise Exception('Please run create_user() login() before this function')
 
-        sms_otp_directory = OneTimePasswordCredentialDirectory.objects.get(
-            code=PHONE_SMS_CREDENTIAL_DIRECTORY_CODE)
+        sms_otp_directory = OneTimePasswordCredentialDirectory.objects.get(code=PHONE_SMS_CREDENTIAL_DIRECTORY_CODE)
         sms_otp_directory.generate_credentials(principal, {})
 
     def add_evidence_google(self):
@@ -107,10 +106,8 @@ class TestUtils(APITestCase):
 
         add_evidence_google_url = reverse('add-evidence-google')
 
-        otp_directory = OneTimePasswordCredentialDirectory.objects.get(
-            code='onetimepassword_internal_google_authenticator')
+        otp_directory = OneTimePasswordCredentialDirectory.objects.get(code='onetimepassword_internal_google_authenticator')
         otp_directory.create_credentials(self.principal, {})
-
 
         otp_credential = OneTimePasswordCredential.objects.last()
 
@@ -579,7 +576,7 @@ class TestAddSMSEvidence(TestUtils):
 
         principal = Principal.objects.last()
         otp_diretory = OneTimePasswordCredentialDirectory.objects.get(
-            code='onetimepassword_internal_phone_sms_authenticator')
+            code='onetimepassword_internal_phone_sms')
 
         otp_diretory.create_credentials(principal, {})
 
@@ -912,7 +909,7 @@ class TestGoogleAuthenticatorDelete(TestUtils):
         self.assertEqual(validation_token.type, 'otp_delete')
 
         sms_otp_directory = OneTimePasswordCredentialDirectory.objects.get(
-            code='onetimepassword_internal_phone_sms_authenticator')
+            code='onetimepassword_internal_phone_sms')
         google_otp_directory = OneTimePasswordCredentialDirectory.objects.get(
             code='onetimepassword_internal_google_authenticator')
 

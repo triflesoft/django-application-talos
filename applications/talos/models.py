@@ -22,7 +22,6 @@ VALIDATION_TOKEN_IDENTIFIER_CHOICES = [
     ('undefined', 'Undefined')
 ]
 
-
 def _tznow():
     from datetime import datetime
     from pytz import utc
@@ -67,10 +66,8 @@ class AbstractReplicatableModel(models.Model):
     uuid = models.UUIDField(unique=True, default=uuid4, editable=False)
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     modified_at = models.DateTimeField(auto_now=True, editable=False)
-    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, related_name='+',
-                                   on_delete=models.CASCADE, editable=False)
-    modified_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, related_name='+',
-                                    on_delete=models.CASCADE, editable=False)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, related_name='+', on_delete=models.CASCADE, editable=False)
+    modified_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, related_name='+', on_delete=models.CASCADE, editable=False)
     created_on = models.CharField(max_length=255, default=_default_hostname)
     modified_on = models.CharField(max_length=255, default=_default_hostname)
 
@@ -293,18 +290,12 @@ class Role(AbstractReplicatableModel):
     code = models.SlugField(unique=True, max_length=255, allow_unicode=True)
     name = models.CharField(unique=True, max_length=255)
     parent = models.ForeignKey('self', blank=True, null=True, related_name='children', on_delete=models.CASCADE)
-    privilege_permissions_granted = models.ManyToManyField(Privilege, related_name='+',
-                                                           through='RolePrivilegePermissionGranted')
-    privilege_permissions_revoked = models.ManyToManyField(Privilege, related_name='+',
-                                                           through='RolePrivilegePermissionRevoked')
-    privilege_permissions_effective = models.ManyToManyField(Privilege, related_name='+',
-                                                             through='RolePrivilegePermissionEffective')
-    model_action_permissions_granted = models.ManyToManyField(ModelAction, related_name='+',
-                                                              through='RoleModelActionPermissionGranted')
-    model_action_permissions_revoked = models.ManyToManyField(ModelAction, related_name='+',
-                                                              through='RoleModelActionPermissionRevoked')
-    model_action_permissions_effective = models.ManyToManyField(ModelAction, related_name='+',
-                                                                through='RoleModelActionPermissionEffective')
+    privilege_permissions_granted = models.ManyToManyField(Privilege, related_name='+', through='RolePrivilegePermissionGranted')
+    privilege_permissions_revoked = models.ManyToManyField(Privilege, related_name='+', through='RolePrivilegePermissionRevoked')
+    privilege_permissions_effective = models.ManyToManyField(Privilege, related_name='+', through='RolePrivilegePermissionEffective')
+    model_action_permissions_granted = models.ManyToManyField(ModelAction, related_name='+', through='RoleModelActionPermissionGranted')
+    model_action_permissions_revoked = models.ManyToManyField(ModelAction, related_name='+', through='RoleModelActionPermissionRevoked')
+    model_action_permissions_effective = models.ManyToManyField(ModelAction, related_name='+', through='RoleModelActionPermissionEffective')
 
     class Meta:
         unique_together = [
@@ -312,7 +303,7 @@ class Role(AbstractReplicatableModel):
             ('directory', 'name')]
         model_permissions = '__all__'
         object_permissions = '__all__'
-        related_securables = ('directory',)
+        related_securables = ('directory', )
         verbose_name = 'Role'
         verbose_name_plural = 'Roles'
 
@@ -507,8 +498,7 @@ class Realm(AbstractReplicatableModel):
 
 class BasicIdentityDirectory(AbstractIdentityDirectory):
     realm = models.ForeignKey(Realm, null=True, blank=True, related_name='+', on_delete=models.CASCADE)
-    credential_directory = models.ForeignKey('BasicCredentialDirectory', null=True, blank=True,
-                                             related_name='identity_directories', on_delete=models.CASCADE)
+    credential_directory = models.ForeignKey('BasicCredentialDirectory', null=True, blank=True, related_name='identity_directories', on_delete=models.CASCADE)
 
     class Meta:
         model_permissions = '__all__'
@@ -813,7 +803,6 @@ class OneTimePasswordCredentialDirectory(AbstractCredentialDirectory):
 
         return self.backend_object.verify_otp(principal, credential, otp_code)
 
-
     def save(self, *args, **kwargs):
         super(OneTimePasswordCredentialDirectory, self).save(*args, **kwargs)
         self.backend_object = None
@@ -849,8 +838,7 @@ class OneTimePasswordCredentialDirectoryOption(AbstractReplicatableModel):
 
 
 class OneTimePasswordCredential(AbstractCredential):
-    directory = models.ForeignKey(OneTimePasswordCredentialDirectory, related_name='credentials',
-                                  on_delete=models.CASCADE)
+    directory = models.ForeignKey(OneTimePasswordCredentialDirectory, related_name='credentials', on_delete=models.CASCADE)
     salt = models.BinaryField()
 
     class Meta:
@@ -866,8 +854,7 @@ class OneTimePasswordCredential(AbstractCredential):
 
 
 class TokenCredentialDirectory(AbstractCredentialDirectory):
-    provided_evidences = models.ManyToManyField(Evidence, related_name='+',
-                                                through='TokenCredentialDirectoryProvidedEvidence')
+    provided_evidences = models.ManyToManyField(Evidence, related_name='+', through='TokenCredentialDirectoryProvidedEvidence')
 
     class Meta:
         model_permissions = '__all__'
@@ -925,8 +912,7 @@ class TokenCredential(AbstractCredential):
 
 class Session(AbstractReplicatableModel):
     previous_session = models.ForeignKey('self', null=True, blank=True, on_delete=models.CASCADE)
-    principal = models.ForeignKey('talos.Principal', null=True, blank=True, related_name='sessions',
-                                  on_delete=models.CASCADE)
+    principal = models.ForeignKey('talos.Principal', null=True, blank=True, related_name='sessions', on_delete=models.CASCADE)
     valid_from = models.DateTimeField(default=_tznow)
     valid_till = models.DateTimeField(default=_tzmax)
     external_id = models.TextField(null=True, blank=True)
@@ -957,12 +943,7 @@ class Session(AbstractReplicatableModel):
 _basic_credential_directory_cache = None
 
 
-class PrincipalManager(models.Manager):
-    def get_by_natural_key(self, username):
-        return super(PrincipalManager, self).get(email=username)
-
 class PrincipalIdentities(object):
-
     def __init__(self, principal):
         self.principal = principal
         self.basic_identities = []
@@ -1004,6 +985,11 @@ class PrincipalCredentials(object):
         self.otp_credentials = value
 
 
+class PrincipalManager(models.Manager):
+    def get_by_natural_key(self, username):
+        return super(PrincipalManager, self).get(email=username)
+
+
 class Principal(AbstractReplicatableModel):
     REQUIRED_FIELDS = []
     USERNAME_FIELD = 'email'
@@ -1013,15 +999,13 @@ class Principal(AbstractReplicatableModel):
     brief_name = models.CharField(blank=True, max_length=255)
     full_name = models.CharField(blank=True, max_length=255)
     email = models.EmailField(unique=True, max_length=255)
+    is_email_verified = models.BooleanField(default=False)
     phone = models.CharField(blank=True, null=True, unique=True, max_length=255)
+    is_phone_verified = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     last_login = models.DateTimeField(blank=True, null=True)
-    salt = models.BinaryField()
+    salt = models.BinaryField() # TODO: Remove this field
     roles = models.ManyToManyField(Role, through='PrincipalRoleMembership', through_fields=('principal', 'role'))
-    is_email_verified = models.BooleanField(default=False)
-    is_phone_verified = models.BooleanField(default=False)
-
-
 
     class Meta:
         model_permissions = ('__all__')
@@ -1039,7 +1023,6 @@ class Principal(AbstractReplicatableModel):
         self.identities = PrincipalIdentities(self)
         self.credentials = PrincipalCredentials(self)
 
-
     def _ensure_basic_credential_directory(self):
         global _basic_credential_directory_cache
 
@@ -1055,7 +1038,6 @@ class Principal(AbstractReplicatableModel):
         for code, model_action in self._model_actions_effective.items():
             self._model_actions_effective_application.add(model_action.application)
             self._model_actions_effective_model_action[model_action.model].add(model_action.action)
-
 
     def _extract_authentication_context(self):
         from django.core import serializers
@@ -1123,12 +1105,12 @@ class Principal(AbstractReplicatableModel):
                 .objects
                 .filter(principal=self)
                 .select_related(
-                'role',
-                'role__directory')
+                    'role__directory',
+                    'role')
                 .prefetch_related(
-                'role__privilege_permissions_effective',
-                'role__model_action_permissions_effective',
-                'role__directory__required_evidences'))
+                    'role__privilege_permissions_effective',
+                    'role__model_action_permissions_effective',
+                    'role__directory__required_evidences'))
 
         self._evidences_effective = OrderedDict()
         self._roles_effective = OrderedDict()
@@ -1298,8 +1280,10 @@ class Principal(AbstractReplicatableModel):
         return 'email'
 
     def save(self, *args, **kwargs):
+        # TODO: Save PrincipalChange models for brief_name, full_name, email, is_email_verified, phone, is_phone_verified, is_active
+        # TODO: but not for last_login
         from os import urandom
-        import itertools
+        from itertools import chain
 
         if not self.salt:
             self.salt = urandom(64)
@@ -1310,11 +1294,9 @@ class Principal(AbstractReplicatableModel):
             identity.principal = self
             identity.save()
 
-        for credential in itertools.chain(self.credentials.basic, self.credentials.otp):
+        for credential in chain(self.credentials.basic, self.credentials.otp):
             credential.principal = self
             credential.save()
-
-
 
     def __str__(self):
         return self.full_name or self.brief_name or self.email
@@ -1324,9 +1306,118 @@ class PrincipalObjectPermission(AbstractObjectPermission):
     target = models.ForeignKey(Principal, related_name='permissions', on_delete=models.CASCADE)
 
 
+class PrincipalHistory(AbstractReplicatableModel):
+    principal = models.ForeignKey(Principal, related_name='+', on_delete=models.CASCADE, editable=False)
+    field_name = models.CharField(max_length=255, editable=False)
+    old_value = models.CharField(max_length=255, editable=False)
+    new_value = models.CharField(max_length=255, editable=False)
+
+    class Meta:
+        model_permissions = ('__all__')
+        verbose_name = 'Principal History'
+        verbose_name_plural = 'Principal History'
+
+    def __str__(self):
+        return self.field_name
+
+
+class PrincipalCredentialHistory(AbstractReplicatableModel):
+    principal = models.ForeignKey(Principal, related_name='+', on_delete=models.CASCADE, editable=False)
+    value = models.BinaryField()
+
+    class Meta:
+        model_permissions = ('__all__')
+        verbose_name = 'Principal Credential History'
+        verbose_name_plural = 'Principal Credential History'
+
+    def __str__(self):
+        return str(self.principal)
+
+
+# TODO: Move to task_handlers.py file?
+def registration_task_handler(task):
+    pass
+
+
+def password_change_task_handler(task):
+    pass
+
+
+def password_reset_task_handler(task):
+    pass
+
+
+class Task(AbstractReplicatableModel):
+    TYPE_REGISTRATION = 1
+    TYPE_PASSWORD_CHANGE = 5
+    TYPE_PASSWORD_RESET = 6
+    TYPE_PHONE_CHANGE = 9
+    TYPE_PHONE_RESET = 10
+    TYPE_EMAIL_CHANGE = 13
+    TYPE_EMAIL_RESET = 14
+    TYPE_OTP_BIND = 17
+    TYPE_OTP_UNBIND = 18
+
+    TYPE_CHOICES = [
+        (TYPE_REGISTRATION, 'Registration',),
+        (TYPE_PASSWORD_CHANGE, 'Password Change',),
+        (TYPE_PASSWORD_RESET, 'Password Reset',),
+        (TYPE_PHONE_CHANGE, 'Phone Change',),
+        (TYPE_PHONE_RESET, 'Phone Reset',),
+        (TYPE_EMAIL_CHANGE, 'EMail Change',),
+        (TYPE_EMAIL_RESET, 'EMail Reset',),
+        (TYPE_OTP_BIND, 'Bind One-Time Password',),
+        (TYPE_OTP_UNBIND, 'Unbind One-Time Password',),
+    ]
+
+    _HANDLERS = {
+        TYPE_REGISTRATION: registration_task_handler,
+        TYPE_PASSWORD_CHANGE: password_change_task_handler,
+        TYPE_PASSWORD_RESET: password_reset_task_handler
+    }
+
+    type = models.IntegerField(max_length=255, choices=TYPE_CHOICES, editable=False)
+    principal = models.ForeignKey(Principal, null=True, blank=True, related_name='+', on_delete=models.CASCADE, editable=False)
+    basic_identity = models.ForeignKey(BasicIdentity, null=True, blank=True, related_name='+', on_delete=models.CASCADE, editable=False)
+    basic_credential = models.ForeignKey(BasicCredential, null=True, blank=True, related_name='+', on_delete=models.CASCADE, editable=False)
+    one_time_password_credential = models.ForeignKey(OneTimePasswordCredential, null=True, blank=True, related_name='+', on_delete=models.CASCADE, editable=False)
+    one_time_password = models.CharField(null=True, blank=True, max_length=255, editable=False)
+    remote_address = models.TextField(null=False, blank=False)
+    expires_at = models.DateTimeField(editable=False)
+    is_completed = models.BooleanField(default=True)
+    expando = models.TextField(null=True, blank=True)
+
+    class Meta:
+        model_permissions = '__all__'
+        verbose_name = 'Task'
+        verbose_name_plural = 'Task'
+
+    @property
+    def principal_candidate(self):
+        pass
+
+    @property
+    def basic_identity_candidate(self):
+        pass
+
+    @property
+    def basic_credential_candidate(self):
+        pass
+
+    @property
+    def one_time_password_credential_candidate(self):
+        pass
+
+    def save(self, *args, **kwargs):
+        self._HANDLERS[self.type](self)
+        pass
+
+    def __str__(self):
+        return self.secret
+
+
 class ValidationToken(AbstractReplicatableModel):
-    principal = models.ForeignKey(Principal, null=True, blank=True, related_name='+', on_delete=models.CASCADE,
-                                  editable=False)
+    principal = models.ForeignKey(Principal, null=True, blank=True, related_name='+', on_delete=models.CASCADE, editable=False)
     # email = models.EmailField(max_length=255, editable=False)
     identifier_type = models.CharField(max_length= 255, choices= VALIDATION_TOKEN_IDENTIFIER_CHOICES, editable=False, default='undefined')
     identifier_value = models.CharField(max_length=255, null=True)

@@ -1,17 +1,18 @@
 from django.template.loader import render_to_string
 from django.urls import reverse
 from rest_framework import serializers
-from talos.models import Principal, BasicIdentityDirectory, BasicCredentialDirectory, BasicIdentity, BasicCredential, \
-    OneTimePasswordCredential, TokenCredential, SubnetCredential, OneTimePasswordCredentialDirectory
-from talos.models import ValidationToken
-from talos.models import _tznow
 from rest_framework import status
+from talos.models import _tznow
+from talos.models import BasicIdentity, BasicCredential, OneTimePasswordCredential
+from talos.models import Principal, BasicIdentityDirectory, BasicCredentialDirectory, OneTimePasswordCredentialDirectory
+from talos.models import ValidationToken
 from talos_rest import constants
 from talos_rest.validators import validate_email as  talos_rest_validate_email
 from talos_rest.validators import validate_phone as talos_rest_validate_phone
 
-PHONE_SMS_CREDENTIAL_DIRECTORY_CODE = 'onetimepassword_internal_phone_sms_authenticator'
+PHONE_SMS_CREDENTIAL_DIRECTORY_CODE = 'onetimepassword_internal_phone_sms'
 GOOGLE_OTP_CREDENTIAL_DIRECTORY_CODE = 'onetimepassword_internal_google_authenticator'
+
 
 class OTPBaserSerializeMixin():
     def __init__(self, *args, **kwargs):
@@ -340,7 +341,7 @@ class EmailChangeRequestSerializer(BasicSerializer):
 
         context = {
             'email' : new_email,
-            'url' : 'http://localhost:8000/email-change-validation/{}'.format(validation_token.secret)
+            'url': 'http://localhost:8000/email-change-validation/{}'.format(validation_token.secret)
         }
 
         send_email(context,
