@@ -934,6 +934,7 @@ class RegistrationConfirmationSerializer(BasicSerializer):
         from talos.helpers.session import CustomJSONEncoder
         from talos_rest.signals import pre_registration
         from talos_rest.signals import post_registration
+        from django.core.exceptions import ValidationError as DjangoValidationError
 
         token = self.validated_data['token']
         is_completed = self.validated_data['is_completed']
@@ -960,10 +961,17 @@ class RegistrationConfirmationSerializer(BasicSerializer):
         if is_completed:
             extra = self.validated_data.get('extra', {})
             try:
-                try:
-                    pre_registration.send(sender=self.principal.__class__, extra=extra, principal=self.principal)
-                except Exception as e:
-                    raise serializers.ValidationError(e)
+                pre_registration.send(sender=self.principal.__class__, extra=extra, principal=self.principal)
+            except DjangoValidationError as e:
+                raise serializers.ValidationError(e,
+                                                  e.code)
+            except serializers.ValidationError:
+                raise
+            except Exception as e:
+                raise serializers.ValidationError(e,
+                                                  code='pre_registration_error')
+
+            try:
                 self.principal.save()
                 post_registration.send(sender=self.principal.__class__, extra=extra, principal=self.principal)
             except Exception as e:
