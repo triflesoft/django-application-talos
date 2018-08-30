@@ -197,9 +197,8 @@ class InternalPhoneSMS(object):
         salt = credential.salt
         totp = pyotp.TOTP(salt, interval=300)
 
-        # TODO: Temporary, uncomment later
-        #sms_sender = SMSSender()
-        #sms_sender.send_message(principal.phone, totp.now())
+        sms_sender = SMSSender()
+        sms_sender.send_message(principal.phone, totp.now())
 
 
     def verify_otp(self, principal, credential, code):
@@ -211,8 +210,5 @@ class InternalPhoneSMS(object):
         totp = pyotp.TOTP(salt.tobytes(), interval=300)
 
         if totp.verify(code):
-            if principal.is_phone_verified == False:
-                principal.is_phone_verified = True
-                principal.save()
             return True
         return False

@@ -24,13 +24,12 @@ class OTPBaserSerializeMixin():
         otp_credential = self.principal.credentials.otp[0]
         self.otp_directory = otp_credential.directory
 
-        # TODO: Should be removed
-        if otp_code != '123456':
-            raise serializers.ValidationError('OTP Code is incorrect',
-                                              code='otp_code_incorrect')
+        if not self.otp_directory.verify_otp(self.principal, otp_credential, otp_code):
+            raise serializers.ValidationError('OTP code is incorrect',
+                                              code=self.error_code)
 
         # if self.otp_directory.verify_credentials(self.principal,
-        #                                                  {'code': otp_code}) == False:
+        #                                         {'code': otp_code}) == False:
         #     raise serializers.ValidationError('OTP code is incorrect',
         #                                       code=self.error_code)
 
@@ -919,13 +918,9 @@ class RegistrationConfirmationSerializer(BasicSerializer):
 
         otp_directory = otp_credential.directory
 
-        if code != '123456':
+        if not otp_directory.verify_otp(self.principal, self.principal.credentials.otp[0], code):
             raise serializers.ValidationError('Code is incorrect',
                                               code=constants.OTP_INVALID)
-
-        #if not otp_directory.verify_otp(self.principal, self.principal.otp_credential, code):
-        #    raise serializers.ValidationError('Code is incorrect',
-        #                                      code=constants.OTP_INVALID)
 
         return attrs
 
@@ -972,6 +967,7 @@ class RegistrationConfirmationSerializer(BasicSerializer):
                                                   code='pre_registration_error')
 
             try:
+                self.principal.is_phone_verified = True
                 self.principal.save()
                 post_registration.send(sender=self.principal.__class__, extra=extra, principal=self.principal)
             except Exception as e:
@@ -986,7 +982,6 @@ class RegistrationConfirmationSerializer(BasicSerializer):
             except Exception as e:
                 raise serializers.ValidationError('Something went wrong while serializing principal object',
                                                   code='internal_error')
-
 
 class RegistrationMessageSerializer(BasicSerializer):
     token = serializers.CharField()
