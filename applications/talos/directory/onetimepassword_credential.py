@@ -125,7 +125,7 @@ class InternalPhoneSMS(object):
         otp_credential.save()
 
 
-        totp = pyotp.TOTP(otp_credential.salt, interval=300)
+        totp = pyotp.TOTP(otp_credential.salt, interval=120)
         sms_sender = SMSSender()
         sms_sender.send_message(principal.phone, 'Your code is {}'.format(totp.now()))
 
@@ -142,7 +142,7 @@ class InternalPhoneSMS(object):
                 valid_till__gte=_tznow())
 
             secret_key = otp_credential.salt.decode()
-            totp = TOTP(secret_key, interval=300)
+            totp = TOTP(secret_key, interval=120)
 
             if totp.verify(code):
                 return True
@@ -195,7 +195,7 @@ class InternalPhoneSMS(object):
         from ..contrib.sms_sender import SMSSender
 
         salt = credential.salt
-        totp = pyotp.TOTP(salt, interval=300)
+        totp = pyotp.TOTP(salt, interval=120)
 
         sms_sender = SMSSender()
         sms_sender.send_message(principal.phone, totp.now())
@@ -207,7 +207,7 @@ class InternalPhoneSMS(object):
         # Type of salt is memoryview
         salt = credential.salt
         # TODO: Remove .tobytes()
-        totp = pyotp.TOTP(salt.tobytes(), interval=300)
+        totp = pyotp.TOTP(salt.tobytes(), interval=120)
 
         if totp.verify(code):
             return True

@@ -801,6 +801,8 @@ class RegistrationRequestSerializer(BasicSerializer):
     phone = serializers.CharField(max_length=250, required=False)
     password = serializers.CharField(max_length=250, required=False)
 
+    extra = serializers.JSONField(required=False)
+
     def validate_brief_name(self, brief_name):
         return brief_name
 
@@ -831,6 +833,8 @@ class RegistrationRequestSerializer(BasicSerializer):
         from talos.models import _tzmax
         from talos.helpers.session import CustomJSONEncoder
         import pyotp
+        from talos_rest.signals import pre_registration
+        from django.core.exceptions import ValidationError as DjangoValidationError
 
         principal = Principal()
         if self.validated_data.get('brief_name'):
@@ -875,6 +879,18 @@ class RegistrationRequestSerializer(BasicSerializer):
             otp_credential.salt = salt
 
             principal.credentials.otp.append(otp_credential)
+
+        extra = self.validated_data.get('extra', {})
+        try:
+            pre_registration.send(sender=self.principal.__class__, extra=extra, principal=self.principal)
+        except DjangoValidationError as e:
+            raise serializers.ValidationError(e,
+                                              e.code)
+        except serializers.ValidationError:
+            raise
+        except Exception as e:
+            raise serializers.ValidationError(e,
+                                              code='pre_registration_error')
 
         serialized = json.dumps(principal, cls=CustomJSONEncoder)
 
@@ -927,9 +943,7 @@ class RegistrationConfirmationSerializer(BasicSerializer):
     def save(self):
         import json
         from talos.helpers.session import CustomJSONEncoder
-        from talos_rest.signals import pre_registration
         from talos_rest.signals import post_registration
-        from django.core.exceptions import ValidationError as DjangoValidationError
 
         token = self.validated_data['token']
         is_completed = self.validated_data['is_completed']
@@ -955,16 +969,6 @@ class RegistrationConfirmationSerializer(BasicSerializer):
 
         if is_completed:
             extra = self.validated_data.get('extra', {})
-            try:
-                pre_registration.send(sender=self.principal.__class__, extra=extra, principal=self.principal)
-            except DjangoValidationError as e:
-                raise serializers.ValidationError(e,
-                                                  e.code)
-            except serializers.ValidationError:
-                raise
-            except Exception as e:
-                raise serializers.ValidationError(e,
-                                                  code='pre_registration_error')
 
             try:
                 self.principal.is_phone_verified = True
@@ -1021,7 +1025,7 @@ class EmailActivationRequestSerializer(BasicSerializer):
         url = '{0}://{1}{2}'.format(
             self.request.scheme,
             self.request.META.get('HTTP_HOST', 'test_host'),
-            '/account/email-activation/{0}'.format(validation_token.secret)
+            '/account/email-activation/#{0}'.format(validation_token.secret)
         )
 
         context = {
@@ -1038,9 +1042,9 @@ class EmailActivationRequestSerializer(BasicSerializer):
 
 
 class EmailActivationConfirmationSerializer(BasicSerializer):
-    secret = serializers.CharField(max_length=250) 
-    
-    def validate_secret(self, secret): 
+    secret = serializers.CharField(max_length=250)
+
+    def validate_secret(self, secret):
         from talos.models import ValidationToken
         try:
             self.validation_token = ValidationToken.objects.get(secret=secret,
@@ -1048,11 +1052,12 @@ class EmailActivationConfirmationSerializer(BasicSerializer):
         except ValidationToken.DoesNotExist:
             raise serializers.ValidationError('Your token is invalid',
                                               constants.TOKEN_INVALID_CODE)
-        return secret 
-    
+        return secret
+
     def save(self):
         self.validation_token.is_active = False
         self.validation_token.save()
 
-        self.principal.is_email_verified = True
-        self.principal.save()
+        principal = self.validation_token.principal
+        principal.is_email_verified = True
+        principal.save()

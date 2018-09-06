@@ -110,7 +110,7 @@ class SessionAPIView(SecureAPIViewBaseView):
         if self.request.user.is_anonymous:
             return Response(status=status.HTTP_401_UNAUTHORIZED)
         else:
-            credential_directory = self.request.user.credentials.otp[0].directory
+            credential_directory = self.request.principal.credentials.otp[0].directory
             evidences = list(dict(self.request.principal._evidences_effective).keys())
             data = {
                 'status': status.HTTP_200_OK,
@@ -336,7 +336,6 @@ class PasswordResetTokenCheckerAPIView(SecureAPIViewBaseView):
             response = {
                 'status' : status.HTTP_200_OK,
                 'result' : {
-                    'otp-code' : serializer.otp_code,
                     'secret' : serializer.token.secret
                 }
             }
@@ -575,6 +574,7 @@ class RegistrationMessageView(SecureAPIViewBaseView):
 
 class EmailActivationRequestView(SecureAPIViewBaseView):
     serializer_class = EmailActivationRequestSerializer
+    #permission_classes = (IsAuthenticated, )
 
     def post(self, request):
         context = super(EmailActivationRequestView, self).get_serializer_context()

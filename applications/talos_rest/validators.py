@@ -76,4 +76,12 @@ def validate_email(email, validate_uniqueness=False, validate_existance=False):
     return email
 
 def validate_password(password):
-    pass
+    from django.contrib.auth.password_validation import validate_password
+    from django.core.exceptions import ValidationError
+    from rest_framework import serializers
+
+    try:
+        validate_password(password)
+    except ValidationError:
+        raise serializers.ValidationError('Password invalide',
+                                          code='password_invalid')
