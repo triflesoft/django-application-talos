@@ -83,5 +83,5 @@ def validate_password(password):
     try:
         validate_password(password)
     except ValidationError:
-        raise serializers.ValidationError('Password invalide',
-                                          code='password_invalid')
+        raise serializers.ValidationError('Invalid password format',
+                                          code='password_invalid_format')

@@ -1,1 +1,1 @@
-Your email has been changed successfully
+Your email has been changed successfully to {{ email }}

@@ -26,7 +26,7 @@ class OTPBaserSerializeMixin():
 
         if not self.otp_directory.verify_otp(self.principal, otp_credential, otp_code):
             raise serializers.ValidationError('OTP code is incorrect',
-                                              code=self.error_code)
+                                              code=constants.OTP_INVALID)
 
         # if self.otp_directory.verify_credentials(self.principal,
         #                                         {'code': otp_code}) == False:
@@ -314,7 +314,9 @@ class SendOTPSerializer(BasicSerializer):
 
 
 
-class EmailChangeRequestSerializer(BasicSerializer):
+class EmailChangeRequestSerializer(OTPBaserSerializeMixin,
+                                   ValidatePasswordMixin,
+                                   BasicSerializer):
     token_type = 'email_change'
 
     new_email = serializers.CharField(label='New E-mail')
@@ -338,9 +340,15 @@ class EmailChangeRequestSerializer(BasicSerializer):
         validation_token.type = self.token_type
         validation_token.save()
 
+        url = '{0}://{1}{2}'.format(
+            self.request.scheme,
+            self.request.META.get('HTTP_HOST', 'test_host'),
+            '/account/email-confirm#{0}'.format(validation_token.secret)
+        )
+
         context = {
             'email' : new_email,
-            'url': 'http://localhost:8000/email-change-validation/{}'.format(validation_token.secret)
+            'url': url
         }
 
         send_email(context,
@@ -350,16 +358,52 @@ class EmailChangeRequestSerializer(BasicSerializer):
                    'talos/email_change/request_email_body.html')
 
 
-class EmailChangeValidationTokenCheckerSerializer(ValidateSecretWhenLogedInMixin, BasicSerializer):
+class EmailChangeValidationTokenCheckerSerializer(ValidateSecretWhenLoggedOutMixin, BasicSerializer):
     token_type = 'email_change'
 
     def __init__(self, *args, **kwargs):
         super(EmailChangeValidationTokenCheckerSerializer, self).__init__(*args, **kwargs)
 
+    def save(self):
+        from talos.models import BasicIdentity
+        from talos.contrib.sms_sender import SMSSender
+        from talos_rest.utils import send_email
 
-class EmailChangeBaseSerialize(OTPBaserSerializeMixin,
-                               ValidatePasswordMixin,
-                               ValidateSecretWhenLogedInMixin,
+        old_email = self.token.principal.email
+
+        self.token.principal.email = self.token.identifier_value
+        self.token.principal.is_email_verified = True
+        self.token.principal.save()
+        self.token.is_active = False
+        self.token.save()
+
+        basic_identity = BasicIdentity.objects.get(principal=self.token.principal)
+        basic_identity.username = self.token.identifier_value
+        basic_identity.save()
+        # Remove session to logout
+        self.request.session.flush()
+
+        context = {
+            'email': self.token.principal.email,
+        }
+
+        send_email(context, [self.token.principal.email],
+                   'talos/email_change/confirmed_email_subject.txt',
+                   'talos/email_change/confirmed_email_body.txt',
+                   'talos/email_change/confirmed_email_body.html')
+
+        send_email(context, [old_email],
+                   'talos/email_change/confirmed_email_subject.txt',
+                   'talos/email_change/confirmed_email_body.txt',
+                   'talos/email_change/confirmed_email_body.html')
+
+
+        mail_change_text = render_to_string('talos/email_change/confirmed_email_body_mobile.txt')
+        sms_sender = SMSSender()
+        sms_sender.send_message(self.token.principal.phone, mail_change_text)
+
+
+class EmailChangeBaseSerialize(ValidateSecretWhenLogedInMixin,
                                BasicSerializer):
     token_type = 'email_change'
 
@@ -1061,3 +1105,13 @@ class EmailActivationConfirmationSerializer(BasicSerializer):
         principal = self.validation_token.principal
         principal.is_email_verified = True
         principal.save()
+
+class ChangePersonalInformationSerializer(OTPBaserSerializeMixin,
+                                BasicSerializer):
+    full_name = serializers.CharField(max_length=250, required=False)
+
+    def save(self):
+        if self.validated_data.get('full_name'):
+            self.principal.full_name = self.validated_data['full_name']
+
+        self.principal.save()

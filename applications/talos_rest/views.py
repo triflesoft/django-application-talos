@@ -34,8 +34,7 @@ from .serializers import SessionSerializer, \
     PhoneResetBaseSerialize, PhoneChangeBaseSerialize, EmailResetBaseSerializer, EmailChangeBaseSerialize, \
     PasswordResetBaseSerializer, SendOTPSerializer, \
     RegistrationRequestSerializer, RegistrationMessageSerializer, \
-    RegistrationConfirmationSerializer, EmailActivationRequestSerializer, EmailActivationConfirmationSerializer
-
+    RegistrationConfirmationSerializer, EmailActivationRequestSerializer, EmailActivationConfirmationSerializer, ChangePersonalInformationSerializer
 
 
 class TranslationContextMixin(object):
@@ -258,6 +257,7 @@ class SendOTPView(SecureAPIViewBaseView):
 class EmailChangeRequestAPIView(SecureAPIViewBaseView):
     serializer_class = EmailChangeRequestSerializer
     permission_classes = (IsAuthenticated,)
+    identity_directory_code = 'basic_internal'
 
     def post(self, request):
         kwargs = super(EmailChangeRequestAPIView, self).get_serializer_context()
@@ -273,15 +273,16 @@ class EmailChangeRequestAPIView(SecureAPIViewBaseView):
 
 
 class EmailChangeValidationTokenCheckerAPIView(SecureAPIViewBaseView):
-    permission_classes = (IsAuthenticated,)
+
     identity_directory_code = 'basic_internal'
     serializer_class = EmailChangeValidationTokenCheckerSerializer
 
-    def get(self, request, **kwargs):
+    def post(self, request, secret, **kwargs):
         context = super(EmailChangeValidationTokenCheckerAPIView, self).get_serializer_context()
-        serializer = EmailChangeValidationTokenCheckerSerializer(data=kwargs, context=context)
+        serializer = EmailChangeValidationTokenCheckerSerializer(data=request.data, context=context)
 
         if serializer.is_valid(raise_exception=False):
+            serializer.save()
             return Response(serializer.data)
         else:
             raise APIValidationError(detail=serializer.errors)
@@ -600,6 +601,25 @@ class EmailActivationConfirmationView(SecureAPIViewBaseView):
         data['secret'] = secret
 
         serializer = EmailActivationConfirmationSerializer(data=data, context=context)
+        if serializer.is_valid(raise_exception=False):
+            serializer.save()
+            data = {
+                'status' : status.HTTP_200_OK,
+                'result' : {}
+            }
+            return Response(data, status=status.HTTP_200_OK)
+        else:
+            raise APIValidationError(serializer.errors)
+
+
+class ChangePersonalInformationView(SecureAPIViewBaseView):
+    permission_classes = (IsAuthenticated,)
+    serializer_class = ChangePersonalInformationSerializer
+
+    def patch(self, request):
+        context = super(ChangePersonalInformationView, self).get_serializer_context()
+        data = request.data
+        serializer = ChangePersonalInformationSerializer(data=data, context=context)
         if serializer.is_valid(raise_exception=False):
             serializer.save()
             data = {

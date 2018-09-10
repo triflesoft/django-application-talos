@@ -17,7 +17,7 @@ from .views import SessionAPIView, EmailChangeRequestAPIView, \
     EmailResetAPIView, \
     PasswordChangeView, PasswordResetView, \
     PasswordResetTokenCheckerAPIView, SendOTPView, \
-    RegistrationRequestView, RegistrationMessageView, EmailActivationRequestView, EmailActivationConfirmationView
+    RegistrationRequestView, RegistrationMessageView, EmailActivationRequestView, EmailActivationConfirmationView, ChangePersonalInformationView
 
 PHONE_SMS_CREDENTIAL_DIRECTORY_CODE = 'onetimepassword_internal_phone_sms'
 GOOGLE_OTP_CREDENTIAL_DIRECTORY_CODE = 'onetimepassword_internal_google_authenticator'
@@ -31,7 +31,6 @@ urlpatterns = [
     path('email/email-change-token/<slug:secret>',
          EmailChangeValidationTokenCheckerAPIView.as_view(), name='email-change-token-validation'),
     path('principal/email/', EmailChangeSecureAPIView.as_view(), name='email-change'),
-
 
     # Email Reset
 
@@ -86,6 +85,8 @@ urlpatterns = [
     path('registration/', RegistrationRequestView.as_view(), name='registration'),
     path('registration/<slug:id>', RegistrationRequestView.as_view(), name='registration-confirmation'),
     path('registration/<slug:id>/message/', RegistrationMessageView.as_view(), name='registration-message'),
+
+    path('personal-information/', ChangePersonalInformationView.as_view(), name='change-personal-information'),
 
     # authentication
     # path('authentication/', AuthenticationView.as_view(), name='authentication'),

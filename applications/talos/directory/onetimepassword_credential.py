@@ -200,14 +200,16 @@ class InternalPhoneSMS(object):
         sms_sender = SMSSender()
         sms_sender.send_message(principal.phone, totp.now())
 
-
     def verify_otp(self, principal, credential, code):
         import pyotp
 
         # Type of salt is memoryview
         salt = credential.salt
         # TODO: Remove .tobytes()
-        totp = pyotp.TOTP(salt.tobytes(), interval=120)
+
+        if isinstance(salt, memoryview):
+            salt = salt.tobytes()
+        totp = pyotp.TOTP(salt, interval=120)
 
         if totp.verify(code):
             return True
