@@ -1019,7 +1019,6 @@ class RegistrationConfirmationSerializer(BasicSerializer):
                 self.principal.save()
                 post_registration.send(sender=self.principal.__class__, extra=extra, principal=self.principal)
             except Exception as e:
-                print(e)
                 raise serializers.ValidationError('Something went wrong while saving principal',
                                                   code='internal_error')
 
@@ -1108,10 +1107,14 @@ class EmailActivationConfirmationSerializer(BasicSerializer):
 
 class ChangePersonalInformationSerializer(OTPBaserSerializeMixin,
                                 BasicSerializer):
-    full_name = serializers.CharField(max_length=250, required=False)
+    first_name = serializers.CharField(max_length=250, required=False)
+    last_name = serializers.CharField(max_length=250, required=False)
 
     def save(self):
-        if self.validated_data.get('full_name'):
-            self.principal.full_name = self.validated_data['full_name']
-
-        self.principal.save()
+        if self.validated_data.get('first_name') and self.validated_data.get('last_name'):
+            from talos_rest.signals import personal_information_changed
+            self.principal.full_name = self.validated_data['first_name'] + ' ' + self.validated_data['last_name']
+            personal_information_changed.send(sender=self.principal.__class__, first_name=self.validated_data['first_name'],
+                                              last_name=self.validated_data['last_name'],
+                                              principal=self.principal)
+            self.principal.save()
