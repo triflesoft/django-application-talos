@@ -1376,7 +1376,7 @@ class Task(AbstractReplicatableModel):
         TYPE_PASSWORD_RESET: password_reset_task_handler
     }
 
-    type = models.IntegerField(max_length=255, choices=TYPE_CHOICES, editable=False)
+    type = models.IntegerField(choices=TYPE_CHOICES, editable=False)
     principal = models.ForeignKey(Principal, null=True, blank=True, related_name='+', on_delete=models.CASCADE, editable=False)
     basic_identity = models.ForeignKey(BasicIdentity, null=True, blank=True, related_name='+', on_delete=models.CASCADE, editable=False)
     basic_credential = models.ForeignKey(BasicCredential, null=True, blank=True, related_name='+', on_delete=models.CASCADE, editable=False)

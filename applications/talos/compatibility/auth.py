@@ -10,7 +10,8 @@ class AuthBackend(object):
             'knowledge_factor',
             'knowledge_factor_password')).order_by('id'))
 
-    def authenticate(self, username=None, password=None):
+
+    def authenticate(self, request, username=None, password=None, **kwargs):
         from ..models import BasicIdentity
         from ..models import Principal
 
