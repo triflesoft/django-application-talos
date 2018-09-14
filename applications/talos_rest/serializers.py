@@ -21,8 +21,12 @@ class OTPBaserSerializeMixin():
         super(OTPBaserSerializeMixin, self).__init__(*args, **kwargs)
 
     def validate_otp_code(self, otp_code):
-        otp_credential = self.principal.credentials.otp[0]
-        self.otp_directory = otp_credential.directory
+        if len(self.principal.credentials.otp) > 0:
+            otp_credential = self.principal.credentials.otp[0]
+            self.otp_directory = otp_credential.directory
+        else:
+            raise serializers.ValidationError('User is not authenticated using mobile phone',
+                                              code='not_authenticated')
 
         if not self.otp_directory.verify_otp(self.principal, otp_credential, otp_code):
             raise serializers.ValidationError('OTP code is incorrect',
@@ -237,7 +241,7 @@ class GoogleAuthenticatorActivateConfirmSerializer(BasicSerializer):
                                               code=constants.GOOGLE_OTP_NOT_ACTIVATED_CODE)
 
         totp = TOTP(self.request.session['temp_otp_secret_key'])
-        if not totp.verify(code):
+        if not totp.verify(code, valid_window=1):
             raise serializers.ValidationError('Code is incorrect',
                                               code=constants.GOOGLE_OTP_INVALID_CODE)
         return code
@@ -348,7 +352,8 @@ class EmailChangeRequestSerializer(OTPBaserSerializeMixin,
 
         context = {
             'email' : new_email,
-            'url': url
+            'url': url,
+            'recipient_name' : self.request.principal.full_name
         }
 
         send_email(context,
@@ -385,6 +390,7 @@ class EmailChangeValidationTokenCheckerSerializer(ValidateSecretWhenLoggedOutMix
 
         context = {
             'email': self.token.principal.email,
+            'recipient_name' : self.token.principal.full_name
         }
 
         send_email(context, [self.token.principal.email],
@@ -745,9 +751,9 @@ class PasswordResetRequestSerializer(BasicSerializer):
 
         send_email(context,
                    [email],
-                   'talos/email_change/request_email_subject.txt',
-                   'talos/email_change/request_email_body.txt',
-                   'talos/email_change/request_email_body.html')
+                   'talos/basic_password_reset/request_email_subject.txt',
+                   'talos/basic_password_reset/request_email_body.txt',
+                   'talos/basic_password_reset/request_email_body.html')
 
 
 class PasswordResetValidationTokenSerializer(ValidateSecretWhenLoggedOutMixin,
