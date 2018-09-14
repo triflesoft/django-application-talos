@@ -43,7 +43,7 @@ class InternalGoogleAuthenticator(object):
             secret_key = otp_credential.salt.decode()
             totp = TOTP(secret_key)
 
-            if totp.verify(code):
+            if totp.verify(code, valid_window=1):
                 return True
         except OneTimePasswordCredential.DoesNotExist:
             pass
@@ -99,7 +99,7 @@ class InternalGoogleAuthenticator(object):
         salt = credential.salt
         totp = pyotp.TOTP(salt.tobytes())
 
-        return totp.verify(code)
+        return totp.verify(code, valid_window=1)
 
 class InternalPhoneSMS(object):
     def __init__(self, credential_directory, **kwargs):
@@ -125,7 +125,7 @@ class InternalPhoneSMS(object):
         otp_credential.save()
 
 
-        totp = pyotp.TOTP(otp_credential.salt, interval=120)
+        totp = pyotp.TOTP(otp_credential.salt, interval=200)
         sms_sender = SMSSender()
         sms_sender.send_message(principal.phone, 'Your code is {}'.format(totp.now()))
 
@@ -142,9 +142,9 @@ class InternalPhoneSMS(object):
                 valid_till__gte=_tznow())
 
             secret_key = otp_credential.salt.decode()
-            totp = TOTP(secret_key, interval=120)
+            totp = TOTP(secret_key, interval=200)
 
-            if totp.verify(code):
+            if totp.verify(code, valid_window=1):
                 return True
         except OneTimePasswordCredential.DoesNotExist:
             pass
@@ -195,7 +195,7 @@ class InternalPhoneSMS(object):
         from ..contrib.sms_sender import SMSSender
 
         salt = credential.salt
-        totp = pyotp.TOTP(salt, interval=120)
+        totp = pyotp.TOTP(salt, interval=200)
 
         sms_sender = SMSSender()
         sms_sender.send_message(principal.phone, totp.now())
@@ -209,8 +209,8 @@ class InternalPhoneSMS(object):
 
         if isinstance(salt, memoryview):
             salt = salt.tobytes()
-        totp = pyotp.TOTP(salt, interval=120)
+        totp = pyotp.TOTP(salt, interval=200)
 
-        if totp.verify(code):
+        if totp.verify(code, valid_window=1):
             return True
         return False
