@@ -1,1 +1,5 @@
-Your email has been changed successfully to {{ email }}
+Hello,
+
+Your email has now been updated to {{ email }}.
+
+Thank you for being a part of the Next Crypto World

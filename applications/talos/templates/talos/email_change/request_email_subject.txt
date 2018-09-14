@@ -1,1 +1,1 @@
-E-mail change for {{ recipient_name }}
+Bixtrim E-mail change for {{ recipient_name }}

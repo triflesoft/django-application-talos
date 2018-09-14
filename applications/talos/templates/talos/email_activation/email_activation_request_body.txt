@@ -1,0 +1,11 @@
+Hello,
+
+You have received this message because you requested to verify your email.
+Please click the url below to finish your email verification.
+
+{{ url }}
+
+Thank you for being a part of the Next Crypto World
+
+Do Not Share This Email
+This email contains a secure link to Bixtrim. Please do not share this email, link, or access code with others.
