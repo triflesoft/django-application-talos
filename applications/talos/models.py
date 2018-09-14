@@ -31,16 +31,17 @@ def _tznow():
 
 def _tzmin():
     from datetime import datetime
+    from datetime import timedelta
     from pytz import utc
 
-    return datetime.min.replace(tzinfo=utc)
-
+    return (datetime.min + timedelta(days=1)).replace(tzinfo=utc)
 
 def _tzmax():
     from datetime import datetime
+    from datetime import timedelta
     from pytz import utc
 
-    return datetime.max.replace(tzinfo=utc)
+    return (datetime.max - timedelta(days=1)).replace(tzinfo=utc)
 
 
 def _create_class_by_name(class_name):
