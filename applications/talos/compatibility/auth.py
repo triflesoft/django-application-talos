@@ -11,7 +11,7 @@ class AuthBackend(object):
             'knowledge_factor_password')).order_by('id'))
 
 
-    def authenticate(self, request, username=None, password=None, **kwargs):
+    def authenticate(self, request=None, username=None, password=None, **kwargs):
         from ..models import BasicIdentity
         from ..models import Principal
 
