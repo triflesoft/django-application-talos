@@ -345,7 +345,7 @@ class EmailChangeRequestSerializer(OTPBaserSerializeMixin,
         validation_token.type = self.token_type
         validation_token.save()
 
-        url = settings.EMAIL_URL_PREFIX + '/account/email-confirm#{0}'.format(validation_token.secret)
+        url = '{0}/account/email-confirm#{1}'.format(settings.EMAIL_URL_PREFIX, validation_token.secret)
 
         context = {
             'email' : new_email,
@@ -476,7 +476,7 @@ class EmailResetRequestSerializer(BasicSerializer):
         validation_token.type = self.token_type
         validation_token.save()
 
-        url =  settings.EMAIL_URL_PREFIX + reverse('email-reset-token-validation', args=[validation_token.secret])
+        url = '{0}{1}'.format(settings.EMAIL_URL_PREFIX, reverse('email-reset-token-validation', args=[validation_token.secret]))
 
         context = {
             'email': new_email,
@@ -568,7 +568,7 @@ class PhoneChangeRequestSerializer(BasicSerializer):
         validation_token.type = self.token_type
         validation_token.save()
 
-        url = settings.EMAIL_URL_PREFIX + reverse('phone-change-token-validation', args=[validation_token.secret])
+        url = '{0}{1}'.format(settings.EMAIL_URL_PREFIX, reverse('phone-change-token-validation', args=[validation_token.secret]))
 
         context = {
             'email': self.principal.email,
@@ -637,7 +637,7 @@ class PhoneResetRequestSerializer(BasicSerializer):
         validation_token.type = self.token_type
         validation_token.save()
 
-        url = settings.EMAIL_URL_PREFIX + reverse('phone-reset-token-validation', args=[validation_token.secret])
+        url = '{0}{1}'.format(settings.EMAIL_URL_PREFIX, reverse('phone-reset-token-validation', args=[validation_token.secret]))
 
         context = {
             'email': self.principal.email,
@@ -722,7 +722,7 @@ class PasswordResetRequestSerializer(BasicSerializer):
 
         self.token = validation_token
 
-        url = settings.EMAIL_URL_PREFIX + '/account/reset-password-token#{0}'.format(validation_token.secret)
+        url = '{0}/account/reset-password-token#{1}'.format(settings.EMAIL_URL_PREFIX, validation_token.secret)
 
         context = {
             'email': email,
@@ -1052,7 +1052,7 @@ class EmailActivationRequestSerializer(BasicSerializer):
         validation_token.type = 'email_activation'
         validation_token.save()
 
-        url = settings.EMAIL_URL_PREFIX + '/account/email-activation/#{0}'.format(validation_token.secret)
+        url = '{0}/account/email-activation/#{1}'.format(settings.EMAIL_URL_PREFIX , validation_token.secret)
 
         context = {
             'email': email,
