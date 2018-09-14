@@ -9,6 +9,7 @@ from talos.models import ValidationToken
 from talos_rest import constants
 from talos_rest.validators import validate_email as  talos_rest_validate_email
 from talos_rest.validators import validate_phone as talos_rest_validate_phone
+from django.conf import settings
 
 PHONE_SMS_CREDENTIAL_DIRECTORY_CODE = 'onetimepassword_internal_phone_sms'
 GOOGLE_OTP_CREDENTIAL_DIRECTORY_CODE = 'onetimepassword_internal_google_authenticator'
@@ -344,11 +345,7 @@ class EmailChangeRequestSerializer(OTPBaserSerializeMixin,
         validation_token.type = self.token_type
         validation_token.save()
 
-        url = '{0}://{1}{2}'.format(
-            self.request.scheme,
-            self.request.META.get('HTTP_HOST', 'test_host'),
-            '/account/email-confirm#{0}'.format(validation_token.secret)
-        )
+        url = settings.EMAIL_URL_PREFIX + '/account/email-confirm#{0}'.format(validation_token.secret)
 
         context = {
             'email' : new_email,
@@ -479,11 +476,7 @@ class EmailResetRequestSerializer(BasicSerializer):
         validation_token.type = self.token_type
         validation_token.save()
 
-        url = '{0}://{1}{2}'.format(
-            self.request.scheme,
-            self.request.META.get('HTTP_HOST', 'test_host'),
-            reverse('email-reset-token-validation', args=[validation_token.secret])
-        )
+        url =  settings.EMAIL_URL_PREFIX + reverse('email-reset-token-validation', args=[validation_token.secret])
 
         context = {
             'email': new_email,
@@ -575,11 +568,7 @@ class PhoneChangeRequestSerializer(BasicSerializer):
         validation_token.type = self.token_type
         validation_token.save()
 
-        url = '{0}://{1}{2}'.format(
-            self.request.scheme,
-            self.request.META.get('HTTP_HOST', 'test_host'),
-            reverse('phone-change-token-validation', args=[validation_token.secret])
-        )
+        url = settings.EMAIL_URL_PREFIX + reverse('phone-change-token-validation', args=[validation_token.secret])
 
         context = {
             'email': self.principal.email,
@@ -648,11 +637,7 @@ class PhoneResetRequestSerializer(BasicSerializer):
         validation_token.type = self.token_type
         validation_token.save()
 
-        url = '{0}://{1}{2}'.format(
-            self.request.scheme,
-            self.request.META.get('HTTP_HOST', 'test_host'),
-            reverse('phone-reset-token-validation', args=[validation_token.secret])
-        )
+        url = settings.EMAIL_URL_PREFIX + reverse('phone-reset-token-validation', args=[validation_token.secret])
 
         context = {
             'email': self.principal.email,
@@ -737,11 +722,7 @@ class PasswordResetRequestSerializer(BasicSerializer):
 
         self.token = validation_token
 
-        url = '{0}://{1}{2}'.format(
-            self.request.scheme,
-            self.request.META.get('HTTP_HOST', 'test_host'),
-            '/account/reset-password-token#{0}'.format(validation_token.secret)
-        )
+        url = settings.EMAIL_URL_PREFIX + '/account/reset-password-token#{0}'.format(validation_token.secret)
 
         context = {
             'email': email,
@@ -1071,11 +1052,7 @@ class EmailActivationRequestSerializer(BasicSerializer):
         validation_token.type = 'email_activation'
         validation_token.save()
 
-        url = '{0}://{1}{2}'.format(
-            self.request.scheme,
-            self.request.META.get('HTTP_HOST', 'test_host'),
-            '/account/email-activation/#{0}'.format(validation_token.secret)
-        )
+        url = settings.EMAIL_URL_PREFIX + '/account/email-activation/#{0}'.format(validation_token.secret)
 
         context = {
             'email': email,
