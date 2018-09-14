@@ -248,7 +248,7 @@ class Context(object):
             if authentication_period < evidence.expiration_period:
                 valid_evidences.append(evidence)
 
-        if len(valid_evidences) != len(self.principal._evidences_effective):
+        if len(valid_evidences) != len(self.principal._evidences_effective) or len(valid_evidences) == 0:
             if len(valid_evidences) == 0:
                 self.principal = Principal.objects.get(id=0)
 
