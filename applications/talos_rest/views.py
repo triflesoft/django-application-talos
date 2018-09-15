@@ -347,7 +347,12 @@ class PasswordResetTokenCheckerAPIView(SecureAPIViewBaseView):
 class PasswordResetView(SecureAPIViewBaseView):
     identity_directory_code = 'basic_internal'
     serializer_class = PasswordResetBaseSerializer
-    queryset = ''
+
+    def get_queryset(self):
+        return
+
+    def get_object(self):
+        return None
 
     def put(self, request):
         kwargs = super(PasswordResetView, self).get_serializer_context()
