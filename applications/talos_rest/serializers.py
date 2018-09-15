@@ -847,6 +847,10 @@ class RegistrationRequestSerializer(BasicSerializer):
         return talos_rest_validate_phone(phone, validate_uniqueness=True)
 
     def validate_password(self, password):
+        from talos_rest.validators import validate_password
+
+        validate_password(password)
+
         return password
 
     def validate(self, attrs):
