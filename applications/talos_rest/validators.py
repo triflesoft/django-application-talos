@@ -80,8 +80,8 @@ def validate_password(password):
     from django.core.exceptions import ValidationError
     from rest_framework import serializers
 
-    try:
-        validate_password(password)
-    except ValidationError:
-        raise serializers.ValidationError('Invalid password format',
-                                          code='password_invalid_format')
+    #try:
+    #    validate_password(password)
+    #except ValidationError:
+    #    raise serializers.ValidationError('Invalid password format',
+    #                                      code='password_invalid_format')
