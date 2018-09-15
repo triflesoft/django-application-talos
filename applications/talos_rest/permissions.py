@@ -33,6 +33,9 @@ class IsAuthenticated(permissions.BasePermission):
         # For not allowed method we should raise 405, because of it we pass this this
         # permission checker
 
+        if request.method == 'OPTIONS':
+            return True
+
         if request.method not in list(view.allowed_methods):
             return True
 
