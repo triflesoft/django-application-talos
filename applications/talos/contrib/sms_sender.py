@@ -32,6 +32,8 @@ class SMSSender(object):
 
         response = self.backend_object.send_message(number, message)
 
+        print(response)
+
         if str(response.get('status', '')) == '400':
             return False
         return True
