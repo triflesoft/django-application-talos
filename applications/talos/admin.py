@@ -969,6 +969,23 @@ class ValidationTokenAdmin(AbstractReplicatableAdmin):
         'type'
     ]
 
+@admin.register(MessagingProviderDirectoryOption)
+class MessagingProviderDirectoryOptionAdmin(AbstractReplicatableAdmin):
+    fieldsets = [
+        ('General',  {
+            'classes': ('wide',),
+            'fields': [('directory',), ('name',), ('value',)]
+        }),
+    ]
+    list_display = ['uuid', 'directory', 'name', 'value']
+    ordering = ['name']
+    search_fields = ['directory', 'name', 'value']
+
+
+class MessagingProviderDirectoryOptionInline(admin.TabularInline):
+    model = MessagingProviderDirectoryOption
+    extra = 0
+
 @admin.register(MessagingProviderDirectory)
 class MessaginProviderDirectoryAdmin(AbstractReplicatableAdmin, PermissionAdminMixin):
     fieldsets = [
@@ -984,6 +1001,10 @@ class MessaginProviderDirectoryAdmin(AbstractReplicatableAdmin, PermissionAdminM
         'backend_class',
         'name'
     ]
+
+    inlines = [
+        MessagingProviderDirectoryOptionInline
+    ]
     prepopulated_fields = {'code': ('name',)}
 
 @admin.register(MessagingRoute)
@@ -998,18 +1019,6 @@ class MessagingRouteAdmin(AbstractReplicatableAdmin):
     ordering = ['prefix']
     search_fields = ['directory', 'prefix']
 
-
-@admin.register(MessagingProviderDirectoryOption)
-class MessagingProviderDirectoryOptionAdmin(AbstractReplicatableAdmin):
-    fieldsets = [
-        ('General',  {
-            'classes': ('wide',),
-            'fields': [('directory',), ('name',), ('value',)]
-        }),
-    ]
-    list_display = ['uuid', 'directory', 'name', 'value']
-    ordering = ['name']
-    search_fields = ['directory', 'name', 'value']
 
 from django.contrib.admin.sites import site
 from django.contrib.auth.models import Group
