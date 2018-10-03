@@ -4,6 +4,8 @@ from django.db import models
 from django.utils.text import slugify
 from socket import gethostname
 from uuid import uuid4
+import json
+from talos_rest import constants
 
 models.options.DEFAULT_NAMES = \
     models.options.DEFAULT_NAMES + \
@@ -1335,17 +1337,130 @@ class PrincipalCredentialHistory(AbstractReplicatableModel):
         return str(self.principal)
 
 
-# TODO: Move to task_handlers.py file?
-def registration_task_handler(task):
+class BaseTaskHandler(object):
+    def __init__(self, task):
+        self.task = task
+        self.principal = self.task.principal
+
+        if hasattr(self.task, 'basic_identity_directory'):
+            print('it has')
+            self.basic_identity_directory = self.task.basic_identity_directory
+
+        if self.task.basic_identity:
+            self.basic_identity = self.task.basic_identity
+            self.basic_identity_directory = self.basic_identity.directory
+
+        if self.task.basic_credential:
+            self.basic_credential = self.task.basic_credential
+            self.basic_credential_directory = self.basic_credential.directory
+        if self.task.one_time_password_credential:
+            self.otp_credential = self.task.one_time_password_credential
+            self.otp_credential_directory = self.otp_credential.directory
+        self.data = task.get_data() # return value: dict
+        self.errors = {}
+
+    def _emit_error(self, field, data):
+        current_errors = self.errors.get(field, [])
+        self.errors[field] = current_errors + [data]
+
+    def get_errors(self):
+        return self.errors
+
+    def validate_password(self):
+        password = self.data.get('password')
+        if password is None:
+            self._emit_error('password', {'detail' : 'password is required', 'code' : 'password_required'})
+        else:
+            if not self.basic_credential_directory.verify_credentials(self.principal,
+                                                                      {'password': password}):
+                self._emit_error('password', {'detail': 'Password is incorrect', 'code': constants.PASSWORD_INVALID_CODE})
+        return password
+
+    def validate_new_password(self):
+        from talos_rest.validators import validate_password
+
+        new_password = self.data.get('new_password')
+        if new_password is None:
+            self._emit_error('new_password', {'detail' : 'password is required', 'code' : 'password_required'})
+        else:
+            validate_password(new_password)
+        return new_password
+
+    def validate_otp_code(self):
+        otp_code = self.data.get('otp_code')
+        if not otp_code:
+            self._emit_error('otp_code', {'detail' : 'One time password is required', 'code' : 'otp_equired'})
+        else:
+            if not self.otp_credential_directory.verify_otp(self.principal, self.otp_credential, otp_code):
+                self._emit_error('otp_code', {'detail': 'OTP code is incorrect', 'code': constants.OTP_INVALID})
+        return otp_code
+
+    def validate_email(self):
+        email = self.data.get('email')
+        if not email:
+            self._emit_error('email', {'detail' : 'Email required', 'code' : 'email_required'})
+        else:
+            self.principal = self.basic_identity_directory.get_principal({'username': email})
+            if not self.principal:
+                self._emit_error('email',
+                                 {'detail': 'Username is not valid. Note that username may be case-sensitive', 'code': constants.USERNAME_INVALID_CODE})
+                return
+            if not self.principal.is_active:
+                self._emit_error('username', {'detail': 'Username is valid, but account is disable', 'code': constants.ACCOUNT_INACTIVE_CODE})
+
+
+class RegistrationTaskHandler(BaseTaskHandler):
     pass
 
 
-def password_change_task_handler(task):
-    pass
+class PasswordChangeTaskHandler(BaseTaskHandler):
+    def __init__(self, *args, **kwargs):
+        super(PasswordChangeTaskHandler, self).__init__(*args, **kwargs)
 
+    def validate(self):
+        self.validate_password()
+        self.validate_new_password()
+        self.validate_otp_code()
 
-def password_reset_task_handler(task):
-    pass
+    def save(self):
+        return self.basic_credential_directory.update_credentials(self.principal,
+                                                                  {'password': self.data['password']},
+                                                                  {'password': self.data['new_password']})
+
+class PasswordResetTaskHandler(BaseTaskHandler):
+    token_type = 'password_reset'
+
+    def validate(self):
+        self.validate_email()
+
+    def save(self):
+        from talos_rest.utils import send_email
+
+        email = self.data.get('email')
+
+        validation_token = ValidationToken()
+        validation_token.identifier_type = 'email'
+        validation_token.identifier_value = email
+        validation_token.principal = self.principal
+        validation_token.type = self.token_type
+        validation_token.save()
+
+        self.token = validation_token
+
+        url = '{0}/account/reset-password-token#{1}'.format(settings.EMAIL_URL_PREFIX, validation_token.secret)
+
+        context = {
+            'email': email,
+            'url': url,
+            'recipient_name': validation_token.principal.full_name,
+        }
+
+        send_email(context,
+                   [email],
+                   'talos/basic_password_reset/request_email_subject.txt',
+                   'talos/basic_password_reset/request_email_body.txt',
+                   'talos/basic_password_reset/request_email_body.html')
+
 
 
 class Task(AbstractReplicatableModel):
@@ -1372,9 +1487,9 @@ class Task(AbstractReplicatableModel):
     ]
 
     _HANDLERS = {
-        TYPE_REGISTRATION: registration_task_handler,
-        TYPE_PASSWORD_CHANGE: password_change_task_handler,
-        TYPE_PASSWORD_RESET: password_reset_task_handler
+        TYPE_REGISTRATION: RegistrationTaskHandler,
+        TYPE_PASSWORD_CHANGE: PasswordChangeTaskHandler,
+        TYPE_PASSWORD_RESET: PasswordResetTaskHandler
     }
 
     type = models.IntegerField(choices=TYPE_CHOICES, editable=False)
@@ -1387,6 +1502,13 @@ class Task(AbstractReplicatableModel):
     expires_at = models.DateTimeField(editable=False)
     is_completed = models.BooleanField(default=True)
     expando = models.TextField(null=True, blank=True)
+
+    # TODO: Cachable property with decorator
+    def _get_handler(self):
+        if not hasattr(self, 'handler'):
+           self.handler = self._HANDLERS[self.type](self)
+        return self.handler
+
 
     class Meta:
         model_permissions = '__all__'
@@ -1409,12 +1531,27 @@ class Task(AbstractReplicatableModel):
     def one_time_password_credential_candidate(self):
         pass
 
+    def get_errors(self):
+        handler = self._get_handler()
+        return handler.get_errors()
+
+    def get_data(self):
+        if not self.expando:
+            return {}
+        return json.loads(self.expando)
+
+
+    def validate(self, *args, **kwargs):
+        handler = self._get_handler()
+        handler.validate()
+
     def save(self, *args, **kwargs):
-        self._HANDLERS[self.type](self)
-        pass
+        handler = self._get_handler()
+        handler.save()
+        super(Task, self).save(*args, **kwargs)
 
     def __str__(self):
-        return self.secret
+        return str(self.principal)
 
 
 class ValidationToken(AbstractReplicatableModel):

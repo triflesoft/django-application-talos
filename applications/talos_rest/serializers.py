@@ -3,9 +3,11 @@ from django.urls import reverse
 from rest_framework import serializers
 from rest_framework import status
 from talos.models import _tznow
+from talos.models import _tzmax
 from talos.models import BasicIdentity, BasicCredential, OneTimePasswordCredential
 from talos.models import Principal, BasicIdentityDirectory, BasicCredentialDirectory, OneTimePasswordCredentialDirectory
 from talos.models import ValidationToken
+from talos.models import Task
 from talos_rest import constants
 from talos_rest.validators import validate_email as  talos_rest_validate_email
 from talos_rest.validators import validate_phone as talos_rest_validate_phone
@@ -114,11 +116,28 @@ class BasicSerializer(serializers.Serializer):
         self.error_code = self.context_params.get('error_code')
 
         self.identity_directory_code = self.context_params.get('identity_directory_code')
+        self.basic_credential_directory_code = self.context_params.get('basic_credential_directory_code')
+        self.otp_credential_directory_code = self.context_params.get('otp_credential_directory_code')
 
         if self.identity_directory_code:
             self.basic_identity_directory = BasicIdentityDirectory.objects.get(
                 code=self.identity_directory_code)
             self.basic_credential_directory = self.basic_identity_directory.credential_directory
+
+        if self.basic_credential_directory_code:
+            self.basic_credential_directory = BasicCredentialDirectory.objects.get(
+                code=self.basic_credential_directory_code
+            )
+            self.basic_credential = BasicCredential.objects.get(directory=self.basic_credential_directory,
+                                                                principal=self.principal)
+
+
+        if self.otp_credential_directory_code:
+            self.otp_credential_directory = OneTimePasswordCredentialDirectory.objects.get(
+                code=self.otp_credential_directory_code
+            )
+            self.otp_credential = OneTimePasswordCredential.objects.get(directory=self.otp_credential_directory,
+                                                                        principal=self.principal)
 
         super(BasicSerializer, self).__init__(*args, **kwargs)
 
@@ -688,53 +707,28 @@ class PhoneResetBaseSerialize(OTPBaserSerializeMixin, ValidatePasswordMixin, Bas
 
 class PasswordResetRequestSerializer(BasicSerializer):
     email = serializers.CharField()
-
     token_type = 'password_reset'
 
     def __init__(self, *args, **kwargs):
-        from talos.models import OneTimePasswordCredentialDirectory
+        self.task = None
         super(PasswordResetRequestSerializer, self).__init__(*args, **kwargs)
 
-        self.sms_otp_directory = OneTimePasswordCredentialDirectory.objects.get(
-            code=PHONE_SMS_CREDENTIAL_DIRECTORY_CODE)
-
-
-    def validate_email(self, email):
-        try:
-            principal = Principal.objects.get(email=email)
-            self.principal = principal
-        except Principal.DoesNotExist:
-            raise serializers.ValidationError("Email doesn't exists",
-                                              code=constants.EMAIL_INVALID_CODE)
-        return email
+    def validate(self, attrs):
+        import json
+        self.task = Task()
+        self.task.type = Task.TYPE_PASSWORD_RESET
+        self.task.principal = self.principal
+        self.task.basic_identity_directory = self.basic_identity_directory # add attribute
+        #self.task.basic_credential = self.basic_credential
+        #self.task.one_time_password_credential = self.otp_credential
+        self.task.expando = json.dumps(attrs)
+        self.task.expires_at = _tzmax()  # _tznow() + datetime.timedelta(days=1)
+        self.task.validate()
+        self.validation_errors = self.task.get_errors()
+        return attrs
 
     def save(self):
-        from talos_rest.utils import send_email
-
-        email = self.validated_data['email']
-
-        validation_token = ValidationToken()
-        validation_token.identifier_type = 'email'
-        validation_token.identifier_value = email
-        validation_token.principal = self.principal
-        validation_token.type = self.token_type
-        validation_token.save()
-
-        self.token = validation_token
-
-        url = '{0}/account/reset-password-token#{1}'.format(settings.EMAIL_URL_PREFIX, validation_token.secret)
-
-        context = {
-            'email': email,
-            'url': url,
-            'recipient_name': validation_token.principal.full_name,
-        }
-
-        send_email(context,
-                   [email],
-                   'talos/basic_password_reset/request_email_subject.txt',
-                   'talos/basic_password_reset/request_email_body.txt',
-                   'talos/basic_password_reset/request_email_body.html')
+        self.task.save()
 
 
 class PasswordResetValidationTokenSerializer(ValidateSecretWhenLoggedOutMixin,
@@ -794,34 +788,31 @@ class PasswordResetBaseSerializer(OTPBaserSerializeMixin, BasicSerializer):
             self.validation_token.save()
 
 
-class PasswordChangeBaseSerialize(OTPBaserSerializeMixin, ValidatePasswordMixin, BasicSerializer):
+class PasswordChangeBaseSerialize(BasicSerializer):
+    password = serializers.CharField()
     new_password = serializers.CharField()
+    otp_code = serializers.CharField()
 
     def __init__(self, *args, **kwargs):
+        self.task = None
+        self.validation_errors = None
         super(PasswordChangeBaseSerialize, self).__init__(*args, **kwargs)
 
-    def validate_new_password(self, new_password):
-        from talos_rest.validators import validate_password
-
-        validate_password(new_password)
-
-        return new_password
+    def validate(self, attrs):
+        import json
+        self.task = Task()
+        self.task.type = Task.TYPE_PASSWORD_CHANGE
+        self.task.principal = self.principal
+        self.task.basic_credential = self.basic_credential
+        self.task.one_time_password_credential = self.otp_credential
+        self.task.expando = json.dumps(attrs)
+        self.task.expires_at = _tzmax() # _tznow() + datetime.timedelta(days=1)
+        self.task.validate()
+        self.validation_errors = self.task.get_errors()
+        return attrs
 
     def save(self):
-        from talos.models import Session
-        from django.db.models import Q
-        from django.utils import timezone
-
-        # Delete every other active session user has
-        Session.objects.filter(Q(principal=self.request.principal),
-                               ~Q(uuid=self.request.session._session.uuid),
-                               Q(valid_till__gt=timezone.now())).update(evidences=None)
-
-        new_password = self.validated_data['new_password']
-        return self.basic_credential_directory.update_credentials(self.principal,
-                                                                  {'password': self.password},
-                                                                  {'password': new_password})
-
+        self.task.save()
 
 
 class RegistrationRequestSerializer(BasicSerializer):

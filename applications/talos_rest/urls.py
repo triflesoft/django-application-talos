@@ -76,7 +76,9 @@ urlpatterns = [
 
     path('otp-message/', SendOTPView.as_view(), name='send-otp'),
 
-    path('principal/password/', PasswordChangeView.as_view(), name='password-change'),
+    path('principal/password/', PasswordChangeView.as_view(), {'basic_credential_directory_code' : 'basic_internal',
+                                                               'otp_credential_directory_code' : 'onetimepassword_internal_phone_sms'},
+         name='password-change'),
 
     path('email-activation-message/', EmailActivationRequestView.as_view(), name='email-activation-request'),
     path('email-activation/<slug:secret>/confirmation/', EmailActivationConfirmationView.as_view(), name='email-activation-confirmation'),

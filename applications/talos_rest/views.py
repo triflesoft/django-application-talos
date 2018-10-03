@@ -307,6 +307,7 @@ class EmailChangeSecureAPIView(SecureAPIViewBaseView):
 
 class PasswordResetRequestView(SecureAPIViewBaseView):
     serializer_class = PasswordResetRequestSerializer
+    identity_directory_code = 'basic_internal'
 
     def post(self, request):
         kwargs = super(PasswordResetRequestView, self).get_serializer_context()
@@ -507,16 +508,22 @@ class PasswordChangeView(SecureAPIViewBaseView):
     serializer_class = PasswordChangeBaseSerialize
     identity_directory_code = 'basic_internal'
 
-    def put(self, request):
+    def put(self, request, basic_credential_directory_code, otp_credential_directory_code):
         kwargs = super(PasswordChangeView, self).get_serializer_context()
 
+        kwargs['basic_credential_directory_code'] = basic_credential_directory_code
+        kwargs['otp_credential_directory_code']  = otp_credential_directory_code
+
         serializer = PasswordChangeBaseSerialize(data=request.data, context=kwargs)
-        if serializer.is_valid(raise_exception=False):
-            if serializer.save():
-                success_response = SuccessResponse()
-                return Response(success_response.data, success_response.status)
+        serializer.is_valid(raise_exception=False)
+
+        if not serializer.validation_errors:
+            serializer.save()
+            success_response = SuccessResponse()
+            return Response(success_response.data, success_response.status)
         else:
-            raise APIValidationError(serializer.errors)
+            print('Error case', serializer.validation_errors)
+            raise APIValidationError(serializer.validation_errors)
 
 
 # # # Registration # # #

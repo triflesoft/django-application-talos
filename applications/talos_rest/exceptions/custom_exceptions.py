@@ -28,11 +28,15 @@ def custom_exception_handler(exc, context):
     response = exception_handler(exc, context)
     # Custom reposense data will be returned only if exception will be APIValidationError
     if isinstance(exc, APIValidationError):
+
+        print('Detail', exc.detail)
+
         custom_response_data = {
             'status': exc.status_code,
             "error": exc.get_codes(),
             'details': exc.detail,
         }
+
         response.data = custom_response_data
 
     elif isinstance(exc, ValidationError):
